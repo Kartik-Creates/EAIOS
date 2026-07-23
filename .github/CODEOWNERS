@@ -1,0 +1,8 @@
+# Global Code Owners
+* @Kartik-Creates
+
+# Sensitive Paths Requiring Core Review
+backend/app/core/* @Kartik-Creates
+backend/app/routers/auth.py @Kartik-Creates
+backend/app/integrations/* @Kartik-Creates
+**/integrations/** @Kartik-Creates
