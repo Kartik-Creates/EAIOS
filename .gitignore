@@ -1,0 +1,51 @@
+# Node / Frontend
+node_modules/
+dist/
+build/
+.next/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environment and Secrets (NEVER COMMIT)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+
+# IDE / Editor Files
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Local Database Files
+*.db
+*.sqlite3
+
+# OS Files
+.DS_Store
+Thumbs.db
