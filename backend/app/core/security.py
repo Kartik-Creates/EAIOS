@@ -1,10 +1,50 @@
 from datetime import datetime, timedelta
+import os
+import base64
+import hashlib
 from typing import Any, Union
 from jose import jwt
 from passlib.context import CryptContext
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+class TokenEncryption:
+    def __init__(self, key: str):
+        # Derive a 32-byte key from the provided key using SHA-256
+        self.key_bytes = hashlib.sha256(key.encode("utf-8")).digest()
+        self.aesgcm = AESGCM(self.key_bytes)
+
+    def encrypt(self, plain: str) -> str:
+        if not plain:
+            return ""
+        nonce = os.urandom(12)
+        encrypted = self.aesgcm.encrypt(nonce, plain.encode("utf-8"), None)
+        # Prepend nonce to ciphertext
+        combined = nonce + encrypted
+        return base64.b64encode(combined).decode("utf-8")
+
+    def decrypt(self, cipher: str) -> str:
+        if not cipher:
+            return ""
+        combined = base64.b64decode(cipher.encode("utf-8"))
+        if len(combined) < 12:
+            raise ValueError("Invalid ciphertext: too short")
+        nonce = combined[:12]
+        ciphertext = combined[12:]
+        decrypted = self.aesgcm.decrypt(nonce, ciphertext, None)
+        return decrypted.decode("utf-8")
+
+# Initialize TokenEncryption instance using settings.ENCRYPTION_KEY or settings.SECRET_KEY
+encryption_key_source = settings.ENCRYPTION_KEY or settings.SECRET_KEY
+token_encryption = TokenEncryption(encryption_key_source)
+
+def encrypt_token(plain: str) -> str:
+    return token_encryption.encrypt(plain)
+
+def decrypt_token(cipher: str) -> str:
+    return token_encryption.decrypt(cipher)
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     if expires_delta:
@@ -21,3 +61,4 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+

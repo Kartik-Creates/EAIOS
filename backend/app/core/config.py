@@ -21,6 +21,25 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "CHANGE_THIS_IN_PRODUCTION_SECRET_KEY_MIN_32_CHARS"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ENCRYPTION_KEY: str = "CHANGE_THIS_IN_PRODUCTION_ENCRYPTION_KEY_MIN_32_CHARS"
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+
+    # Slack OAuth/Token
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_BOT_TOKEN: str = ""
+
+    # Jira OAuth/Token
+    JIRA_CLIENT_ID: str = ""
+    JIRA_CLIENT_SECRET: str = ""
+    JIRA_API_TOKEN: str = ""
 
     # Embeddings (Ollama, local)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
