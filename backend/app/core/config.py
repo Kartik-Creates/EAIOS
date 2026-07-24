@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
+    # Embeddings (Ollama, local)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+    EMBEDDING_DIM: int = 768
+
     class Config:
         case_sensitive = True
         env_file = ".env"
