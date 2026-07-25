@@ -1,6 +1,7 @@
-from typing import List, Union
-from pydantic import AnyHttpUrl, validator
+
+from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "EAIOS"
@@ -8,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = [
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
         "http://localhost:3000",
         "http://localhost:8000",
     ]

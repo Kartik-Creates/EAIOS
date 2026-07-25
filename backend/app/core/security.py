@@ -1,11 +1,13 @@
-from datetime import datetime, timedelta
-import os
 import base64
 import hashlib
-from typing import Any, Union
+import os
+from datetime import datetime, timedelta
+from typing import Any
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jose import jwt
 from passlib.context import CryptContext
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
@@ -46,20 +48,20 @@ def encrypt_token(plain: str) -> str:
 def decrypt_token(cipher: str) -> str:
     return token_encryption.decrypt(cipher)
 
-def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
+def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 def create_refresh_token(
-    subject: Union[str, Any],
+    subject: str | Any,
     token_version: int,
-    expires_delta: timedelta = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Create a refresh token embedding the user's current token_version.
 
