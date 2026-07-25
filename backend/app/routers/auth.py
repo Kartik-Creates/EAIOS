@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import httpx
@@ -169,7 +169,7 @@ async def oauth_login(
     state_payload = {
         "user_id": current_user.id,
         "provider": provider,
-        "exp": datetime.utcnow() + timedelta(minutes=15),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
     }
     state_jwt = jwt.encode(state_payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -281,7 +281,7 @@ async def oauth_callback(
     expires_in = token_data.get("expires_in")
     expires_at = None
     if expires_in:
-        expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in))
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
 
     scopes = token_data.get("scope")
 
