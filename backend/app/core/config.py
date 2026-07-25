@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
         "http://localhost:3000",
+        "http://localhost:5173",
         "http://localhost:8000",
     ]
 
