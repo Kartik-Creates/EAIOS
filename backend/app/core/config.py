@@ -1,6 +1,7 @@
-from typing import List, Union
-from pydantic import AnyHttpUrl, validator
+
+from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "EAIOS"
@@ -8,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = [
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
         "http://localhost:3000",
         "http://localhost:8000",
     ]
@@ -20,7 +21,32 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "CHANGE_THIS_IN_PRODUCTION_SECRET_KEY_MIN_32_CHARS"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes — non-negotiable baseline rule
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ENCRYPTION_KEY: str = "CHANGE_THIS_IN_PRODUCTION_ENCRYPTION_KEY_MIN_32_CHARS"
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+
+    # Slack OAuth/Token
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_BOT_TOKEN: str = ""
+
+    # Jira OAuth/Token
+    JIRA_CLIENT_ID: str = ""
+    JIRA_CLIENT_SECRET: str = ""
+    JIRA_API_TOKEN: str = ""
+
+    # Embeddings (Ollama, local)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+    EMBEDDING_DIM: int = 768
 
     class Config:
         case_sensitive = True

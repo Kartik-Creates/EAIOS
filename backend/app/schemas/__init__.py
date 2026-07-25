@@ -1,3 +1,5 @@
-from app.schemas.user import UserRead, UserCreate, UserUpdate, Token
+from app.schemas.oauth import OAuthConnectionRead, TokenManualInput
+from app.schemas.user import Token, UserCreate, UserRead, UserUpdate
 
-__all__ = ["UserRead", "UserCreate", "UserUpdate", "Token"]
+__all__ = ["OAuthConnectionRead", "Token", "TokenManualInput", "UserCreate", "UserRead", "UserUpdate"]
+
