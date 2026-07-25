@@ -43,10 +43,14 @@ class Settings(BaseSettings):
     JIRA_CLIENT_SECRET: str = ""
     JIRA_API_TOKEN: str = ""
 
-    # Embeddings (Ollama, local)
+    # Ollama (local LLM + embeddings)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+    OLLAMA_CHAT_MODEL: str = "llama3.2"
     EMBEDDING_DIM: int = 768
+
+    # Chat endpoint rate limit (in-process; see app/core/rate_limit.py)
+    CHAT_RATE_LIMIT: str = "10/minute"
 
     class Config:
         case_sensitive = True

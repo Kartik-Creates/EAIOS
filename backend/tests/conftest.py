@@ -35,10 +35,13 @@ async def db_session_fixture():
 
 @pytest_asyncio.fixture(name="client")
 async def client_fixture(db_session):
+    from app.core.rate_limit import limiter
+
     async def override_get_db():
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    limiter.reset()  # the limiter is a process-wide singleton; isolate tests
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
