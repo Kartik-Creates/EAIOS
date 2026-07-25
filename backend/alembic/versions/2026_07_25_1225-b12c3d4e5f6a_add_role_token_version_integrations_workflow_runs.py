@@ -9,8 +9,8 @@ given the model diffs.  The local dev DB (Docker Compose PostgreSQL) was not
 reachable at generation time — verify with `alembic upgrade head` against
 a fresh database before merging.
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "b12c3d4e5f6a"
 down_revision = "a01b2c3d4e5f"

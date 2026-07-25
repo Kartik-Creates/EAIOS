@@ -1,4 +1,4 @@
-from typing import List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +11,10 @@ from app.schemas.user import UserRead
 router = APIRouter()
 
 
-@router.get("/users", response_model=List[UserRead])
+@router.get("/users", response_model=list[UserRead])
 async def list_users(
-    _current_admin: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
+    _current_admin: Annotated[User, Depends(require_role("admin"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """List all users — admin only.
 
