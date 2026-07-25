@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import uuid
 import httpx
-from jose import jwt
+from jose import jwt, JWTError
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -11,11 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.config import settings
-from app.core.security import create_access_token, verify_password, get_password_hash, encrypt_token
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    verify_password,
+    get_password_hash,
+    encrypt_token,
+)
 from app.core.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.oauth_token import OAuthToken
-from app.schemas.user import Token, UserCreate, UserRead
+from app.schemas.user import Token, UserCreate, UserRead, RefreshRequest
 from app.schemas.oauth import OAuthConnectionRead, TokenManualInput
 
 router = APIRouter()
@@ -37,7 +43,9 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         full_name=user_in.full_name,
         hashed_password=get_password_hash(user_in.password),
         is_active=True,
-        is_superuser=False
+        is_superuser=False,
+        role="employee",
+        token_version=0,
     )
     db.add(db_user)
     await db.commit()
@@ -64,7 +72,73 @@ async def login(
         )
     
     access_token = create_access_token(subject=user.id)
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(
+        subject=user.id, token_version=user.token_version
+    )
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+@router.post("/refresh", response_model=Token)
+async def refresh(
+    body: RefreshRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange a valid refresh token for a new access + refresh token pair.
+
+    Validates the embedded token_version against the DB — if the user has
+    logged out (which increments token_version), this rejects the old token.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(
+            body.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        token_version: int = payload.get("ver")
+        if user_id is None or token_type != "refresh" or token_version is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        raise credentials_exception
+
+    # Reject if token_version has been incremented (user logged out)
+    if user.token_version != token_version:
+        raise credentials_exception
+
+    new_access = create_access_token(subject=user.id)
+    new_refresh = create_refresh_token(
+        subject=user.id, token_version=user.token_version
+    )
+    return {
+        "access_token": new_access,
+        "refresh_token": new_refresh,
+        "token_type": "bearer",
+    }
+
+@router.post("/logout")
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Revoke all refresh tokens by incrementing the user's token_version.
+
+    Already-issued access tokens remain valid until their 15-minute expiry.
+    """
+    current_user.token_version += 1
+    db.add(current_user)
+    await db.commit()
+    return {"detail": "Successfully logged out — all refresh tokens revoked."}
 
 @router.get("/me", response_model=UserRead)
 async def read_user_me(current_user: User = Depends(get_current_user)):
@@ -281,4 +355,3 @@ async def list_connections(
     res = await db.execute(stmt)
     connections = res.scalars().all()
     return connections
-
