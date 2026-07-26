@@ -12,19 +12,16 @@ from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, Citation
 from app.services.llm_service import generate_answer
-from app.services.retrieval_service import semantic_search
+from app.services.retrieval_service import (
+    confidence_from_distance,
+    excerpt,
+    semantic_search,
+)
 
 router = APIRouter()
 logger = logging.getLogger("eaios.chat")
 
 FALLBACK_MESSAGE = "I couldn't find this in company documents — I've flagged it for review."
-
-_EXCERPT_LEN = 200
-
-
-def _confidence_from_distance(distance: float) -> float:
-    """Map pgvector cosine distance (0=identical) to a [0,1] confidence score."""
-    return round(max(0.0, min(1.0, 1.0 - distance)), 4)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -65,7 +62,7 @@ async def chat(
         )
 
     answer = await generate_answer(body.query, results)
-    confidence = _confidence_from_distance(results[0].distance)
+    confidence = confidence_from_distance(results[0].distance)
 
     logger.info(
         "chat_answered user_id=%s confidence=%.4f chunks=%d",
@@ -78,11 +75,7 @@ async def chat(
         Citation(
             document_title=chunk.document_title,
             document_id=chunk.document_id,
-            excerpt=(
-                chunk.content[:_EXCERPT_LEN] + "…"
-                if len(chunk.content) > _EXCERPT_LEN
-                else chunk.content
-            ),
+            excerpt=excerpt(chunk.content),
         )
         for chunk in results
     ]
