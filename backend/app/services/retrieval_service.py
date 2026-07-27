@@ -22,6 +22,15 @@ class RetrievedChunk:
     distance: float
 
 
+def confidence_from_distance(distance: float) -> float:
+    """Map pgvector cosine distance (0=identical) to a [0,1] confidence/score value."""
+    return round(max(0.0, min(1.0, 1.0 - distance)), 4)
+
+
+def excerpt(content: str, max_len: int = 200) -> str:
+    return content[:max_len] + "…" if len(content) > max_len else content
+
+
 async def semantic_search(
     db: AsyncSession,
     query: str,
