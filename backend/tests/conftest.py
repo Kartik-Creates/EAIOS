@@ -1,3 +1,4 @@
+import pytest
 import pytest_asyncio
 from app.core.deps import get_db
 from app.db.base import Base
@@ -45,3 +46,48 @@ async def client_fixture(db_session):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_redis_helpers(monkeypatch):
+    active_jtis = {}  # user_id -> set of jtis
+    revoked_jtis = set()
+
+    async def fake_add_active_jti(user_id: str, jti: str, expire_seconds: int):
+        if user_id not in active_jtis:
+            active_jtis[user_id] = set()
+        active_jtis[user_id].add(jti)
+
+    async def fake_remove_active_jti(user_id: str, jti: str):
+        if user_id in active_jtis:
+            active_jtis[user_id].discard(jti)
+
+    async def fake_get_active_jtis(user_id: str):
+        return active_jtis.get(user_id, set())
+
+    async def fake_clear_active_jtis(user_id: str):
+        if user_id in active_jtis:
+            active_jtis[user_id].clear()
+
+    async def fake_revoke_jti(jti: str, expire_seconds: int):
+        revoked_jtis.add(jti)
+
+    async def fake_is_jti_revoked(jti: str):
+        return jti in revoked_jtis
+
+    monkeypatch.setattr("app.core.redis.add_active_jti", fake_add_active_jti)
+    monkeypatch.setattr("app.core.redis.remove_active_jti", fake_remove_active_jti)
+    monkeypatch.setattr("app.core.redis.get_active_jtis", fake_get_active_jtis)
+    monkeypatch.setattr("app.core.redis.clear_active_jtis", fake_clear_active_jtis)
+    monkeypatch.setattr("app.core.redis.revoke_jti", fake_revoke_jti)
+    monkeypatch.setattr("app.core.redis.is_jti_revoked", fake_is_jti_revoked)
+
+    # Patch the direct imports inside app.routers.auth to prevent connection attempts during tests
+    monkeypatch.setattr("app.routers.auth.add_active_jti", fake_add_active_jti)
+    monkeypatch.setattr("app.routers.auth.remove_active_jti", fake_remove_active_jti)
+    monkeypatch.setattr("app.routers.auth.get_active_jtis", fake_get_active_jtis)
+    monkeypatch.setattr("app.routers.auth.clear_active_jtis", fake_clear_active_jtis)
+    monkeypatch.setattr("app.routers.auth.revoke_jti", fake_revoke_jti)
+    monkeypatch.setattr("app.routers.auth.is_jti_revoked", fake_is_jti_revoked)
+
+    yield {"active_jtis": active_jtis, "revoked_jtis": revoked_jtis}
