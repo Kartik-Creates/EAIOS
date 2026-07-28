@@ -57,10 +57,19 @@ apiClient.interceptors.response.use(
           });
           
           const newAccessToken = response.data.access_token;
-          
+          const newRefreshToken = response.data.refresh_token;
+
           if (newAccessToken) {
             storage.setAccessToken(newAccessToken);
-            
+
+            // The backend rotates refresh tokens on every /auth/refresh call
+            // (single-use, old JTI revoked immediately) — the old refresh_token
+            // in storage is now dead and MUST be replaced, or the next refresh
+            // attempt will be rejected and the user force-logged-out.
+            if (newRefreshToken) {
+              storage.setRefreshToken(newRefreshToken);
+            }
+
             // Re-apply the new token to the failed request and retry
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
