@@ -4,6 +4,17 @@ import type { User, LoginPayload, AuthState } from '@/types/auth.types';
 import { authService } from '@/services/authService';
 import { storage } from '@/utils/storage';
 
+const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
+
+const MOCK_USER: User = {
+  id: 'local-dev-bypass',
+  email: 'dev@eaios.local',
+  full_name: 'Development Bypass',
+  is_active: true,
+  is_superuser: true,
+  role: 'admin',
+};
+
 export interface AuthContextType extends AuthState {
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -13,11 +24,11 @@ export interface AuthContextType extends AuthState {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(storage.getAccessToken());
-  const [refreshToken, setRefreshToken] = useState<string | null>(storage.getRefreshToken());
-  const [isLoading, setIsLoading] = useState<boolean>(true); // start true to check session on mount
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!storage.getAccessToken());
+  const [user, setUser] = useState<User | null>(BYPASS_AUTH ? MOCK_USER : null);
+  const [accessToken, setAccessToken] = useState<string | null>(BYPASS_AUTH ? 'local-dev-bypass-token' : storage.getAccessToken());
+  const [refreshToken, setRefreshToken] = useState<string | null>(BYPASS_AUTH ? 'local-dev-bypass-refresh' : storage.getRefreshToken());
+  const [isLoading, setIsLoading] = useState<boolean>(!BYPASS_AUTH);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(BYPASS_AUTH || !!storage.getAccessToken());
 
   /**
    * Hydrates the user session.
@@ -25,6 +36,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Interceptor handles refresh automatically if access code is expired but valid refresh exists.
    */
   const verifySession = useCallback(async () => {
+    if (BYPASS_AUTH) {
+      setUser(MOCK_USER);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      return;
+    }
+
     const token = storage.getAccessToken();
     if (!token) {
       setUser(null);
@@ -39,7 +57,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {
-      // Interceptor will log out if neither token works
       setUser(null);
       setIsAuthenticated(false);
       setAccessToken(null);
@@ -60,6 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Log into the application and acquire tokens.
    */
   const login = async (payload: LoginPayload) => {
+    if (BYPASS_AUTH) {
+      setUser(MOCK_USER);
+      setIsAuthenticated(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const tokens = await authService.login(payload);
@@ -71,7 +94,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRefreshToken(tokens.refresh_token);
       setIsAuthenticated(true);
 
-      // Fetch user data right after acquiring tokens
       const userData = await authService.me();
       setUser(userData);
     } finally {
@@ -83,27 +105,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Log out from application and clear tokens locally and on backend.
    */
   const logout = async () => {
-    try {
-      if (isAuthenticated) {
-        await authService.logout();
+    if (!BYPASS_AUTH) {
+      try {
+        if (isAuthenticated) {
+          await authService.logout();
+        }
+      } catch (e) {
+        console.warn("Logout request failed, clearing local state anyway.", e);
       }
-    } catch (e) {
-      console.warn("Logout request failed, clearing local state anyway.", e);
-    } finally {
-      storage.clearAuthTokens();
-      setAccessToken(null);
-      setRefreshToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
     }
+    
+    storage.clearAuthTokens();
+    setAccessToken(null);
+    setRefreshToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
   };
 
   return (
     <AuthContext.Provider value={{
-      user,
-      accessToken,
-      refreshToken,
-      isAuthenticated,
+      user: BYPASS_AUTH ? MOCK_USER : user,
+      accessToken: BYPASS_AUTH ? 'local-dev-bypass-token' : accessToken,
+      refreshToken: BYPASS_AUTH ? 'local-dev-bypass-refresh' : refreshToken,
+      isAuthenticated: BYPASS_AUTH ? true : isAuthenticated,
       isLoading,
       login,
       logout,

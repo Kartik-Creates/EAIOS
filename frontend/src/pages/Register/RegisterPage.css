@@ -1,3 +1,1 @@
-/* Register page inherits all styles from LoginPage.css (same auth layout).
-   Only page-specific overrides are defined here. */
-@import url('../Login/LoginPage.css');
+@import '../Login/LoginPage.css';

@@ -73,7 +73,7 @@ export const MeetingPage = () => {
       <header className="meeting-hero-panel">
         <div className="meeting-hero-text">
           <h1>
-            <Mic size={24} className="text-purple-400" />
+            <Mic size={24} className="text-muted" />
             Meeting Intelligence
           </h1>
           <p>
@@ -83,8 +83,8 @@ export const MeetingPage = () => {
         </div>
 
         <div className="meeting-stats-pill">
-          <Badge variant="purple">AI Powered</Badge>
-          <span className="text-xs text-slate-400">
+          <Badge variant="slate">AI Powered</Badge>
+          <span className="text-xs text-muted">
             RAG + LangChain Agent
           </span>
         </div>
@@ -104,10 +104,10 @@ export const MeetingPage = () => {
       {/* ── Input Panel ── */}
       <section className="meeting-section-card">
         <div className="meeting-section-header">
-          <div className="meeting-section-title">
-            <FileText size={20} className="text-blue-400" />
-            <h2>Meeting Transcript</h2>
-          </div>
+              <div className="meeting-section-title">
+                <FileText size={20} className="text-muted" />
+                <h2>Meeting Transcript</h2>
+              </div>
           <div className="meeting-header-actions">
             <Button variant="ghost" size="sm" onClick={handleClear} disabled={isLoading || (!transcript && !summary)}>
               <Trash2 size={14} className="mr-1" />
@@ -116,7 +116,7 @@ export const MeetingPage = () => {
           </div>
         </div>
 
-        <p className="text-xs text-slate-400" style={{ margin: '0 0 0.75rem 0' }}>
+         <p className="text-xs text-muted" style={{ margin: '0 0 0.75rem 0' }}>
           Paste the full meeting transcript below. The AI agent will identify key decisions,
           action items with assignees, and generate a concise executive summary.
         </p>
@@ -165,10 +165,10 @@ export const MeetingPage = () => {
           <section className="meeting-section-card">
             <div className="meeting-section-header">
               <div className="meeting-section-title">
-                <Sparkles size={20} className="text-green-400" />
+                <Sparkles size={20} className="text-muted" />
                 <h2>Executive Summary</h2>
               </div>
-              <Badge variant="green">
+              <Badge variant="slate">
                 {(summary.confidence * 100).toFixed(0)}% Confidence
               </Badge>
             </div>
@@ -193,10 +193,10 @@ export const MeetingPage = () => {
           <section className="meeting-section-card">
             <div className="meeting-section-header">
               <div className="meeting-section-title">
-                <CheckCircle2 size={20} className="text-blue-400" />
+                <CheckCircle2 size={20} className="text-muted" />
                 <h2>Key Decisions</h2>
               </div>
-              <Badge variant="blue">{summary.decisions.length}</Badge>
+              <Badge variant="slate">{summary.decisions.length}</Badge>
             </div>
 
             {summary.decisions.length === 0 ? (
@@ -222,10 +222,10 @@ export const MeetingPage = () => {
           <section className="meeting-section-card">
             <div className="meeting-section-header">
               <div className="meeting-section-title">
-                <Clock size={20} className="text-amber-400" />
+                <Clock size={20} className="text-muted" />
                 <h2>Action Items</h2>
               </div>
-              <Badge variant="yellow">
+              <Badge variant="slate">
                 {summary.action_items.filter((i) => i.completed).length}/{summary.action_items.length} Done
               </Badge>
             </div>

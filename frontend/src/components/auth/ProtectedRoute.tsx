@@ -2,6 +2,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Spinner } from '@/components/ui/Spinner';
 
+const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
+
 export const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -13,9 +15,9 @@ export const ProtectedRoute = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (BYPASS_AUTH || isAuthenticated) {
+    return <Outlet />;
   }
 
-  return <Outlet />;
+  return <Navigate to="/login" replace />;
 };

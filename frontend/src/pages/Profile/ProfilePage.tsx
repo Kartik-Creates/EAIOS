@@ -23,20 +23,6 @@ export const ProfilePage = () => {
   const userInitial = user?.full_name ? user.full_name[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'U';
   const roleName = user?.role ? user.role.toUpperCase() : 'EMPLOYEE';
 
-  // Helper for role badge variant
-  const getRoleVariant = (role?: string) => {
-    switch (role) {
-      case 'admin':
-        return 'purple';
-      case 'manager':
-        return 'blue';
-      case 'hr':
-        return 'yellow';
-      default:
-        return 'green';
-    }
-  };
-
   return (
     <div className="profile-page">
       {/* ── Hero Profile Header ── */}
@@ -48,11 +34,11 @@ export const ProfilePage = () => {
         <div className="profile-hero-meta">
           <div className="profile-name-row">
             <h1>{user?.full_name || 'Enterprise User'}</h1>
-            <Badge variant={getRoleVariant(user?.role)}>
+            <Badge variant="slate">
               <Shield size={12} className="inline mr-1" />
               {roleName} ROLE
             </Badge>
-            {user?.is_superuser && <Badge variant="purple">Superuser</Badge>}
+            {user?.is_superuser && <Badge variant="slate">Superuser</Badge>}
           </div>
 
           <div className="profile-email-label">
@@ -121,7 +107,7 @@ export const ProfilePage = () => {
         {/* ── Access Control & RBAC Permissions Card ── */}
         <section className="profile-section-card">
           <div className="section-card-title">
-            <Shield size={20} className="text-purple-400" />
+            <Shield size={20} className="text-muted" />
             <h2>RBAC Permission Matrix</h2>
           </div>
 

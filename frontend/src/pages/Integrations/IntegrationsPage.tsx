@@ -33,8 +33,8 @@ export const IntegrationsPage = () => {
       <header className="integrations-hero-panel">
         <div className="integrations-hero-text">
           <h1>
-            <Plug size={24} className="text-purple-400" />
-            Enterprise Data Connectors & Integrations
+            <Plug size={24} className="text-muted" />
+            Enterprise Data Connectors
           </h1>
           <p>
             Connect cloud document stores, code repositories, and collaboration workspaces. EAIOS
@@ -99,9 +99,9 @@ export const IntegrationsPage = () => {
       {/* ── Security & Data Compliance Section ── */}
       <section className="security-assurance-card" aria-label="Security Assurance">
         <div className="security-header">
-          <ShieldCheck size={22} className="text-blue-400" />
+          <ShieldCheck size={22} className="text-muted" />
           <h3>Data Security & Encryption Guarantees</h3>
-          <Badge variant="blue">Enterprise Security</Badge>
+          <Badge variant="slate">Enterprise Security</Badge>
         </div>
 
         <div className="security-grid">
