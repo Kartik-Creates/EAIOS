@@ -1,45 +1,41 @@
-import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '@/context/AuthContext';
+import { AppRoutes } from '@/routes/AppRoutes';
 
 export default function App() {
   return (
-    <div className="app-container">
-      <header className="header">
-        <div className="logo-badge">EAIOS</div>
-        <div className="title-group">
-          <h1>Enterprise AI Operating System</h1>
-          <p className="subtitle">Unified RAG Knowledge Search & Agentic Workflow Automation</p>
-        </div>
-      </header>
+    <BrowserRouter>
+      <AuthProvider>
+        
+        {/* Central Router controlling all Navigation */}
+        <AppRoutes />
 
-      <main className="content-grid">
-        <section className="card">
-          <div className="card-header">
-            <span className="icon">🔍</span>
-            <h2>Unified RAG Search</h2>
-          </div>
-          <p>Connect and query enterprise knowledge bases across Gmail, Slack, Drive, GitHub, and Jira with pgvector support.</p>
-        </section>
+        {/* Global Toast Configuration configured against CSS dark tokens */}
+        <Toaster 
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+            },
+            success: {
+              iconTheme: {
+                primary: 'var(--color-success)',
+                secondary: 'var(--bg-card)',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: 'var(--color-error)',
+                secondary: 'var(--bg-card)',
+              },
+            },
+          }}
+        />
 
-        <section className="card">
-          <div className="card-header">
-            <span className="icon">⚡</span>
-            <h2>Agentic Workflows</h2>
-          </div>
-          <p>Automate multi-step tasks and cross-platform actions with intelligent event-driven agents.</p>
-        </section>
-
-        <section className="card">
-          <div className="card-header">
-            <span className="icon">🔒</span>
-            <h2>Enterprise Security</h2>
-          </div>
-          <p>Role-based access controls, code ownership enforcement, and isolated tenant vector search.</p>
-        </section>
-      </main>
-
-      <footer className="footer">
-        <p>EAIOS Platform Skeleton • React + FastAPI + PostgreSQL (pgvector) + Redis</p>
-      </footer>
-    </div>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

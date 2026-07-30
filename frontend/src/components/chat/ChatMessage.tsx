@@ -1,0 +1,132 @@
+import { useState } from 'react';
+import { Sparkles, User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
+import type { Message } from '@/types/chat.types';
+import { Badge } from '@/components/ui/Badge';
+import { CitationCard } from './CitationCard';
+
+interface ChatMessageProps {
+  message: Message;
+  userName?: string;
+}
+
+export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => {
+  const [copied, setCopied] = useState(false);
+  const [showCitations, setShowCitations] = useState(true);
+
+  const isUser = message.role === 'user';
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.warn('Failed to copy message:', err);
+    }
+  };
+
+  // Helper for confidence color and label
+  const getConfidenceBadge = (confidence?: number) => {
+    if (confidence === undefined) return null;
+    const percentage = Math.round(confidence * 100);
+
+    if (confidence >= 0.8) {
+      return <Badge variant="green">{percentage}% High Confidence</Badge>;
+    } else if (confidence >= 0.5) {
+      return <Badge variant="yellow">{percentage}% Moderate Match</Badge>;
+    } else {
+      return <Badge variant="red">{percentage}% Low Confidence</Badge>;
+    }
+  };
+
+  const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <div className={`chat-message-row ${isUser ? 'user-row' : 'assistant-row'}`}>
+      <div className="message-avatar">
+        {isUser ? (
+          <div className="user-avatar-icon">
+            <User size={18} />
+          </div>
+        ) : (
+          <div className="assistant-avatar-icon">
+            <Sparkles size={18} />
+          </div>
+        )}
+      </div>
+
+      <div className="message-bubble-wrapper">
+        <div className="message-header">
+          <span className="sender-name">{isUser ? userName : 'EAIOS Assistant'}</span>
+          <span className="message-time">{formattedTime}</span>
+          {!isUser && getConfidenceBadge(message.confidence)}
+        </div>
+
+        <div className={`message-bubble ${message.isError ? 'error-bubble' : ''}`}>
+          <p className="message-text">{message.content}</p>
+
+          {/* Flagged for Review Warning Banner */}
+          {message.flagged_for_review && (
+            <div className="flagged-banner">
+              <AlertTriangle size={16} className="flagged-icon" />
+              <span>
+                No direct document match found. Query has been flagged for knowledge base review.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* AI Citations Drawer */}
+        {!isUser && message.citations && message.citations.length > 0 && (
+          <div className="citations-container">
+            <button
+              type="button"
+              className="citations-toggle-btn"
+              onClick={() => setShowCitations((prev) => !prev)}
+            >
+              <BookOpen size={14} />
+              <span>
+                {showCitations
+                  ? `Hide ${message.citations.length} Source Citations`
+                  : `View ${message.citations.length} Source Citations`}
+              </span>
+            </button>
+
+            {showCitations && (
+              <div className="citations-list">
+                {message.citations.map((citation, idx) => (
+                  <CitationCard key={`${citation.document_id}-${idx}`} citation={citation} index={idx} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Copy Action Button */}
+        <div className="message-footer-actions">
+          <button
+            type="button"
+            className="action-btn"
+            onClick={handleCopy}
+            title="Copy message to clipboard"
+          >
+            {copied ? (
+              <>
+                <Check size={14} className="text-green-400" />
+                <span className="text-green-400">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
