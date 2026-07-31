@@ -8,7 +8,6 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown,
   Moon,
   Sun,
 } from 'lucide-react';
@@ -30,9 +29,6 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const displayName = 'DB';
-  const initials = 'DB';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -111,11 +107,10 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
             aria-expanded={isDropdownOpen}
             aria-haspopup="true"
           >
-            <div className="topbar-avatar-ring" aria-hidden="true">
-              {initials}
+            <div className="topbar-avatar" aria-hidden="true">
+              <User size={22} strokeWidth={1.5} />
             </div>
-            <span className="topbar-user-name">{displayName}</span>
-            <ChevronDown size={16} aria-hidden="true" />
+
           </button>
 
           {isDropdownOpen && (

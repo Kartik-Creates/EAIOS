@@ -1,194 +1,198 @@
 import { useState } from 'react';
 import {
-  User as UserIcon,
-  Mail,
+  User,
   Shield,
-  Key,
-  KeyRound,
-  CheckCircle2,
-  Clock,
-  Laptop,
+  Lock,
   LogOut,
+  CheckCircle2,
+  Laptop,
+  Palette,
+  Globe,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { cn } from '@/utils/cn';
 import './ProfilePage.css';
 
+const ROLE_LABELS: Record<string, string> = {
+  employee: 'Employee',
+  manager: 'Manager',
+  hr: 'HR',
+  admin: 'Admin',
+};
+
 export const ProfilePage = () => {
-  const { user, logout, accessToken } = useAuth();
+  const { user, logout } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  const userInitial = user?.full_name ? user.full_name[0].toUpperCase() : user?.email ? user.email[0].toUpperCase() : 'U';
-  const roleName = user?.role ? user.role.toUpperCase() : 'EMPLOYEE';
+  const roleLabel = ROLE_LABELS[user?.role ?? 'employee'] || 'Employee';
 
   return (
     <div className="profile-page">
-      {/* ── Hero Profile Header ── */}
-      <header className="profile-hero-card">
-        <div className="profile-avatar-large">
-          {userInitial}
-        </div>
-
-        <div className="profile-hero-meta">
-          <div className="profile-name-row">
-            <h1>{user?.full_name || 'Enterprise User'}</h1>
-            <Badge variant="slate">
-              <Shield size={12} className="inline mr-1" />
-              {roleName} ROLE
-            </Badge>
-            {user?.is_superuser && <Badge variant="slate">Superuser</Badge>}
+      <div className="profile-container">
+        {/* ── Profile Header ── */}
+        <section className="profile-header-card">
+          <div className="profile-header-avatar" aria-hidden="true">
+            <div className="profile-avatar-circle">
+              <User size={48} strokeWidth={1.5} />
+            </div>
           </div>
-
-          <div className="profile-email-label">
-            <Mail size={14} />
-            <span>{user?.email || 'user@eaios.enterprise'}</span>
-            <span className="mx-2">•</span>
-            <span className="text-xs text-slate-400">Account ID: {user?.id || 'N/A'}</span>
+          <div className="profile-header-body">
+            <div className="profile-header-top">
+              <h1 className="profile-full-name">
+                {user?.full_name || 'Enterprise User'}
+              </h1>
+              <div className="profile-badges">
+                <Badge variant="slate" className="profile-role-badge">
+                  {roleLabel}
+                </Badge>
+                {user?.is_active && (
+                  <Badge variant="green" className="profile-verified-badge">
+                    <CheckCircle2 size={12} aria-hidden="true" />
+                    Verified
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <p className="profile-email">{user?.email || 'user@eaios.enterprise'}</p>
           </div>
-        </div>
+          <div className="profile-header-actions">
+            <Button variant="secondary" size="sm" className="profile-edit-btn">
+              Edit Profile
+            </Button>
+          </div>
+        </section>
 
-        <div className="profile-hero-actions">
-          <Button variant="secondary" size="sm" onClick={() => setIsPasswordModalOpen(true)}>
-            <KeyRound size={16} className="mr-1" />
-            Change Password
-          </Button>
+        {/* ── Personal Information ── */}
+        <section className="profile-section-card">
+          <h2 className="profile-section-title">
+            <User size={20} className="text-muted" aria-hidden="true" />
+            Personal Information
+          </h2>
+          <div className="profile-info-list">
+            <InfoRow label="Full Name" value={user?.full_name || 'Not specified'} />
+            <InfoRow label="Email" value={user?.email || 'Not specified'} />
+            <InfoRow label="Role" value={roleLabel} />
+            <InfoRow
+              label="Account Status"
+              value={
+                <span
+                  className={cn(
+                    'profile-status-dot',
+                    user?.is_active ? 'profile-status-active' : 'profile-status-suspended'
+                  )}
+                >
+                  {user?.is_active ? 'Active & Verified' : 'Suspended'}
+                </span>
+              }
+            />
+            <InfoRow label="Account ID" value={user?.id || 'N/A'} />
+          </div>
+        </section>
 
-          <Button variant="ghost" size="sm" onClick={logout} className="text-red-400 hover:text-red-300">
-            <LogOut size={16} className="mr-1" />
+        {/* ── Security ── */}
+        <section className="profile-section-card">
+          <h2 className="profile-section-title">
+            <Lock size={20} className="text-muted" aria-hidden="true" />
+            Security
+          </h2>
+          <div className="profile-security-list">
+            <button
+              type="button"
+              className="profile-security-row"
+              onClick={() => setIsPasswordModalOpen(true)}
+            >
+              <div className="profile-security-icon">
+                <Lock size={18} aria-hidden="true" />
+              </div>
+              <div className="profile-security-meta">
+                <span className="profile-security-title">Password</span>
+                <span className="profile-security-desc">Last changed 20 days ago</span>
+              </div>
+              <ChevronRight size={16} className="profile-security-chevron" aria-hidden="true" />
+            </button>
+            <div className="profile-security-row">
+              <div className="profile-security-icon">
+                <Laptop size={18} aria-hidden="true" />
+              </div>
+              <div className="profile-security-meta">
+                <span className="profile-security-title">Recent Login</span>
+                <span className="profile-security-desc">Web Application (Browser) • Just now</span>
+              </div>
+              <span className="profile-security-tag">Current Session</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Preferences ── */}
+        <section className="profile-section-card">
+          <h2 className="profile-section-title">
+            <Palette size={20} className="text-muted" aria-hidden="true" />
+            Preferences
+          </h2>
+          <div className="profile-preferences-list">
+            <div className="profile-preference-row">
+              <div className="profile-preference-left">
+                <Palette size={16} className="text-muted" aria-hidden="true" />
+                <div>
+                  <span className="profile-preference-title">Theme</span>
+                  <span className="profile-preference-desc">Dark / Corporate White</span>
+                </div>
+              </div>
+              <span className="profile-preference-value">System Default</span>
+            </div>
+            <div className="profile-preference-row">
+              <div className="profile-preference-left">
+                <Globe size={16} className="text-muted" aria-hidden="true" />
+                <div>
+                  <span className="profile-preference-title">Language</span>
+                  <span className="profile-preference-desc">Display language</span>
+                </div>
+              </div>
+              <span className="profile-preference-value">English</span>
+            </div>
+            <div className="profile-divider" role="separator" />
+            <ToggleSwitch
+              label="Email Preferences"
+              description="Receive product updates and notifications"
+              checked={true}
+              onCheckedChange={() => {}}
+            />
+            <ToggleSwitch
+              label="Auto Save"
+              description="Automatically save drafts and changes"
+              checked={true}
+              onCheckedChange={() => {}}
+            />
+            <ToggleSwitch
+              label="Desktop Notifications"
+              description="Show notifications in the browser"
+              checked={false}
+              onCheckedChange={() => {}}
+            />
+          </div>
+        </section>
+
+        {/* ── Account Actions ── */}
+        <section className="profile-section-card profile-danger-card">
+          <h2 className="profile-section-title">
+            <Shield size={20} className="text-error" aria-hidden="true" />
+            <span className="profile-danger-title">Account Actions</span>
+          </h2>
+          <p className="profile-danger-desc">
+            Sign out of your account. You will need to sign in again to access the dashboard.
+          </p>
+          <Button variant="danger" className="profile-signout-btn" onClick={logout}>
+            <LogOut size={16} aria-hidden="true" />
             Sign Out
           </Button>
-        </div>
-      </header>
-
-      {/* ── Profile Content Grid ── */}
-      <div className="profile-content-grid">
-        {/* ── Account Details Card ── */}
-        <section className="profile-section-card">
-          <div className="section-card-title">
-            <UserIcon size={20} className="text-blue-400" />
-            <h2>Account Details</h2>
-          </div>
-
-          <div className="info-list">
-            <div className="info-item">
-              <span className="info-item-label">
-                <UserIcon size={14} /> Full Name
-              </span>
-              <span className="info-item-value">{user?.full_name || 'Not Specified'}</span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-item-label">
-                <Mail size={14} /> Email Address
-              </span>
-              <span className="info-item-value">{user?.email}</span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-item-label">
-                <Shield size={14} /> Assigned Role
-              </span>
-              <span className="info-item-value capitalize">{user?.role}</span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-item-label">
-                <CheckCircle2 size={14} /> Account Status
-              </span>
-              <span className="info-item-value text-green-400">
-                {user?.is_active ? 'Active & Verified' : 'Suspended'}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Access Control & RBAC Permissions Card ── */}
-        <section className="profile-section-card">
-          <div className="section-card-title">
-            <Shield size={20} className="text-muted" />
-            <h2>RBAC Permission Matrix</h2>
-          </div>
-
-          <p className="text-xs text-slate-400" style={{ margin: 0 }}>
-            Your RAG semantic searches and AI queries are automatically filtered to document chunks matching your role.
-          </p>
-
-          <div className="rbac-rights-list">
-            <div className="rbac-right-badge">
-              <CheckCircle2 size={14} className="rbac-right-icon" />
-              <span>Public & General Company Policies Access</span>
-            </div>
-
-            <div className="rbac-right-badge">
-              <CheckCircle2 size={14} className="rbac-right-icon" />
-              <span>Personal Integration & OAuth Connector Ingestion</span>
-            </div>
-
-            {(user?.role === 'manager' || user?.role === 'admin' || user?.role === 'hr') && (
-              <div className="rbac-right-badge">
-                <CheckCircle2 size={14} className="rbac-right-icon" />
-                <span>Departmental & Confidential Team Documents Access</span>
-              </div>
-            )}
-
-            {user?.role === 'admin' && (
-              <>
-                <div className="rbac-right-badge">
-                  <CheckCircle2 size={14} className="rbac-right-icon" />
-                  <span>Full Platform User Administration & Role Modification</span>
-                </div>
-                <div className="rbac-right-badge">
-                  <CheckCircle2 size={14} className="rbac-right-icon" />
-                  <span>Unanswered Query Review & Knowledge Base Management</span>
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* ── JWT Session & Security Telemetry Card ── */}
-        <section className="profile-section-card">
-          <div className="section-card-title">
-            <Key size={20} className="text-green-400" />
-            <h2>Active Session Telemetry</h2>
-          </div>
-
-          <div className="session-detail-box">
-            <div className="session-key-row">
-              <span>Token Type:</span>
-              <strong>JWT Bearer (HMAC-SHA256)</strong>
-            </div>
-            <div className="session-key-row">
-              <span>Token Lifetime:</span>
-              <strong>15 Minutes (Auto-refreshed via Redis JTI)</strong>
-            </div>
-            <div className="session-key-row">
-              <span>Active Token Preview:</span>
-              <strong>{accessToken ? `${accessToken.slice(0, 16)}...` : 'N/A'}</strong>
-            </div>
-          </div>
-
-          <div className="info-list">
-            <div className="info-item">
-              <span className="info-item-label">
-                <Laptop size={14} /> Session Device
-              </span>
-              <span className="info-item-value">Web Application (Browser)</span>
-            </div>
-
-            <div className="info-item">
-              <span className="info-item-label">
-                <Clock size={14} /> Replay Protection
-              </span>
-              <span className="info-item-value text-blue-400">Redis Blacklist Active</span>
-            </div>
-          </div>
         </section>
       </div>
 
-      {/* ── Change Password Modal ── */}
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
@@ -196,5 +200,12 @@ export const ProfilePage = () => {
     </div>
   );
 };
+
+const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="profile-info-row">
+    <span className="profile-info-label">{label}</span>
+    <span className="profile-info-value">{value}</span>
+  </div>
+);
 
 export default ProfilePage;

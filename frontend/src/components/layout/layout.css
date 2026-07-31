@@ -35,6 +35,7 @@
 .sidebar-mobile-hidden {
   transform: translateX(-100%);
 }
+
 .sidebar-mobile-open {
   transform: translateX(0);
   width: var(--sidebar-width) !important;
@@ -147,6 +148,7 @@
 .sidebar-nav-item[data-tooltip] {
   position: relative;
 }
+
 .sidebar-nav-item[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -257,9 +259,11 @@
   transition: border-color var(--transition-fast);
   min-width: 0;
 }
+
 .topbar-search-input::placeholder {
   color: var(--text-muted);
 }
+
 .topbar-search-input:focus {
   outline: none;
   border-color: var(--border-focus);
@@ -330,6 +334,7 @@
   position: relative;
   flex-shrink: 0;
 }
+
 .topbar-icon-btn:hover {
   background-color: var(--bg-hover);
   color: var(--text-main);
@@ -339,43 +344,53 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  border-radius: var(--radius-xl);
   background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-main);
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   font-family: inherit;
   flex-shrink: 0;
 }
+
 .topbar-avatar-btn:hover {
   background-color: var(--bg-hover);
   border-color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
 }
 
-.topbar-avatar-ring {
-  width: 28px;
-  height: 28px;
+.topbar-avatar-btn:hover .topbar-avatar {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.topbar-avatar {
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-full);
-  background: var(--accent-primary);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  color: #fff;
+  color: var(--text-muted);
   flex-shrink: 0;
+  transition: transform 250ms ease, box-shadow 250ms ease;
+  overflow: hidden;
 }
 
-.topbar-user-name {
-  max-width: clamp(60px, 12vw, 120px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.topbar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+  display: block;
 }
+
 
 /* ── Topbar Dropdown ── */
 .topbar-dropdown-wrapper {
@@ -509,6 +524,7 @@
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -533,6 +549,7 @@
 
 /* ── Tablet / Desktop hover-to-expand ── */
 @media (hover: hover) {
+
   .sidebar:hover,
   .sidebar.sidebar-collapsed:hover {
     width: var(--sidebar-width) !important;
@@ -725,8 +742,13 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes overlay-scale {
@@ -734,6 +756,7 @@
     opacity: 0;
     transform: scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -745,15 +768,18 @@
   .sidebar {
     width: var(--sidebar-collapsed);
   }
+
   .sidebar .sidebar-logo-text,
   .sidebar .sidebar-nav-label {
     opacity: 0;
     width: 0;
     overflow: hidden;
   }
+
   .topbar {
     left: var(--sidebar-collapsed);
   }
+
   .dashboard-content {
     margin-left: var(--sidebar-collapsed);
   }
@@ -766,10 +792,6 @@
 
   .topbar {
     padding: 0 var(--space-4);
-  }
-
-  .topbar-avatar-btn .topbar-user-name {
-    display: none;
   }
 
   .topbar-avatar-btn {
@@ -796,22 +818,28 @@
     width: var(--sidebar-width);
     transform: translateX(-100%);
   }
+
   .sidebar.sidebar-mobile-open {
     transform: translateX(0);
   }
+
   .sidebar-overlay.overlay-visible {
     display: block;
   }
+
   .topbar {
     left: 0;
   }
+
   .topbar-hamburger {
     display: flex;
   }
+
   .dashboard-content {
     margin-left: 0;
     padding: var(--space-6) var(--space-4);
   }
+
   .sidebar.sidebar-mobile-open .sidebar-logo-text,
   .sidebar.sidebar-mobile-open .sidebar-nav-label {
     opacity: 1;
