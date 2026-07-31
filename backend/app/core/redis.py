@@ -41,3 +41,20 @@ async def is_jti_revoked(jti: str) -> bool:
     key = f"{REVOKED_JTI_PREFIX}:{jti}"
     val = await redis_client.get(key)
     return val is not None
+
+
+OAUTH_STATE_PREFIX = "oauth_state"
+
+async def store_oauth_state(jti: str, user_id: str, expire_seconds: int = 600) -> None:
+    """Store OAuth state JTI in Redis with a short TTL (10 minutes)."""
+    key = f"{OAUTH_STATE_PREFIX}:{jti}"
+    await redis_client.setex(key, expire_seconds, user_id)
+
+async def consume_oauth_state(jti: str) -> str | None:
+    """Retrieve and delete an OAuth state JTI atomically (single-use enforcement)."""
+    key = f"{OAUTH_STATE_PREFIX}:{jti}"
+    user_id = await redis_client.get(key)
+    if user_id:
+        await redis_client.delete(key)
+    return user_id
+
