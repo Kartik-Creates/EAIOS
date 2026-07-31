@@ -61,13 +61,19 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
 def create_refresh_token(
     subject: str | Any,
     token_version: int,
+    jti: str | None = None,
     expires_delta: timedelta | None = None,
-) -> str:
-    """Create a refresh token embedding the user's current token_version.
+) -> tuple[str, str]:
+    """Create a refresh token embedding the user's current token_version and a unique jti.
 
     On /refresh the version in the token is compared against the DB value;
     a mismatch (caused by logout) rejects the token immediately.
+    Returns a tuple: (encoded_token_string, jti)
     """
+    if jti is None:
+        import uuid
+        jti = str(uuid.uuid4())
+
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -78,9 +84,11 @@ def create_refresh_token(
         "sub": str(subject),
         "type": "refresh",
         "ver": token_version,
+        "jti": jti,
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return encoded_jwt, jti
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)

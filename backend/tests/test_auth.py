@@ -231,3 +231,16 @@ async def test_manual_connections(client, db_session):
     # Decrypting should yield plain text
     assert decrypt_token(db_token.access_token_encrypted) == "xoxb-test-token"
     assert decrypt_token(db_token.refresh_token_encrypted) == "xoxr-refresh-token"
+
+@pytest.mark.asyncio
+async def test_login_rate_limit_returns_429(client):
+    """Sending 6 rapid login requests triggers the 5/minute rate limit on the 6th attempt."""
+    login_data = {"username": "nonexistent@example.com", "password": "wrongpassword"}
+    statuses = []
+    for _ in range(6):
+        resp = client.post("/api/v1/auth/login", data=login_data)
+        statuses.append(resp.status_code)
+
+    assert statuses[:5] == [400, 400, 400, 400, 400]
+    assert statuses[5] == 429
+

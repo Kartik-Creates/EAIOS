@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -12,12 +12,21 @@ from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
+from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     encrypt_token,
     get_password_hash,
     verify_password,
+)
+from app.core.redis import (
+    add_active_jti,
+    remove_active_jti,
+    get_active_jtis,
+    clear_active_jtis,
+    is_jti_revoked,
+    revoke_jti,
 )
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
@@ -58,10 +67,13 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ):
+
     stmt = select(User).where(User.email == form_data.username)
     res = await db.execute(stmt)
     user = res.scalars().first()
@@ -77,9 +89,12 @@ async def login(
         )
 
     access_token = create_access_token(subject=user.id)
-    refresh_token = create_refresh_token(
+    refresh_token, jti = create_refresh_token(
         subject=user.id, token_version=user.token_version
     )
+    # Track the active JTI in Redis
+    await add_active_jti(user_id=user.id, jti=jti, expire_seconds=7 * 24 * 3600)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -109,9 +124,14 @@ async def refresh(
         user_id: str = payload.get("sub")
         token_type: str = payload.get("type")
         token_version: int = payload.get("ver")
-        if user_id is None or token_type != "refresh" or token_version is None:
+        jti: str = payload.get("jti")
+        if user_id is None or token_type != "refresh" or token_version is None or jti is None:
             raise credentials_exception
     except JWTError:
+        raise credentials_exception
+
+    # Replay protection: check if JTI has already been revoked/used
+    if await is_jti_revoked(jti):
         raise credentials_exception
 
     user = await db.get(User, user_id)
@@ -122,10 +142,22 @@ async def refresh(
     if user.token_version != token_version:
         raise credentials_exception
 
+    # Determine remaining lifespan of old refresh token to blacklist it properly
+    exp_time = payload.get("exp")
+    now_ts = datetime.now(timezone.utc).timestamp()
+    remaining_seconds = int(exp_time - now_ts) if exp_time else 0
+
     new_access = create_access_token(subject=user.id)
-    new_refresh = create_refresh_token(
+    new_refresh, new_jti = create_refresh_token(
         subject=user.id, token_version=user.token_version
     )
+
+    # Redis rotation logic: swap JTI references and revoke the old JTI
+    await remove_active_jti(user_id=user.id, jti=jti)
+    await add_active_jti(user_id=user.id, jti=new_jti, expire_seconds=7 * 24 * 3600)
+    if remaining_seconds > 0:
+        await revoke_jti(jti=jti, expire_seconds=remaining_seconds)
+
     return {
         "access_token": new_access,
         "refresh_token": new_refresh,
@@ -138,10 +170,17 @@ async def logout(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Revoke all refresh tokens by incrementing the user's token_version.
+    """Revoke all refresh tokens by incrementing the user's token_version and invalidating Redis JTIs.
 
     Already-issued access tokens remain valid until their 15-minute expiry.
     """
+    # Fetch active JTIs for this user and revoke them in Redis
+    active_jtis = await get_active_jtis(current_user.id)
+    for jti in active_jtis:
+        await revoke_jti(jti, expire_seconds=7 * 24 * 3600)
+    
+    await clear_active_jtis(current_user.id)
+
     current_user.token_version += 1
     db.add(current_user)
     await db.commit()
