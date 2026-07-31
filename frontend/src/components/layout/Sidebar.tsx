@@ -64,11 +64,12 @@ export const Sidebar = ({
         onMouseLeave={onMouseLeave}
       >
         <div className="sidebar-header">
-          <NavLink to="/" className="sidebar-logo" aria-label="EAIOS Home">
-            <div className="sidebar-logo-badge">EA</div>
-            <span className="sidebar-logo-text">EAIOS</span>
+          <NavLink to="/" className="sidebar-logo" aria-label="UnifyAI Home">
+            <img src="/logo-icon-dark-mode.png" alt="UnifyAI Icon" className="sidebar-logo-icon-img" />
+            <img src="/logo-dark-mode.png" alt="UnifyAI" className="sidebar-logo-full-img" />
           </NavLink>
         </div>
+
 
         <nav className="sidebar-nav" aria-label="Application pages">
           {visibleNavItems.map((item) => {

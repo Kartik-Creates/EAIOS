@@ -105,14 +105,14 @@ export default function RegisterPage() {
 
       <div className="auth-form-card">
         <div className="auth-logo">
-          <div className="auth-logo-badge">EA</div>
-          <span className="auth-logo-text">EAIOS</span>
+          <img src="/logo-dark-mode.png" alt="UnifyAI Logo" className="auth-logo-img" />
         </div>
 
         <div className="auth-form-header">
           <h1>Create your account</h1>
-          <p>Join EAIOS to start managing enterprise knowledge with AI.</p>
+          <p>Join UnifyAI to start managing enterprise knowledge with AI.</p>
         </div>
+
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <Input

@@ -33,6 +33,19 @@ app.include_router(chat.router, prefix=settings.API_V1_STR, tags=["chat"])
 app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
 app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
 
+import logging
+logger = logging.getLogger("eaios.security")
+
+@app.on_event("startup")
+async def startup_security_checks():
+    env = getattr(settings, "ENVIRONMENT", "development")
+    if env != "development":
+        logger.warning(
+            "CRITICAL SECURITY NOTICE: Running in non-development environment '%s'. "
+            "Confirm VITE_BYPASS_AUTH and dev-only auth bypass flags are disabled across all client builds.",
+            env
+        )
+
 @app.get("/")
 def root():
     return {
@@ -40,3 +53,4 @@ def root():
         "docs": "/docs",
         "health": f"{settings.API_V1_STR}/health",
     }
+

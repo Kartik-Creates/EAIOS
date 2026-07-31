@@ -14,7 +14,8 @@
 // OAuth redirect: "google" | "github"
 // Manual token:  "slack"  | "jira"
 // ─────────────────────────────────────────────
-export type OAuthProvider = 'google' | 'github' | 'slack' | 'jira';
+export type OAuthProvider = 'gmail' | 'google_drive' | 'google' | 'github' | 'slack' | 'jira';
+
 
 // ─────────────────────────────────────────────
 // OAuth Connection

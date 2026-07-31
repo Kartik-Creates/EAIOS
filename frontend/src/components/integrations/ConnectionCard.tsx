@@ -4,18 +4,22 @@ import {
   GitBranch,
   MessageSquare,
   Kanban,
+  Mail,
   CheckCircle2,
   ExternalLink,
   RefreshCw,
   Key,
   type LucideIcon,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { apiClient } from '@/services/axios';
 import type { ProviderMeta, OAuthConnection, TokenManualInput, DriveSyncResult } from '@/types/integration.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  Mail,
   HardDrive,
   Github: GitBranch,
   MessageSquare,
@@ -38,16 +42,29 @@ export const ConnectionCard = ({
   isSyncingDrive,
 }: ConnectionCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
   const isConnected = !!connection;
 
-  const handleOAuthConnect = () => {
-    // Redirects to backend OAuth endpoint which handles provider authorization
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-    window.location.href = `${apiBase}/auth/oauth/${providerMeta.id}/login`;
+  const handleOAuthConnect = async () => {
+    try {
+      setIsConnecting(true);
+      const response = await apiClient.get<{ url: string }>(`/integrations/${providerMeta.id}/connect`);
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      } else {
+        toast.error('Failed to generate OAuth redirect URL.');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || `Failed to connect to ${providerMeta.label}`;
+      toast.error(msg);
+    } finally {
+      setIsConnecting(false);
+    }
   };
+
 
   const handleSyncDrive = async () => {
     try {

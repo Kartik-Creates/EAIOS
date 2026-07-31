@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Plug,
   ShieldCheck,
@@ -6,6 +7,7 @@ import {
   Eye,
   AlertCircle,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useConnections } from '@/hooks/useConnections';
 import { ConnectionCard } from '@/components/integrations/ConnectionCard';
 import { PROVIDERS } from '@/constants/providers';
@@ -22,10 +24,27 @@ export const IntegrationsPage = () => {
     submitManualToken,
     triggerDriveSync,
     getConnection,
+    fetchConnections,
   } = useConnections();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const callbackError = params.get('error');
+
+    if (connected) {
+      toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchConnections();
+    } else if (callbackError) {
+      toast.error(`Connection cancelled or failed: ${callbackError}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [fetchConnections]);
 
   const connectedCount = connections.length;
   const totalProvidersCount = PROVIDERS.length;
+
 
   return (
     <div className="integrations-page">
@@ -37,9 +56,10 @@ export const IntegrationsPage = () => {
             Enterprise Data Connectors
           </h1>
           <p>
-            Connect cloud document stores, code repositories, and collaboration workspaces. EAIOS
+            Connect cloud document stores, code repositories, and collaboration workspaces. UnifyAI
             continuously indexes connected assets into secure vector embeddings scoped by RBAC.
           </p>
+
         </div>
 
         <div className="integrations-stats-pill">
@@ -110,7 +130,7 @@ export const IntegrationsPage = () => {
             <div>
               <div className="security-feature-title">AES-256 Encryption at Rest</div>
               <div className="security-feature-desc">
-                All OAuth refresh tokens and manual API keys are stored encrypted using Fernet symmetric key cryptography.
+                All OAuth refresh tokens and manual API keys are stored encrypted using AES-256-GCM symmetric key cryptography.
               </div>
             </div>
           </div>

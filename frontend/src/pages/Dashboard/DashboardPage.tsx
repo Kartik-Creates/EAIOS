@@ -430,7 +430,7 @@ export const DashboardPage = () => {
               <div className="activity-details">
                 <div className="activity-title">Embeddings Cache Warming</div>
                 <div className="activity-desc">
-                  Pre-computed FAISS vector index for fast semantic lookup responses.
+                  Pre-computed pgvector index for fast semantic lookup responses.
                 </div>
               </div>
               <span className="activity-time">3h ago</span>

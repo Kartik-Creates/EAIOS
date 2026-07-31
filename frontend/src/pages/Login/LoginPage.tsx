@@ -88,9 +88,9 @@ export default function LoginPage() {
 
       <div className="auth-form-card">
         <div className="auth-logo">
-          <div className="auth-logo-badge">EA</div>
-          <span className="auth-logo-text">EAIOS</span>
+          <img src="/logo-dark-mode.png" alt="UnifyAI Logo" className="auth-logo-img" />
         </div>
+
 
         <div className="auth-form-header">
           <h1>Welcome Back</h1>
