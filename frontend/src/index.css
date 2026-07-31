@@ -7,38 +7,40 @@
    CSS CUSTOM PROPERTIES (Design Tokens)
    ------------------------------------------------------------ */
 :root {
+  color-scheme: light;
+
   /* ── Backgrounds ── */
-  --bg-dark: #000000;
-  --bg-card: #0d0e10;
-  --bg-input: #1c1b1b;
-  --bg-sidebar: #0e0f10;
-  --bg-secondary: #15171D;
-  --bg-hover: #1D1F26;
+  --bg-dark: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-input: #F3F4F6;
+  --bg-sidebar: #FFFFFF;
+  --bg-secondary: #F8F9FB;
+  --bg-hover: #EFF6FF;
 
   /* ── Accent ── */
-  --accent-primary: #5B8CFF;
+  --accent-primary: #2563EB;
   --accent-hover: #1D4ED8;
 
   /* ── Text ── */
-  --text-main: #FAFAFA;
-  --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
+  --text-main: #111827;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
 
   /* ── Semantic Colors ── */
-  --color-success: #22C55E;
-  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success: #16A34A;
+  --color-success-bg: rgba(22, 163, 74, 0.08);
   --color-warning: #F59E0B;
-  --color-warning-bg: rgba(245, 158, 11, 0.1);
-  --color-error: #EF4444;
-  --color-error-bg: rgba(239, 68, 68, 0.1);
-  --color-info: #38BDF8;
-  --color-info-bg: rgba(56, 189, 248, 0.1);
+  --color-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-error: #DC2626;
+  --color-error-bg: rgba(220, 38, 38, 0.08);
+  --color-info: #2563EB;
+  --color-info-bg: rgba(37, 99, 235, 0.08);
 
   /* ── Borders ── */
-  --border-color: #23262D;
-  --border-divider: #2C3038;
-  --border-focus: #5B8CFF;
-  --border-error: #EF4444;
+  --border-color: #E5E7EB;
+  --border-divider: #E5E7EB;
+  --border-focus: #2563EB;
+  --border-error: #DC2626;
 
   /* ── Spacing Scale (8px system) ── */
   --space-1: 0.25rem;
@@ -98,9 +100,9 @@
   --font-weight-bold: 700;
 
   /* ── Shadows ── */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
 
   /* ── Transitions ── */
   --transition-fast: 150ms ease-out;
@@ -115,7 +117,50 @@
   --z-modal: 400;
   --z-toast: 500;
 
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-input-bg: rgba(243, 244, 246, 0.6);
+  --focus-ring: rgba(37, 99, 235, 0.08);
+}
+
+/* Dark Theme override */
+[data-theme="dark"] {
   color-scheme: dark;
+
+  --bg-dark: #000000;
+  --bg-card: #0d0e10;
+  --bg-input: #1c1b1b;
+  --bg-sidebar: #0e0f10;
+  --bg-secondary: #15171D;
+  --bg-hover: #1D1F26;
+
+  --accent-primary: #5B8CFF;
+  --accent-hover: #1D4ED8;
+
+  --text-main: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+
+  --color-success: #22C55E;
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-error: #EF4444;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-info: #38BDF8;
+  --color-info-bg: rgba(56, 189, 248, 0.1);
+
+  --border-color: #23262D;
+  --border-divider: #2C3038;
+  --border-focus: #5B8CFF;
+  --border-error: #EF4444;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  --glass-bg: rgba(17, 19, 24, 0.55);
+  --glass-input-bg: rgba(28, 27, 27, 0.6);
+  --focus-ring: rgba(91, 140, 255, 0.12);
 }
 
 /* ------------------------------------------------------------
@@ -143,6 +188,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 #root {

@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import AnimatedShaderBackground from '@/components/background/AnimatedShaderBackground';
 import './LoginPage.css';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
@@ -84,8 +83,6 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <AnimatedShaderBackground />
-
       <div className="auth-form-card">
         <div className="auth-logo">
           <div className="auth-logo-badge">EA</div>

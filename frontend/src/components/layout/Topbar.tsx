@@ -9,9 +9,12 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { ROUTES } from '@/constants/routes';
 import { SearchOverlay } from './SearchOverlay';
 import './layout.css';
@@ -23,6 +26,7 @@ interface TopbarProps {
 
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
   const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -144,6 +148,35 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                 <Settings size={16} aria-hidden="true" />
                 Settings
               </button>
+              <div className="topbar-dropdown-divider" role="separator" />
+              <div className="topbar-theme-section" role="menuitem">
+                <span className="topbar-theme-label">
+                  {theme === 'dark' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+                  Theme
+                </span>
+                <div className="topbar-theme-options">
+                  <button
+                    type="button"
+                    className={cn('topbar-theme-option', theme === 'dark' && 'topbar-theme-option-active')}
+                    onClick={() => toggleTheme()}
+                  >
+                    <span className="topbar-theme-radio" aria-hidden="true">
+                      {theme === 'dark' && <span className="topbar-theme-radio-dot" />}
+                    </span>
+                    Dark
+                  </button>
+                  <button
+                    type="button"
+                    className={cn('topbar-theme-option', theme === 'corporate-white' && 'topbar-theme-option-active')}
+                    onClick={() => toggleTheme()}
+                  >
+                    <span className="topbar-theme-radio" aria-hidden="true">
+                      {theme === 'corporate-white' && <span className="topbar-theme-radio-dot" />}
+                    </span>
+                    White
+                  </button>
+                </div>
+              </div>
               <div className="topbar-dropdown-divider" role="separator" />
               <button
                 type="button"
