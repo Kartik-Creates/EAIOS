@@ -7,13 +7,16 @@ import {
   CheckCircle2,
   Laptop,
   Palette,
-  Globe,
   ChevronRight,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { EditProfileModal } from './EditProfileModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { cn } from '@/utils/cn';
 import './ProfilePage.css';
@@ -27,19 +30,26 @@ const ROLE_LABELS: Record<string, string> = {
 
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const roleLabel = ROLE_LABELS[user?.role ?? 'employee'] || 'Employee';
+  const avatarUrl = user?.id ? localStorage.getItem(`avatar_${user.id}`) : null;
 
   return (
     <div className="profile-page">
-      <div className="profile-container">
+      <div className="profile-container profile-container-wide">
         {/* ── Profile Header ── */}
         <section className="profile-header-card">
           <div className="profile-header-avatar" aria-hidden="true">
-            <div className="profile-avatar-circle">
-              <User size={48} strokeWidth={1.5} />
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" className="profile-header-img" />
+            ) : (
+              <div className="profile-avatar-circle">
+                <User size={48} strokeWidth={1.5} />
+              </div>
+            )}
           </div>
           <div className="profile-header-body">
             <div className="profile-header-top">
@@ -61,7 +71,7 @@ export const ProfilePage = () => {
             <p className="profile-email">{user?.email || 'user@eaios.enterprise'}</p>
           </div>
           <div className="profile-header-actions">
-            <Button variant="secondary" size="sm" className="profile-edit-btn">
+            <Button variant="secondary" size="sm" className="profile-edit-btn" onClick={() => setIsEditProfileOpen(true)}>
               Edit Profile
             </Button>
           </div>
@@ -73,7 +83,7 @@ export const ProfilePage = () => {
             <User size={20} className="text-muted" aria-hidden="true" />
             Personal Information
           </h2>
-          <div className="profile-info-list">
+          <div className="profile-info-list profile-info-list-wide">
             <InfoRow label="Full Name" value={user?.full_name || 'Not specified'} />
             <InfoRow label="Email" value={user?.email || 'Not specified'} />
             <InfoRow label="Role" value={roleLabel} />
@@ -135,45 +145,20 @@ export const ProfilePage = () => {
             Preferences
           </h2>
           <div className="profile-preferences-list">
-            <div className="profile-preference-row">
-              <div className="profile-preference-left">
-                <Palette size={16} className="text-muted" aria-hidden="true" />
+            <div className="profile-theme-row">
+              <div className="profile-theme-left">
+                <div className="profile-theme-icon">
+                  {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+                </div>
                 <div>
                   <span className="profile-preference-title">Theme</span>
-                  <span className="profile-preference-desc">Dark / Corporate White</span>
+                  <span className="profile-preference-desc">
+                    {theme === 'dark' ? 'Dark mode is active' : 'Corporate White mode is active'}
+                  </span>
                 </div>
               </div>
-              <span className="profile-preference-value">System Default</span>
+              <ToggleSwitch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
             </div>
-            <div className="profile-preference-row">
-              <div className="profile-preference-left">
-                <Globe size={16} className="text-muted" aria-hidden="true" />
-                <div>
-                  <span className="profile-preference-title">Language</span>
-                  <span className="profile-preference-desc">Display language</span>
-                </div>
-              </div>
-              <span className="profile-preference-value">English</span>
-            </div>
-            <div className="profile-divider" role="separator" />
-            <ToggleSwitch
-              label="Email Preferences"
-              description="Receive product updates and notifications"
-              checked={true}
-              onCheckedChange={() => {}}
-            />
-            <ToggleSwitch
-              label="Auto Save"
-              description="Automatically save drafts and changes"
-              checked={true}
-              onCheckedChange={() => {}}
-            />
-            <ToggleSwitch
-              label="Desktop Notifications"
-              description="Show notifications in the browser"
-              checked={false}
-              onCheckedChange={() => {}}
-            />
           </div>
         </section>
 
@@ -193,6 +178,10 @@ export const ProfilePage = () => {
         </section>
       </div>
 
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+      />
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
