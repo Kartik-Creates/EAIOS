@@ -110,7 +110,7 @@ export const IntegrationsPage = () => {
             <div>
               <div className="security-feature-title">AES-256 Encryption at Rest</div>
               <div className="security-feature-desc">
-                All OAuth refresh tokens and manual API keys are stored encrypted using Fernet symmetric key cryptography.
+                All OAuth refresh tokens and manual API keys are stored encrypted using AES-256-GCM symmetric key cryptography.
               </div>
             </div>
           </div>
