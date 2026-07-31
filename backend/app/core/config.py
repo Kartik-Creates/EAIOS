@@ -1,6 +1,6 @@
 
 from pydantic import AnyHttpUrl
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "CHANGE_THIS_IN_PRODUCTION_SECRET_KEY_MIN_32_CHARS"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes — non-negotiable baseline rule
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ENCRYPTION_KEY: str = "CHANGE_THIS_IN_PRODUCTION_ENCRYPTION_KEY_MIN_32_CHARS"
 
@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     JIRA_CLIENT_ID: str = ""
     JIRA_CLIENT_SECRET: str = ""
     JIRA_API_TOKEN: str = ""
+    JIRA_DOMAIN: str = ""
+
+    # Drive OAuth
+    DRIVE_CLIENT_ID: str = ""
+    DRIVE_CLIENT_SECRET: str = ""
 
     # Ollama (local LLM + embeddings)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
@@ -53,11 +58,18 @@ class Settings(BaseSettings):
     OLLAMA_CHAT_MODEL: str = "llama3.2"
     EMBEDDING_DIM: int = 768
 
-    # Chat endpoint rate limit (in-process; see app/core/rate_limit.py)
+    # Chat endpoint rate limit
     CHAT_RATE_LIMIT: str = "10/minute"
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    # Mail/OAuth placeholders
+    GMAIL_CLIENT_ID: str = ""
+    GMAIL_CLIENT_SECRET: str = ""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
 
 settings = Settings()
