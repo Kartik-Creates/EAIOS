@@ -70,25 +70,7 @@ export const MeetingPage = () => {
   return (
     <div className="meeting-page">
       {/* ── Hero Header ── */}
-      <header className="meeting-hero-panel">
-        <div className="meeting-hero-text">
-          <h1>
-            <Mic size={24} className="text-muted" />
-            Meeting Intelligence
-          </h1>
-          <p>
-            Transform raw meeting transcripts into structured summaries, key decisions,
-            and actionable follow-up items using EAIOS AI agents.
-          </p>
-        </div>
 
-        <div className="meeting-stats-pill">
-          <Badge variant="slate">AI Powered</Badge>
-          <span className="text-xs text-muted">
-            RAG + LangChain Agent
-          </span>
-        </div>
-      </header>
 
       {/* ── Error Banner ── */}
       {error && !isLoading && (
@@ -104,10 +86,10 @@ export const MeetingPage = () => {
       {/* ── Input Panel ── */}
       <section className="meeting-section-card">
         <div className="meeting-section-header">
-              <div className="meeting-section-title">
-                <FileText size={20} className="text-muted" />
-                <h2>Meeting Transcript</h2>
-              </div>
+          <div className="meeting-section-title">
+            <FileText size={20} className="text-muted" />
+            <h2>Meeting Transcript</h2>
+          </div>
           <div className="meeting-header-actions">
             <Button variant="ghost" size="sm" onClick={handleClear} disabled={isLoading || (!transcript && !summary)}>
               <Trash2 size={14} className="mr-1" />
@@ -116,7 +98,7 @@ export const MeetingPage = () => {
           </div>
         </div>
 
-         <p className="text-xs text-muted" style={{ margin: '0 0 0.75rem 0' }}>
+        <p className="text-xs text-muted" style={{ margin: '0 0 0.75rem 0' }}>
           Paste the full meeting transcript below. The AI agent will identify key decisions,
           action items with assignees, and generate a concise executive summary.
         </p>

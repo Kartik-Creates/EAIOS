@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { useAvatar } from '@/hooks/useAvatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
@@ -31,11 +32,11 @@ const ROLE_LABELS: Record<string, string> = {
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { avatarUrl } = useAvatar(user?.id);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const roleLabel = ROLE_LABELS[user?.role ?? 'employee'] || 'Employee';
-  const avatarUrl = user?.id ? localStorage.getItem(`avatar_${user.id}`) : null;
 
   return (
     <div className="profile-page">

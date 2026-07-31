@@ -162,25 +162,7 @@ export const WorkflowPage = () => {
   return (
     <div className="workflow-page">
       {/* ── Hero Header ── */}
-      <header className="workflow-hero-panel">
-        <div className="workflow-hero-text">
-          <h1>
-            <Wand2 size={24} className="text-muted" />
-            Workflow Automation
-          </h1>
-          <p>
-            Trigger deterministic enterprise workflows with human-in-the-loop confirmation for
-            write actions. All executions are audit-logged and reversible.
-          </p>
-        </div>
 
-        <div className="workflow-hero-actions">
-          <Button variant="ghost" size="sm" onClick={fetchTools} disabled={isLoadingTools}>
-            <RefreshCw size={14} className="mr-1" />
-            Refresh Tools
-          </Button>
-        </div>
-      </header>
 
       {/* ── Error Banner ── */}
       {error && (

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/hooks/useAuth';
+import { notifyAvatarUpdated } from '@/hooks/useAvatar';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -80,6 +81,8 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
       } else {
         localStorage.removeItem(`avatar_${updatedUser.id}`);
       }
+
+      notifyAvatarUpdated(updatedUser.id);
 
       setSuccess('Profile updated successfully.');
       setTimeout(() => {

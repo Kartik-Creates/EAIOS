@@ -65,8 +65,8 @@ export const Sidebar = ({
       >
         <div className="sidebar-header">
           <NavLink to="/" className="sidebar-logo" aria-label="EAIOS Home">
-            <div className="sidebar-logo-badge">EA</div>
-            <span className="sidebar-logo-text">EAIOS</span>
+            <div className="sidebar-logo-badge"><img src="" alt="" /></div>
+            <span className="sidebar-logo-text">UNIFY-AI</span>
           </NavLink>
         </div>
 

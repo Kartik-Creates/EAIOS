@@ -36,10 +36,7 @@ export const IntegrationsPage = () => {
             <Plug size={24} className="text-muted" />
             Enterprise Data Connectors
           </h1>
-          <p>
-            Connect cloud document stores, code repositories, and collaboration workspaces. EAIOS
-            continuously indexes connected assets into secure vector embeddings scoped by RBAC.
-          </p>
+
         </div>
 
         <div className="integrations-stats-pill">
@@ -97,45 +94,7 @@ export const IntegrationsPage = () => {
       )}
 
       {/* ── Security & Data Compliance Section ── */}
-      <section className="security-assurance-card" aria-label="Security Assurance">
-        <div className="security-header">
-          <ShieldCheck size={22} className="text-muted" />
-          <h3>Data Security & Encryption Guarantees</h3>
-          <Badge variant="slate">Enterprise Security</Badge>
-        </div>
 
-        <div className="security-grid">
-          <div className="security-feature-item">
-            <Lock size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">AES-256 Encryption at Rest</div>
-              <div className="security-feature-desc">
-                All OAuth refresh tokens and manual API keys are stored encrypted using Fernet symmetric key cryptography.
-              </div>
-            </div>
-          </div>
-
-          <div className="security-feature-item">
-            <Eye size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">Read-Only Scope Enforcement</div>
-              <div className="security-feature-desc">
-                Integrations request minimum read-only permissions (`drive.readonly`, `repo`). No write access is ever requested.
-              </div>
-            </div>
-          </div>
-
-          <div className="security-feature-item">
-            <RefreshCw size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">Continuous Background Ingestion</div>
-              <div className="security-feature-desc">
-                Document changes and new files are automatically chunked into 500-character vector embeddings upon sync.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };
