@@ -97,26 +97,12 @@
   text-align: center;
 }
 
-.auth-logo-badge {
-  width: 40px;
-  height: 40px;
-  background: var(--accent-primary);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-bold);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(91, 140, 255, 0.25);
+.auth-logo-img {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
 }
 
-.auth-logo-text {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-main);
-  letter-spacing: -0.02em;
-}
 
 /* ── Form Header ── */
 .auth-form-header {

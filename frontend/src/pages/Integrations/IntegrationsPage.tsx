@@ -56,9 +56,10 @@ export const IntegrationsPage = () => {
             Enterprise Data Connectors
           </h1>
           <p>
-            Connect cloud document stores, code repositories, and collaboration workspaces. EAIOS
+            Connect cloud document stores, code repositories, and collaboration workspaces. UnifyAI
             continuously indexes connected assets into secure vector embeddings scoped by RBAC.
           </p>
+
         </div>
 
         <div className="integrations-stats-pill">
