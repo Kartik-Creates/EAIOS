@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Mail,
   HardDrive,
   GitBranch,
   MessageSquare,
@@ -44,15 +45,16 @@ export const ConnectionCard = ({
 }: ConnectionCardProps) => {
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
   const isConnected = !!connection;
 
   const handleOAuthConnect = () => {
+    setIsConnecting(true);
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
     window.location.href = `${apiBase}/auth/oauth/${providerMeta.id}/login`;
   };
-
 
   const handleSyncDrive = async () => {
     try {
