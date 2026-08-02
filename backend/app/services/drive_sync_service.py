@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -10,11 +11,23 @@ from app.core.security import decrypt_token, encrypt_token
 from app.models.integration import Integration
 from app.models.oauth_token import OAuthToken
 from app.services.ingestion_service import ingest_document
+from app.services.meeting_service import MeetingIntelligenceError, summarize_meeting
 
 logger = logging.getLogger("eaios.drive_sync")
 
 class DriveSyncError(RuntimeError):
     """Base error for Google Drive sync flow."""
+
+# Google Meet auto-generates transcripts as Google Docs named like
+# "<Meeting Title> - Transcript (2026-08-02 10:00 GMT+5:30)" once a
+# participant manually enables transcription — there is no API to trigger
+# or query Meet transcription (Phase C plan), so this naming pattern is the
+# only reliable signal available for detecting one during a normal Drive sync.
+_MEET_TRANSCRIPT_PATTERN = re.compile(r"-\s*Transcript\b", re.IGNORECASE)
+
+
+def _is_meet_transcript(file_name: str) -> bool:
+    return bool(_MEET_TRANSCRIPT_PATTERN.search(file_name))
 
 async def _refresh_google_token(db: AsyncSession, db_token: OAuthToken) -> str:
     """Refresh the expired Google access token using the refresh token."""
@@ -98,6 +111,7 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
 
         # 4. Download and ingest each file
         files_synced = []
+        meetings_synced = []
         files_skipped = []
         errors = []
 
@@ -119,7 +133,28 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
                     )
                     export_resp.raise_for_status()
                     content = export_resp.text
-                
+
+                    # Phase C: a Meet transcript doc gets routed into the meeting
+                    # intelligence pipeline (Phase A) instead of Company Brain —
+                    # it's a transcript to summarize, not a document to chunk.
+                    if _is_meet_transcript(file_name):
+                        try:
+                            await summarize_meeting(
+                                db,
+                                transcript=content,
+                                organizer_user_id=user_id,
+                                source="google_meet",
+                            )
+                        except MeetingIntelligenceError as exc:
+                            raise DriveSyncError(
+                                f"Meeting intelligence extraction failed: {exc}"
+                            ) from exc
+                        meetings_synced.append({"name": file_name, "id": file_id})
+                        logger.info(
+                            "Successfully summarized Meet transcript: %s (id: %s)", file_name, file_id
+                        )
+                        continue
+
                 # Case B: Standard text files
                 elif mime_type.startswith("text/") or mime_type in ("application/x-javascript", "application/json", "application/xml"):
                     dl_resp = await client.get(
@@ -128,7 +163,7 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
                     )
                     dl_resp.raise_for_status()
                     content = dl_resp.content.decode("utf-8", errors="ignore")
-                
+
                 # Case C: Skip binary / unsupported types
                 else:
                     files_skipped.append({
@@ -179,7 +214,19 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
     await db.commit()
 
     return {
+        # Counts match the frontend's DriveSyncResult contract (integration.types.ts) —
+        # the previous version returned only the detail arrays below under different
+        # key names, which the frontend's `synced`/`skipped`/`errors` fields never matched.
+        "synced": len(files_synced),
+        "skipped": len(files_skipped),
+        "errors": len(errors),
+        "meetings_synced": len(meetings_synced),
+        "message": (
+            f"Synced {len(files_synced)} document(s) and {len(meetings_synced)} "
+            f"meeting transcript(s); {len(files_skipped)} skipped, {len(errors)} failed."
+        ),
         "files_synced": files_synced,
+        "meeting_details": meetings_synced,
         "files_skipped": files_skipped,
-        "errors": errors
+        "error_details": errors,
     }
