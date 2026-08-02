@@ -6,7 +6,7 @@ from app.core.config import settings
 
 logger = logging.getLogger("eaios.embedding")
 
-GEMINI_EMBED_MODEL = "models/text-embedding-004"
+GEMINI_EMBED_MODEL = "gemini-embedding-001"
 
 
 class EmbeddingServiceError(RuntimeError):
@@ -53,14 +53,10 @@ async def _embed_texts_ollama(texts: list[str]) -> list[list[float]]:
 
 
 def _embed_texts_gemini(texts: list[str]) -> list[list[float]]:
-    """Batch-embed texts via Google Gemini text-embedding-004 API.
+    """Batch-embed texts via Google Gemini gemini-embedding-001 API using google-genai SDK.
 
-    Gemini's embed_content accepts a single string or a list. For batches
-    it returns a list of embedding vectors under result['embedding'] (single)
-    or result['embeddings'] (batch via embeddings endpoint).
-
-    text-embedding-004 produces 768-dimensional vectors — same as the
-    existing nomic-embed-text, so no pgvector column change is needed.
+    Configures output_dimensionality=768 to explicitly match existing Vector(768)
+    pgvector columns.
     """
     if not settings.GEMINI_API_KEY:
         raise EmbeddingServiceError(
@@ -69,29 +65,31 @@ def _embed_texts_gemini(texts: list[str]) -> list[list[float]]:
         )
 
     try:
-        import google.generativeai as genai
+        from google import genai
+        from google.genai import types
 
-        genai.configure(api_key=settings.GEMINI_API_KEY)
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
         vectors: list[list[float]] = []
         for text in texts:
-            result = genai.embed_content(
+            response = client.models.embed_content(
                 model=GEMINI_EMBED_MODEL,
-                content=text,
-                task_type="retrieval_document",
+                contents=text,
+                config=types.EmbedContentConfig(
+                    output_dimensionality=settings.EMBEDDING_DIM,
+                ),
             )
-            embedding = result.get("embedding")
-            if not isinstance(embedding, list):
+            if not response.embeddings or not response.embeddings[0].values:
                 raise EmbeddingServiceError(
-                    f"Gemini returned unexpected embedding shape for text-embedding-004"
+                    f"Gemini returned empty embedding vector for model '{GEMINI_EMBED_MODEL}'"
                 )
-            vectors.append(embedding)
+            vectors.append(response.embeddings[0].values)
 
     except Exception as exc:
         if isinstance(exc, EmbeddingServiceError):
             raise
         raise EmbeddingServiceError(
-            f"Gemini embedding API call failed ({GEMINI_EMBED_MODEL}): {exc}"
+            f"Gemini embedding API call failed ({GEMINI_EMBED_MODEL}): {type(exc).__name__}: {exc}"
         ) from exc
 
     if len(vectors) != len(texts):

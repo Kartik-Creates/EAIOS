@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     # LLM Provider selection ("ollama" for local dev, "gemini" for production)
     LLM_PROVIDER: str = "ollama"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+
 
     # Embedding Provider selection ("ollama" for local dev, "gemini" for production)
     EMBEDDING_PROVIDER: str = "ollama"

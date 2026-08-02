@@ -45,6 +45,19 @@ async def startup_security_checks():
             "Confirm VITE_BYPASS_AUTH and dev-only auth bypass flags are disabled across all client builds.",
             env
         )
+    if settings.LLM_PROVIDER.lower() == "gemini" or settings.EMBEDDING_PROVIDER.lower() == "gemini":
+        if not settings.GEMINI_API_KEY:
+            logger.warning(
+                "CONFIG WARNING: GEMINI_API_KEY is not set while LLM_PROVIDER or EMBEDDING_PROVIDER is 'gemini'."
+            )
+        else:
+            try:
+                from google import genai
+                _ = genai.Client(api_key=settings.GEMINI_API_KEY)
+                logger.info("Gemini provider validation successful at startup.")
+            except Exception as exc:
+                logger.warning("Gemini provider initialization check failed at startup: %s", exc)
+
 
 @app.get("/")
 def root():
