@@ -2,7 +2,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from app.core.config import settings
 from app.services.llm_service import LLMServiceError, generate_completion
 

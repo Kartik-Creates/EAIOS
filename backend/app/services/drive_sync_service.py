@@ -1,13 +1,14 @@
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.core.security import decrypt_token, encrypt_token
-from app.models.oauth_token import OAuthToken
 from app.models.integration import Integration
+from app.models.oauth_token import OAuthToken
 from app.services.ingestion_service import ingest_document
 
 logger = logging.getLogger("eaios.drive_sync")
@@ -76,10 +77,9 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
 
     # 2. Check token expiration
     access_token = decrypt_token(db_token.access_token_encrypted)
-    if db_token.expires_at:
-        # Buffer of 60 seconds
-        if datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60):
-            access_token = await _refresh_google_token(db, db_token)
+    # Buffer of 60 seconds
+    if db_token.expires_at and datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60):
+        access_token = await _refresh_google_token(db, db_token)
 
     # 3. Call Google Drive list API
     files = []
@@ -150,7 +150,8 @@ async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
                 files_synced.append({"name": file_name, "id": file_id})
                 logger.info("Successfully synced Drive file: %s (id: %s)", file_name, file_id)
 
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — one bad file must not abort the whole
+                # sync; record it and keep processing the rest of the batch.
                 logger.error("Error syncing Google Drive file %s (id: %s): %s", file_name, file_id, exc)
                 errors.append({"name": file_name, "id": file_id, "error": str(exc)})
 

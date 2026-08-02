@@ -151,7 +151,8 @@ async def oauth_provider_callback(
                     f"{frontend_base}?error={urllib.parse.quote(f'Token exchange failed for {canonical_provider}')}"
                 )
             token_data = resp.json()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — any network/parse failure here must degrade
+            # to a clean redirect with an error message, not a raw 500 during an OAuth callback.
             logger.error("HTTP error during token exchange for '%s': %s", canonical_provider, exc)
             return RedirectResponse(f"{frontend_base}?error=Failed+to+contact+OAuth+provider")
 
@@ -250,7 +251,8 @@ async def trigger_drive_sync(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — any unexpected failure during sync must still
+        # return a clean 500 to the caller rather than crash the request handler.
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during sync: {exc}",

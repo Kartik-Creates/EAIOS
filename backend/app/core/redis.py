@@ -1,4 +1,5 @@
 import redis.asyncio as aioredis
+
 from app.core.config import settings
 
 # Global async redis client connection

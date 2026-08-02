@@ -1,11 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
+from app.core.security import encrypt_token
+from app.models.integration import Integration
+from app.models.oauth_token import OAuthToken
+from app.models.user import User
 from sqlalchemy.future import select
 
-from app.core.security import encrypt_token
-from app.models.oauth_token import OAuthToken
-from app.models.integration import Integration
-from app.models.user import User
 
 @pytest.mark.asyncio
 async def test_drive_sync_success(client, db_session, monkeypatch):
