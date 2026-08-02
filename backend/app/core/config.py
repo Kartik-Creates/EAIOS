@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     JIRA_CLIENT_SECRET: str = ""
     JIRA_API_TOKEN: str = ""
 
+    # LLM Provider selection ("ollama" for local dev, "gemini" for production)
+    LLM_PROVIDER: str = "ollama"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
+    # Embedding Provider selection ("ollama" for local dev, "gemini" for production)
+    EMBEDDING_PROVIDER: str = "ollama"
+
     # Ollama (local LLM + embeddings)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
@@ -55,6 +63,7 @@ class Settings(BaseSettings):
 
     # Chat endpoint rate limit (in-process; see app/core/rate_limit.py)
     CHAT_RATE_LIMIT: str = "10/minute"
+
 
     class Config:
         case_sensitive = True
