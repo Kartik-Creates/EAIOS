@@ -10,6 +10,7 @@ from app.services.retrieval_service import (
     confidence_from_distance,
     excerpt,
     semantic_search,
+    semantic_search_meetings,
 )
 
 router = APIRouter()
@@ -27,17 +28,30 @@ async def search(
 ) -> SearchResponse:
     # allowed_roles is derived from the authenticated user — never omitted/None,
     # which would fall back to unrestricted access inside semantic_search().
-    results = await semantic_search(db, q, allowed_roles=[current_user.role], top_k=top_k)
-
-    return SearchResponse(
-        query=q,
-        results=[
-            SearchResult(
-                document_id=chunk.document_id,
-                document_title=chunk.document_title,
-                excerpt=excerpt(chunk.content),
-                score=confidence_from_distance(chunk.distance),
-            )
-            for chunk in results
-        ],
+    doc_results = await semantic_search(db, q, allowed_roles=[current_user.role], top_k=top_k)
+    meeting_results = await semantic_search_meetings(
+        db, q, organizer_user_id=current_user.id, top_k=top_k
     )
+
+    combined = [
+        SearchResult(
+            document_id=chunk.document_id,
+            document_title=chunk.document_title,
+            excerpt=excerpt(chunk.content),
+            score=confidence_from_distance(chunk.distance),
+            source_type="document",
+        )
+        for chunk in doc_results
+    ] + [
+        SearchResult(
+            document_id=meeting.meeting_id,
+            document_title=meeting.meeting_title,
+            excerpt=excerpt(meeting.summary_text),
+            score=confidence_from_distance(meeting.distance),
+            source_type="meeting",
+        )
+        for meeting in meeting_results
+    ]
+    combined.sort(key=lambda r: r.score, reverse=True)
+
+    return SearchResponse(query=q, results=combined[:top_k])
