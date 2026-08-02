@@ -24,7 +24,7 @@ export const IntegrationsPage = () => {
     submitManualToken,
     triggerDriveSync,
     getConnection,
-    fetchConnections,
+    refreshConnections,
   } = useConnections();
 
   useEffect(() => {
@@ -35,12 +35,14 @@ export const IntegrationsPage = () => {
     if (connected) {
       toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
       window.history.replaceState({}, document.title, window.location.pathname);
-      fetchConnections();
+      refreshConnections();
+
     } else if (callbackError) {
       toast.error(`Connection cancelled or failed: ${callbackError}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [fetchConnections]);
+  }, [refreshConnections]);
+
 
   const connectedCount = connections.length;
   const totalProvidersCount = PROVIDERS.length;

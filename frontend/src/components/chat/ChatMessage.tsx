@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Sparkles, User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
+import { User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
 import type { Message } from '@/types/chat.types';
+
 import { Badge } from '@/components/ui/Badge';
 import { CitationCard } from './CitationCard';
 

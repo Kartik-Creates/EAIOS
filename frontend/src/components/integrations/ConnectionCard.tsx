@@ -124,10 +124,12 @@ export const ConnectionCard = ({
               variant={isConnected ? 'secondary' : 'primary'}
               size="sm"
               onClick={handleOAuthConnect}
+              disabled={isConnecting}
             >
               <ExternalLink size={14} className="mr-1" />
-              {isConnected ? 'Reconnect OAuth' : 'Connect via OAuth'}
+              {isConnecting ? 'Connecting...' : isConnected ? 'Reconnect OAuth' : 'Connect via OAuth'}
             </Button>
+
           ) : (
             <Button
               variant={isConnected ? 'secondary' : 'primary'}
