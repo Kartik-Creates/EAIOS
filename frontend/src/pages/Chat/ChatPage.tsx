@@ -61,7 +61,7 @@ export const ChatPage = () => {
               <Sparkles size={18} />
             </div>
             <div className="message-bubble-wrapper">
-              <span className="sender-name text-xs text-slate-400">EAIOS Assistant</span>
+               <span className="sender-name text-xs text-slate-400">UNIFY-AI Assistant</span>
               <div className="message-bubble assistant-row">
                 <div className="typing-indicator">
                   <span className="typing-dot" />

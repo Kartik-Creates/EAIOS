@@ -1,4 +1,3 @@
-
 from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
 
@@ -18,7 +17,13 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8000",
     ]
 
+    # Host URLs for OAuth redirects
+    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
+
+
     # Database
+
     DATABASE_URL: str = "postgresql+asyncpg://eaios_user:eaios_password@localhost:5432/eaios_db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
