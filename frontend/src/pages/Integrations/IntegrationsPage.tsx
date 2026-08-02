@@ -1,16 +1,13 @@
 import {
   Plug,
-  ShieldCheck,
-  Lock,
-  RefreshCw,
-  Eye,
   AlertCircle,
 } from 'lucide-react';
 import { useConnections } from '@/hooks/useConnections';
 import { ConnectionCard } from '@/components/integrations/ConnectionCard';
+import { CustomIntegrationModal } from '@/components/integrations/CustomIntegrationModal';
 import { PROVIDERS } from '@/constants/providers';
-import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
+import { useState } from 'react';
 import './IntegrationsPage.css';
 
 export const IntegrationsPage = () => {
@@ -19,13 +16,17 @@ export const IntegrationsPage = () => {
     isLoading,
     isSyncingDrive,
     error,
-    submitManualToken,
     triggerDriveSync,
     getConnection,
   } = useConnections();
 
   const connectedCount = connections.length;
   const totalProvidersCount = PROVIDERS.length;
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+
+  const handleSaveCustomIntegration = (data: Record<string, unknown>) => {
+    console.log('Custom integration saved:', data);
+  };
 
   return (
     <div className="integrations-page">
@@ -84,9 +85,9 @@ export const IntegrationsPage = () => {
                 key={providerMeta.id}
                 providerMeta={providerMeta}
                 connection={activeConnection}
-                onSubmitManualToken={submitManualToken}
                 onTriggerDriveSync={triggerDriveSync}
                 isSyncingDrive={isSyncingDrive}
+                onAddCustom={providerMeta.id === 'custom' ? () => setIsCustomModalOpen(true) : undefined}
               />
             );
           })}
@@ -95,6 +96,11 @@ export const IntegrationsPage = () => {
 
       {/* ── Security & Data Compliance Section ── */}
 
+      <CustomIntegrationModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        onSave={handleSaveCustomIntegration}
+      />
     </div>
   );
 };

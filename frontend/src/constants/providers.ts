@@ -50,6 +50,13 @@ export const PROVIDERS: ProviderMeta[] = [
     authMethod:  'manual',
     icon:        'Kanban',
   },
+  {
+    id:          'custom' as OAuthProvider,
+    label:       'Custom Integration',
+    description: 'Connect your own enterprise application using OAuth, API Keys, Personal Access Tokens, or Webhooks.',
+    authMethod:  'custom',
+    icon:        'Plug',
+  },
 ];
 
 // ─────────────────────────────────────────────
@@ -68,4 +75,5 @@ export const PROVIDER_COLORS: Record<OAuthProvider, string> = {
   github: '#e6edf3',
   slack:  '#4a154b',
   jira:   '#0052cc',
+  custom: '#6b7280',
 };

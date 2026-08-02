@@ -10,6 +10,7 @@ import {
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_ITEMS } from '@/constants/routes';
+import { AppLogo } from '@/components/common/AppLogo';
 import './layout.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -64,9 +65,8 @@ export const Sidebar = ({
         onMouseLeave={onMouseLeave}
       >
         <div className="sidebar-header">
-          <NavLink to="/" className="sidebar-logo" aria-label="EAIOS Home">
-            <div className="sidebar-logo-badge"><img src="" alt="" /></div>
-            <span className="sidebar-logo-text">UNIFY-AI</span>
+          <NavLink to="/" className="sidebar-logo" aria-label="UNIFY-AI Home">
+            <AppLogo />
           </NavLink>
         </div>
 

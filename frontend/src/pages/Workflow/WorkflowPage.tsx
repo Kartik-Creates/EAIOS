@@ -7,7 +7,6 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
-  RefreshCw,
   Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';

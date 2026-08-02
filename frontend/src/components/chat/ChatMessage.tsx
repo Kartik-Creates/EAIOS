@@ -60,7 +60,7 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
 
       <div className="message-bubble-wrapper">
         <div className="message-header">
-          <span className="sender-name">{isUser ? userName : 'EAIOS Assistant'}</span>
+           <span className="sender-name">{isUser ? userName : 'UNIFY-AI Assistant'}</span>
           <span className="message-time">{formattedTime}</span>
           {!isUser && getConfidenceBadge(message.confidence)}
         </div>

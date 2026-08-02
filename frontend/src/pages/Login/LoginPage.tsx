@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { AppLogo } from '@/components/common/AppLogo';
 import './LoginPage.css';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
@@ -85,8 +86,7 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-form-card">
         <div className="auth-logo">
-          <div className="auth-logo-badge">EA</div>
-          <span className="auth-logo-text">EAIOS</span>
+          <AppLogo className="app-logo-vertical app-logo-large" />
         </div>
 
         <div className="auth-form-header">
