@@ -13,6 +13,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import toast from 'react-hot-toast';
+
 import type {
   ProviderMeta,
   OAuthConnection,
@@ -23,6 +25,7 @@ import type {
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
+import { integrationsService } from '@/services/integrationsService';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Mail,
@@ -57,15 +60,24 @@ export const ConnectionCard = ({
   const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
   const isConnected = !!connection;
 
-  const handleOAuthConnect = () => {
-    setIsConnecting(true);
-
-    // VITE_API_BASE_URL should be:
-    // https://eaios-ijy2.onrender.com
-    const apiBase =
-      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
-    window.location.href = `${apiBase}/api/v1/auth/oauth/${providerMeta.id}/login`;
+  const handleOAuthConnect = async () => {
+    try {
+      setIsConnecting(true);
+      const url = await integrationsService.connectOAuth(providerMeta.id);
+      if (url) {
+        window.location.href = url;
+      } else {
+        toast.error('Failed to generate OAuth authorization URL.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        `Failed to connect to ${providerMeta.label}`;
+      toast.error(msg);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleSyncDrive = async () => {
