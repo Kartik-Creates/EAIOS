@@ -51,6 +51,7 @@ export interface DriveSyncResult {
   synced: number;
   skipped: number;
   errors: number;
+  meetings_synced?: number;
   message?: string;
 }
 

@@ -5,7 +5,9 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.routers import admin, auth, briefing, chat, health, integrations, search
+
+from app.routers import admin, auth, briefing, chat, health, integrations, meeting, search
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,9 +35,11 @@ app.include_router(chat.router, prefix=settings.API_V1_STR, tags=["chat"])
 app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
 app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
 app.include_router(briefing.router, prefix=settings.API_V1_STR, tags=["briefing"])
+app.include_router(meeting.router, prefix=settings.API_V1_STR, tags=["meeting"])
 
 
 import logging
+
 logger = logging.getLogger("eaios.security")
 
 @app.on_event("startup")
@@ -57,7 +61,8 @@ async def startup_security_checks():
                 from google import genai
                 _ = genai.Client(api_key=settings.GEMINI_API_KEY)
                 logger.info("Gemini provider validation successful at startup.")
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — genai.Client can raise various SDK/network
+                # errors; any of them should just warn at startup, never crash the server.
                 logger.warning("Gemini provider initialization check failed at startup: %s", exc)
 
 

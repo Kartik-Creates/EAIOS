@@ -13,20 +13,20 @@ from sqlalchemy.future import select
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.core.rate_limit import limiter
+from app.core.redis import (
+    add_active_jti,
+    clear_active_jtis,
+    get_active_jtis,
+    is_jti_revoked,
+    remove_active_jti,
+    revoke_jti,
+)
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     encrypt_token,
     get_password_hash,
     verify_password,
-)
-from app.core.redis import (
-    add_active_jti,
-    remove_active_jti,
-    get_active_jtis,
-    clear_active_jtis,
-    is_jti_revoked,
-    revoke_jti,
 )
 from app.models.oauth_token import OAuthToken
 from app.models.user import User

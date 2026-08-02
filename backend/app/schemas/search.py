@@ -6,6 +6,7 @@ class SearchResult(BaseModel):
     document_title: str
     excerpt: str
     score: float
+    source_type: str = "document"  # "document" | "meeting"
 
 
 class SearchResponse(BaseModel):

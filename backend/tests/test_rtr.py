@@ -1,6 +1,5 @@
 import pytest
-from app.models.user import User
-from sqlalchemy.future import select
+
 
 @pytest.mark.asyncio
 async def test_rtr_replay_fails(client):
