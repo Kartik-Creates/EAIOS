@@ -12,7 +12,14 @@ import {
   Key,
   type LucideIcon,
 } from 'lucide-react';
-import type { ProviderMeta, OAuthConnection, DriveSyncResult, TokenManualInput } from '@/types/integration.types';
+
+import type {
+  ProviderMeta,
+  OAuthConnection,
+  DriveSyncResult,
+  TokenManualInput,
+} from '@/types/integration.types';
+
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
@@ -52,22 +59,34 @@ export const ConnectionCard = ({
 
   const handleOAuthConnect = () => {
     setIsConnecting(true);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-    window.location.href = `${apiBase}/auth/oauth/${providerMeta.id}/login`;
+
+    // VITE_API_BASE_URL should be:
+    // https://eaios-ijy2.onrender.com
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+    window.location.href = `${apiBase}/api/v1/auth/oauth/${providerMeta.id}/login`;
   };
 
   const handleSyncDrive = async () => {
     try {
       setSyncFeedback(null);
       const res = await onTriggerDriveSync();
-      setSyncFeedback(`Sync Complete: ${res.synced} files synced (${res.errors} errors).`);
+      setSyncFeedback(
+        `Sync Complete: ${res.synced} files synced (${res.errors} errors).`
+      );
     } catch (err: any) {
-      setSyncFeedback(`Sync Error: ${err.message || 'Drive sync failed.'}`);
+      setSyncFeedback(
+        `Sync Error: ${err.message || 'Drive sync failed.'}`
+      );
     }
   };
 
-  const handleManualTokenSubmit = async (payload: TokenManualInput) => {
+  const handleManualTokenSubmit = async (
+    payload: TokenManualInput
+  ) => {
     if (!onSubmitManualToken) return;
+
     await onSubmitManualToken(payload);
     setIsTokenModalOpen(false);
   };
@@ -76,35 +95,59 @@ export const ConnectionCard = ({
     <>
       <div className="connection-card">
         <div className="connection-card-header">
-          <div className="provider-icon-badge" style={{ backgroundColor: 'var(--bg-dark)' }}>
-            <IconComponent size={24} className="text-blue-400" />
+          <div
+            className="provider-icon-badge"
+            style={{ backgroundColor: 'var(--bg-dark)' }}
+          >
+            <IconComponent
+              size={24}
+              className="text-blue-400"
+            />
           </div>
 
           <div className="provider-info">
-            <h3 className="provider-label">{providerMeta.label}</h3>
+            <h3 className="provider-label">
+              {providerMeta.label}
+            </h3>
+
             <span className="auth-method-tag">
-              {providerMeta.authMethod === 'oauth' ? 'OAuth2 SSO' : providerMeta.authMethod === 'manual' ? 'Manual Token' : 'API / OAuth / Webhook'}
+              {providerMeta.authMethod === 'oauth'
+                ? 'OAuth2 SSO'
+                : providerMeta.authMethod === 'manual'
+                ? 'Manual Token'
+                : 'API / OAuth / Webhook'}
             </span>
           </div>
 
           <div className="connection-status">
             {isConnected ? (
               <Badge variant="green">
-                <CheckCircle2 size={12} className="inline mr-1" />
+                <CheckCircle2
+                  size={12}
+                  className="inline mr-1"
+                />
                 Connected
               </Badge>
             ) : (
-              <Badge variant="slate">Not Connected</Badge>
+              <Badge variant="slate">
+                Not Connected
+              </Badge>
             )}
           </div>
         </div>
 
-        <p className="provider-description">{providerMeta.description}</p>
+        <p className="provider-description">
+          {providerMeta.description}
+        </p>
 
         {isConnected && connection?.scopes && (
           <div className="connection-meta-box">
-            <span className="meta-label">Granted Scopes:</span>
-            <span className="meta-value">{connection.scopes}</span>
+            <span className="meta-label">
+              Granted Scopes:
+            </span>
+            <span className="meta-value">
+              {connection.scopes}
+            </span>
           </div>
         )}
 
@@ -116,8 +159,15 @@ export const ConnectionCard = ({
 
         <div className="connection-card-actions">
           {providerMeta.authMethod === 'custom' ? (
-            <Button variant="primary" size="sm" onClick={onAddCustom}>
-              <ExternalLink size={14} className="mr-1" />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onAddCustom}
+            >
+              <ExternalLink
+                size={14}
+                className="mr-1"
+              />
               Add Integration
             </Button>
           ) : providerMeta.authMethod === 'oauth' ? (
@@ -127,22 +177,32 @@ export const ConnectionCard = ({
               onClick={handleOAuthConnect}
               disabled={isConnecting}
             >
-              <ExternalLink size={14} className="mr-1" />
-              {isConnecting ? 'Connecting...' : isConnected ? 'Reconnect OAuth' : 'Connect via OAuth'}
+              <ExternalLink
+                size={14}
+                className="mr-1"
+              />
+              {isConnecting
+                ? 'Connecting...'
+                : isConnected
+                ? 'Reconnect OAuth'
+                : 'Connect via OAuth'}
             </Button>
-
           ) : (
             <Button
               variant={isConnected ? 'secondary' : 'primary'}
               size="sm"
               onClick={() => setIsTokenModalOpen(true)}
             >
-              <Key size={14} className="mr-1" />
-              {isConnected ? 'Update Token' : 'Configure Token'}
+              <Key
+                size={14}
+                className="mr-1"
+              />
+              {isConnected
+                ? 'Update Token'
+                : 'Configure Token'}
             </Button>
           )}
 
-          {/* Special action for Google Drive sync */}
           {providerMeta.id === 'google' && isConnected && (
             <Button
               variant="primary"
@@ -151,22 +211,26 @@ export const ConnectionCard = ({
               isLoading={isSyncingDrive}
               disabled={isSyncingDrive}
             >
-              <RefreshCw size={14} className="mr-1" />
+              <RefreshCw
+                size={14}
+                className="mr-1"
+              />
               Trigger RAG Sync
             </Button>
           )}
         </div>
       </div>
 
-      {providerMeta.authMethod === 'manual' && onSubmitManualToken && (
-        <ManualTokenModal
-          isOpen={isTokenModalOpen}
-          onClose={() => setIsTokenModalOpen(false)}
-          provider={providerMeta.id as 'slack' | 'jira'}
-          providerLabel={providerMeta.label}
-          onSubmitToken={handleManualTokenSubmit}
-        />
-      )}
+      {providerMeta.authMethod === 'manual' &&
+        onSubmitManualToken && (
+          <ManualTokenModal
+            isOpen={isTokenModalOpen}
+            onClose={() => setIsTokenModalOpen(false)}
+            provider={providerMeta.id as 'slack' | 'jira'}
+            providerLabel={providerMeta.label}
+            onSubmitToken={handleManualTokenSubmit}
+          />
+        )}
     </>
   );
 };
