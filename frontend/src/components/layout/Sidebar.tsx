@@ -66,7 +66,7 @@ export const Sidebar = ({
       >
         <div className="sidebar-header">
           <NavLink to="/" className="sidebar-logo" aria-label="UNIFY-AI Home">
-            <AppLogo />
+            <AppLogo className="app-logo-sidebar" />
           </NavLink>
         </div>
 

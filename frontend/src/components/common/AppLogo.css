@@ -16,8 +16,13 @@
 }
 
 .app-logo-large .app-logo-image {
-  width: 72px;
-  height: 72px;
+  width: 102px;
+  height: 102px;
+}
+
+.app-logo-sidebar .app-logo-image {
+  width: 74px;
+  height: 74px;
 }
 
 .app-logo-image {
