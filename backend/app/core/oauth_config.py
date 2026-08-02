@@ -8,7 +8,7 @@ PROVIDERS = {
     "gmail": {
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
-        "scope": "https://www.googleapis.com/auth/gmail.readonly",
+        "scope": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
         "get_client_id": lambda: settings.GOOGLE_CLIENT_ID,
         "get_client_secret": lambda: settings.GOOGLE_CLIENT_SECRET,
         "extra_params": {"access_type": "offline", "prompt": "consent"},
@@ -16,11 +16,12 @@ PROVIDERS = {
     "google_drive": {
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
-        "scope": "https://www.googleapis.com/auth/drive.readonly",
+        "scope": "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly",
         "get_client_id": lambda: settings.GOOGLE_CLIENT_ID,
         "get_client_secret": lambda: settings.GOOGLE_CLIENT_SECRET,
         "extra_params": {"access_type": "offline", "prompt": "consent"},
     },
+
     "github": {
         "auth_url": "https://github.com/login/oauth/authorize",
         "token_url": "https://github.com/login/oauth/access_token",
