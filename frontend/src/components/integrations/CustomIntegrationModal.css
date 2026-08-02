@@ -1,0 +1,355 @@
+/* ============================================================
+   Custom Integration Modal Stylesheet — CustomIntegrationModal.css
+   ============================================================ */
+
+.custom-integration-modal .modal-content {
+  max-width: 560px;
+}
+
+/* ── Step Header ── */
+.custom-integration-step-header {
+  margin-bottom: var(--space-5);
+}
+
+.custom-integration-back-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: var(--space-3);
+  font-family: inherit;
+  transition: color var(--transition-fast);
+}
+
+.custom-integration-back-btn:hover {
+  color: var(--accent-hover);
+}
+
+.custom-integration-step-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-main);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.custom-integration-step-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Service Search ── */
+.custom-integration-search {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.custom-integration-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.custom-integration-search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) 3rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.custom-integration-search-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.custom-integration-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.custom-integration-search-clear {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.custom-integration-search-clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* ── Service List ── */
+.custom-integration-service-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.custom-integration-service-group {
+  margin-bottom: var(--space-4);
+}
+
+.custom-integration-service-group:last-child {
+  margin-bottom: 0;
+}
+
+.custom-integration-service-group-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-1);
+}
+
+.custom-integration-service-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.custom-integration-service-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  text-align: left;
+}
+
+.custom-integration-service-option:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.custom-integration-service-option-selected {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.custom-integration-service-option-label {
+  flex: 1;
+}
+
+.custom-integration-service-option-badge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+}
+
+/* ── Form ── */
+.custom-integration-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.custom-integration-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.custom-integration-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.custom-integration-select-wrapper {
+  position: relative;
+}
+
+.custom-integration-select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.custom-integration-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.custom-integration-select-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.custom-integration-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.custom-integration-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.custom-integration-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.custom-integration-icon-upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.custom-integration-file-input {
+  display: none;
+}
+
+.custom-integration-icon-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.custom-integration-icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.custom-integration-icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+/* ── Test Result ── */
+.custom-integration-test-result {
+  margin-bottom: var(--space-4);
+  min-height: 36px;
+}
+
+.custom-integration-test-success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: fade-in-up var(--transition-base) ease-out;
+}
+
+.custom-integration-test-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: fade-in-up var(--transition-base) ease-out;
+}
+
+/* ── Form Actions ── */
+.custom-integration-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .custom-integration-modal .modal-content {
+    margin: var(--space-4);
+    max-height: calc(100vh - var(--space-8));
+  }
+
+  .custom-integration-form-actions {
+    flex-wrap: wrap;
+  }
+
+  .custom-integration-form-actions .btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .custom-integration-icon-upload {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

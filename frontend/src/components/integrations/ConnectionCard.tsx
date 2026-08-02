@@ -4,16 +4,14 @@ import {
   GitBranch,
   MessageSquare,
   Kanban,
-  Mail,
+  Plug,
   CheckCircle2,
   ExternalLink,
   RefreshCw,
   Key,
   type LucideIcon,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { apiClient } from '@/services/axios';
-import type { ProviderMeta, OAuthConnection, TokenManualInput, DriveSyncResult } from '@/types/integration.types';
+import type { ProviderMeta, OAuthConnection, DriveSyncResult, TokenManualInput } from '@/types/integration.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
@@ -24,45 +22,35 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Github: GitBranch,
   MessageSquare,
   Kanban,
+  Plug,
 };
 
 interface ConnectionCardProps {
   providerMeta: ProviderMeta;
   connection?: OAuthConnection;
-  onSubmitManualToken: (payload: TokenManualInput) => Promise<void>;
   onTriggerDriveSync: () => Promise<DriveSyncResult>;
   isSyncingDrive: boolean;
+  onSubmitManualToken?: (payload: TokenManualInput) => Promise<void>;
+  onAddCustom?: () => void;
 }
 
 export const ConnectionCard = ({
   providerMeta,
   connection,
-  onSubmitManualToken,
   onTriggerDriveSync,
   isSyncingDrive,
+  onSubmitManualToken,
+  onAddCustom,
 }: ConnectionCardProps) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
 
   const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
   const isConnected = !!connection;
 
-  const handleOAuthConnect = async () => {
-    try {
-      setIsConnecting(true);
-      const response = await apiClient.get<{ url: string }>(`/integrations/${providerMeta.id}/connect`);
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      } else {
-        toast.error('Failed to generate OAuth redirect URL.');
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || `Failed to connect to ${providerMeta.label}`;
-      toast.error(msg);
-    } finally {
-      setIsConnecting(false);
-    }
+  const handleOAuthConnect = () => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+    window.location.href = `${apiBase}/auth/oauth/${providerMeta.id}/login`;
   };
 
 
@@ -76,6 +64,12 @@ export const ConnectionCard = ({
     }
   };
 
+  const handleManualTokenSubmit = async (payload: TokenManualInput) => {
+    if (!onSubmitManualToken) return;
+    await onSubmitManualToken(payload);
+    setIsTokenModalOpen(false);
+  };
+
   return (
     <>
       <div className="connection-card">
@@ -87,7 +81,7 @@ export const ConnectionCard = ({
           <div className="provider-info">
             <h3 className="provider-label">{providerMeta.label}</h3>
             <span className="auth-method-tag">
-              {providerMeta.authMethod === 'oauth' ? 'OAuth2 SSO' : 'Manual Token'}
+              {providerMeta.authMethod === 'oauth' ? 'OAuth2 SSO' : providerMeta.authMethod === 'manual' ? 'Manual Token' : 'API / OAuth / Webhook'}
             </span>
           </div>
 
@@ -119,7 +113,12 @@ export const ConnectionCard = ({
         )}
 
         <div className="connection-card-actions">
-          {providerMeta.authMethod === 'oauth' ? (
+          {providerMeta.authMethod === 'custom' ? (
+            <Button variant="primary" size="sm" onClick={onAddCustom}>
+              <ExternalLink size={14} className="mr-1" />
+              Add Integration
+            </Button>
+          ) : providerMeta.authMethod === 'oauth' ? (
             <Button
               variant={isConnected ? 'secondary' : 'primary'}
               size="sm"
@@ -134,7 +133,7 @@ export const ConnectionCard = ({
             <Button
               variant={isConnected ? 'secondary' : 'primary'}
               size="sm"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsTokenModalOpen(true)}
             >
               <Key size={14} className="mr-1" />
               {isConnected ? 'Update Token' : 'Configure Token'}
@@ -157,13 +156,13 @@ export const ConnectionCard = ({
         </div>
       </div>
 
-      {providerMeta.authMethod === 'manual' && (
+      {providerMeta.authMethod === 'manual' && onSubmitManualToken && (
         <ManualTokenModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isTokenModalOpen}
+          onClose={() => setIsTokenModalOpen(false)}
           provider={providerMeta.id as 'slack' | 'jira'}
           providerLabel={providerMeta.label}
-          onSubmitToken={onSubmitManualToken}
+          onSubmitToken={handleManualTokenSubmit}
         />
       )}
     </>

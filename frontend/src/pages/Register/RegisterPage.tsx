@@ -7,7 +7,7 @@ import { authService } from '@/services/authService';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import AnimatedShaderBackground from '@/components/background/AnimatedShaderBackground';
+import { AppLogo } from '@/components/common/AppLogo';
 import './RegisterPage.css';
 
 interface RegisterFormState {
@@ -101,16 +101,14 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <AnimatedShaderBackground />
-
       <div className="auth-form-card">
         <div className="auth-logo">
-          <img src="/logo-dark-mode.png" alt="UnifyAI Logo" className="auth-logo-img" />
+          <AppLogo className="app-logo-vertical app-logo-large" />
         </div>
 
         <div className="auth-form-header">
           <h1>Create your account</h1>
-          <p>Join UnifyAI to start managing enterprise knowledge with AI.</p>
+          <p>Join UNIFY-AI to start managing enterprise knowledge with AI.</p>
         </div>
 
 

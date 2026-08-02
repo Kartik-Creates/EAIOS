@@ -9,9 +9,6 @@ export const useConnections = () => {
   const [syncResult, setSyncResult] = useState<DriveSyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Fetches the user's active connections list from backend
-   */
   const fetchConnections = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -30,9 +27,6 @@ export const useConnections = () => {
     fetchConnections();
   }, [fetchConnections]);
 
-  /**
-   * Submits a manual token for Slack or Jira
-   */
   const submitManualToken = async (payload: TokenManualInput) => {
     try {
       setError(null);
@@ -44,9 +38,6 @@ export const useConnections = () => {
     }
   };
 
-  /**
-   * Triggers Google Drive RAG document sync
-   */
   const triggerDriveSync = async (): Promise<DriveSyncResult> => {
     try {
       setIsSyncingDrive(true);
@@ -63,16 +54,10 @@ export const useConnections = () => {
     }
   };
 
-  /**
-   * Helper to check if a specific provider is connected
-   */
   const isConnected = (providerId: string): boolean => {
     return connections.some((c) => c.provider === providerId);
   };
 
-  /**
-   * Helper to get connection metadata for a provider
-   */
   const getConnection = (providerId: string): OAuthConnection | undefined => {
     return connections.find((c) => c.provider === providerId);
   };

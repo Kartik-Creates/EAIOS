@@ -8,13 +8,57 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown,
+  MessageSquare,
+  Kanban,
+  CheckCircle2,
+  Circle,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatar } from '@/hooks/useAvatar';
 import { ROUTES } from '@/constants/routes';
 import { SearchOverlay } from './SearchOverlay';
 import './layout.css';
+
+interface NotificationItem {
+  id: string;
+  source: string;
+  sourceIcon: React.ReactNode;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+}
+
+const NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: '1',
+    source: 'Slack',
+    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    title: 'John mentioned you in #engineering',
+    description: '@you Can you review the latest PR when you get a chance?',
+    timestamp: '2 min ago',
+    read: false,
+  },
+  {
+    id: '2',
+    source: 'Jira',
+    sourceIcon: <Kanban size={16} className="text-[#0052CC]" />,
+    title: 'TASK-142 moved to "In Review"',
+    description: 'Status changed from In Progress to In Review by Sarah',
+    timestamp: '15 min ago',
+    read: false,
+  },
+  {
+    id: '3',
+    source: 'Slack',
+    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    title: 'Daily standup starts in 10 minutes',
+    description: 'Reminder: Engineering standup in #engineering channel',
+    timestamp: 'Today',
+    read: true,
+  },
+];
 
 interface TopbarProps {
   isCollapsed: boolean;
@@ -22,23 +66,30 @@ interface TopbarProps {
 }
 
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const { avatarUrl } = useAvatar(user?.id);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
-  const displayName = 'DB';
-  const initials = 'DB';
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsDropdownOpen(false);
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -48,6 +99,14 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = () => {
+    setIsNotificationsOpen((prev) => !prev);
+  };
 
   return (
     <header
@@ -91,14 +150,82 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
 
       {/* ── Right Actions ── */}
       <div className="topbar-actions">
-        <button
-          type="button"
-          className="topbar-icon-btn"
-          aria-label="Notifications"
-        >
-          <Bell size={18} aria-hidden="true" />
-        </button>
+        {/* Notification Bell */}
+        <div className="topbar-notification-wrapper" ref={notificationRef}>
+          <button
+            type="button"
+            className="topbar-icon-btn"
+            aria-label="Notifications"
+            onClick={handleNotificationClick}
+            aria-expanded={isNotificationsOpen}
+          >
+            <Bell size={18} aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="topbar-notification-badge" aria-label={`${unreadCount} unread notifications`}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
+          {isNotificationsOpen && (
+            <div className="topbar-notification-dropdown" role="menu">
+              <div className="topbar-notification-header">
+                <h3 className="topbar-notification-title">Notifications</h3>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="topbar-notification-mark-all"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+
+              <div className="topbar-notification-list">
+                {notifications.length === 0 ? (
+                  <div className="topbar-notification-empty">
+                    <MessageSquare size={32} className="topbar-notification-empty-icon" />
+                    <p>No notifications yet</p>
+                    <span>You're all caught up!</span>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        'topbar-notification-item',
+                        !notification.read && 'topbar-notification-item-unread'
+                      )}
+                      role="menuitem"
+                    >
+                      <div className="topbar-notification-item-icon">
+                        {notification.sourceIcon}
+                      </div>
+                      <div className="topbar-notification-item-content">
+                        <div className="topbar-notification-item-header">
+                          <span className="topbar-notification-item-source">{notification.source}</span>
+                          <span className="topbar-notification-item-time">{notification.timestamp}</span>
+                        </div>
+                        <p className="topbar-notification-item-title">{notification.title}</p>
+                        <p className="topbar-notification-item-desc">{notification.description}</p>
+                      </div>
+                      <div className="topbar-notification-item-indicator">
+                        {notification.read ? (
+                          <CheckCircle2 size={16} className="text-muted" />
+                        ) : (
+                          <Circle size={16} className="text-accent" />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User Avatar Dropdown */}
         <div className="topbar-dropdown-wrapper" ref={dropdownRef}>
           <button
             type="button"
@@ -107,15 +234,31 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
             aria-expanded={isDropdownOpen}
             aria-haspopup="true"
           >
-            <div className="topbar-avatar-ring" aria-hidden="true">
-              {initials}
+            <div className="topbar-avatar" aria-hidden="true">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Profile" />
+              ) : (
+                <User size={22} strokeWidth={1.5} />
+              )}
             </div>
-            <span className="topbar-user-name">{displayName}</span>
-            <ChevronDown size={16} aria-hidden="true" />
           </button>
 
           {isDropdownOpen && (
             <div className="topbar-dropdown" role="menu">
+              <div className="topbar-dropdown-user">
+                <div className="topbar-dropdown-avatar" aria-hidden="true">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" />
+                  ) : (
+                    <User size={20} strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="topbar-dropdown-user-info">
+                  <span className="topbar-dropdown-user-name">{user?.full_name || 'User'}</span>
+                  <span className="topbar-dropdown-user-email">{user?.email || ''}</span>
+                </div>
+              </div>
+              <div className="topbar-dropdown-divider" role="separator" />
               <NavLink
                 to={ROUTES.DASHBOARD}
                 className="topbar-dropdown-item"
@@ -168,3 +311,4 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
     </header>
   );
 };
+
