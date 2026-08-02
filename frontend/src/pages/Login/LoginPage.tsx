@@ -89,6 +89,7 @@ export default function LoginPage() {
           <AppLogo className="app-logo-vertical app-logo-large" />
         </div>
 
+
         <div className="auth-form-header">
           <h1>Welcome Back</h1>
           <p>Sign in to continue to your workspace.</p>

@@ -54,33 +54,29 @@
   color: var(--text-main);
 }
 
-.sidebar-logo-badge {
-  width: 32px;
+.sidebar-logo-icon-img {
   height: 32px;
-  background: var(--accent-primary);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: #fff;
+  width: auto;
+  object-fit: contain;
   flex-shrink: 0;
+  display: none;
 }
 
-.sidebar-logo-text {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-main);
-  white-space: nowrap;
+.sidebar-logo-full-img {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
   transition: opacity var(--transition-base);
 }
 
-.sidebar-collapsed .sidebar-logo-text {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
+.sidebar-collapsed .sidebar-logo-full-img {
+  display: none;
 }
+
+.sidebar-collapsed .sidebar-logo-icon-img {
+  display: block;
+}
+
 
 /* ── Sidebar Nav ── */
 .sidebar-nav {

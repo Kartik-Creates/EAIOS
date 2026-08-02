@@ -1,11 +1,14 @@
+import logging
 import httpx
 
 from app.core.config import settings
 from app.services.retrieval_service import RetrievedChunk
 
+logger = logging.getLogger("eaios.llm")
+
 
 class LLMServiceError(RuntimeError):
-    """Raised when the LLM backend is unreachable or returns an unexpected shape."""
+    """Raised when the active LLM provider (Ollama or Gemini) is unreachable or returns an error."""
 
 
 _SYSTEM_PROMPT = (
@@ -33,10 +36,8 @@ def _build_prompt(query: str, chunks: list[RetrievedChunk]) -> str:
     )
 
 
-async def generate_answer(query: str, chunks: list[RetrievedChunk]) -> str:
-    """Generate a grounded answer from retrieved chunks via the local Ollama model."""
-    prompt = _build_prompt(query, chunks)
-
+async def _generate_ollama_completion(prompt: str) -> str:
+    """Generate completion via local Ollama API."""
     async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=120.0) as client:
         try:
             response = await client.post(
@@ -57,3 +58,54 @@ async def generate_answer(query: str, chunks: list[RetrievedChunk]) -> str:
             f"Ollama returned an empty/invalid completion (model={settings.OLLAMA_CHAT_MODEL})"
         )
     return answer.strip()
+
+
+def _generate_gemini_completion(prompt: str) -> str:
+    """Generate completion via Google Gemini API using google-genai SDK."""
+    if not settings.GEMINI_API_KEY:
+        raise LLMServiceError(
+            "GEMINI_API_KEY is not configured in settings. Set GEMINI_API_KEY in your environment or .env file."
+        )
+
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+        )
+
+        if not response or not hasattr(response, "text") or not response.text:
+            raise LLMServiceError(
+                f"Gemini API returned an empty completion (model={settings.GEMINI_MODEL})"
+            )
+        return response.text.strip()
+    except Exception as exc:
+        if isinstance(exc, LLMServiceError):
+            raise
+        raise LLMServiceError(
+            f"Gemini API generation failed (model={settings.GEMINI_MODEL}): {type(exc).__name__}: {exc}"
+        ) from exc
+
+
+async def generate_completion(prompt: str) -> str:
+    """Route completion request to the configured LLM_PROVIDER ('ollama' or 'gemini')."""
+    provider = settings.LLM_PROVIDER.lower()
+
+    if provider == "gemini":
+        logger.info("Routing LLM generation to Gemini API (model=%s)", settings.GEMINI_MODEL)
+        return _generate_gemini_completion(prompt)
+    elif provider == "ollama":
+        logger.info("Routing LLM generation to Ollama (model=%s)", settings.OLLAMA_CHAT_MODEL)
+        return await _generate_ollama_completion(prompt)
+    else:
+        raise LLMServiceError(
+            f"Unsupported LLM_PROVIDER '{settings.LLM_PROVIDER}'. Supported providers: 'ollama', 'gemini'."
+        )
+
+
+async def generate_answer(query: str, chunks: list[RetrievedChunk]) -> str:
+    """Generate a grounded answer from retrieved chunks via the configured LLM provider."""
+    prompt = _build_prompt(query, chunks)
+    return await generate_completion(prompt)

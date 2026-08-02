@@ -133,3 +133,21 @@ async def test_drive_sync_success(client, db_session, monkeypatch):
     assert integration is not None
     assert integration.status == "active"
     assert integration.last_sync_at is not None
+
+@pytest.mark.asyncio
+async def test_drive_sync_rbac_scoping(client):
+    """A non-admin user cannot trigger Drive sync for another user's account."""
+    client.post("/api/v1/auth/register", json={
+        "email": "employee_sync@example.com", "password": "securepassword", "full_name": "Employee Sync"
+    })
+    login_resp = client.post("/api/v1/auth/login", data={
+        "username": "employee_sync@example.com", "password": "securepassword"
+    })
+    access_token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Attempt to sync another user's Drive account as a non-admin
+    resp = client.post("/api/v1/integrations/drive/sync?target_user_id=some-other-user-uuid", headers=headers)
+    assert resp.status_code == 403
+    assert "Insufficient permissions" in resp.json()["detail"]
+

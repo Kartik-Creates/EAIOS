@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  Mail,
   HardDrive,
   Github: GitBranch,
   MessageSquare,
@@ -51,6 +52,7 @@ export const ConnectionCard = ({
     const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
     window.location.href = `${apiBase}/auth/oauth/${providerMeta.id}/login`;
   };
+
 
   const handleSyncDrive = async () => {
     try {
@@ -121,10 +123,12 @@ export const ConnectionCard = ({
               variant={isConnected ? 'secondary' : 'primary'}
               size="sm"
               onClick={handleOAuthConnect}
+              disabled={isConnecting}
             >
               <ExternalLink size={14} className="mr-1" />
-              {isConnected ? 'Reconnect OAuth' : 'Connect via OAuth'}
+              {isConnecting ? 'Connecting...' : isConnected ? 'Reconnect OAuth' : 'Connect via OAuth'}
             </Button>
+
           ) : (
             <Button
               variant={isConnected ? 'secondary' : 'primary'}

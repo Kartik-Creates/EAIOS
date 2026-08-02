@@ -37,6 +37,7 @@ export const NotFoundPage = () => {
           This may be a mistyped URL, an expired link, or a route that requires different
           permissions.
         </p>
+
       </div>
 
       {/* ── Primary Actions ── */}

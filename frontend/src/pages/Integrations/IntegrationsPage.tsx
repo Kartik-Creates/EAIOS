@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import {
   Plug,
   AlertCircle,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useConnections } from '@/hooks/useConnections';
 import { ConnectionCard } from '@/components/integrations/ConnectionCard';
 import { CustomIntegrationModal } from '@/components/integrations/CustomIntegrationModal';
@@ -18,7 +20,25 @@ export const IntegrationsPage = () => {
     error,
     triggerDriveSync,
     getConnection,
+    refreshConnections,
   } = useConnections();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const callbackError = params.get('error');
+
+    if (connected) {
+      toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      refreshConnections();
+
+    } else if (callbackError) {
+      toast.error(`Connection cancelled or failed: ${callbackError}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refreshConnections]);
+
 
   const connectedCount = connections.length;
   const totalProvidersCount = PROVIDERS.length;
@@ -27,6 +47,7 @@ export const IntegrationsPage = () => {
   const handleSaveCustomIntegration = (data: Record<string, unknown>) => {
     console.log('Custom integration saved:', data);
   };
+
 
   return (
     <div className="integrations-page">

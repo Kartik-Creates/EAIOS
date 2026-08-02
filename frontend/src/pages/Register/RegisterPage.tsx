@@ -111,6 +111,7 @@ export default function RegisterPage() {
           <p>Join UNIFY-AI to start managing enterprise knowledge with AI.</p>
         </div>
 
+
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <Input
             id="register-fullname"

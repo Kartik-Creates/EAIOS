@@ -6,6 +6,10 @@ import { storage } from '@/utils/storage';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
 
+// CRITICAL SECURITY WARNING:
+// VITE_BYPASS_AUTH must NEVER be set to 'true' in any deployed, staging, demo,
+// or production environment. It bypasses all authentication and grants full 'admin'
+// superuser privileges to an unauthenticated mock session.
 const MOCK_USER: User = {
   id: 'local-dev-bypass',
   email: 'dev@eaios.local',
@@ -14,6 +18,7 @@ const MOCK_USER: User = {
   is_superuser: true,
   role: 'admin',
 };
+
 
 export interface AuthContextType extends AuthState {
   login: (payload: LoginPayload) => Promise<void>;

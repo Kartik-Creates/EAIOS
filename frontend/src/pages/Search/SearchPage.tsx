@@ -135,7 +135,7 @@ export const SearchPage = () => {
             </div>
 
             <span className="text-xs text-slate-400">
-              Powered by FAISS Vector Database & Cosine Distance Scoring
+              Powered by pgvector (PostgreSQL) & Cosine Distance Scoring
             </span>
           </div>
         </form>
@@ -156,7 +156,7 @@ export const SearchPage = () => {
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem 0', gap: '1rem' }}>
           <Spinner size="lg" />
-          <p className="text-slate-400 text-sm">Querying FAISS vector index & scoring similarity...</p>
+          <p className="text-slate-400 text-sm">Querying pgvector index & scoring similarity...</p>
         </div>
       ) : hasSearched && results.length > 0 ? (
         <main className="search-results-container">

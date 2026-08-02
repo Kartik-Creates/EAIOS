@@ -70,6 +70,7 @@ export const Sidebar = ({
           </NavLink>
         </div>
 
+
         <nav className="sidebar-nav" aria-label="Application pages">
           {visibleNavItems.map((item) => {
             const Icon = ICON_MAP[item.icon];

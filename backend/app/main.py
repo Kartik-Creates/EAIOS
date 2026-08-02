@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.rate_limit import limiter
-from app.routers import admin, auth, chat, health, search, integrations
+from app.routers import admin, auth, briefing, chat, health, integrations, search
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -32,6 +32,34 @@ app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["a
 app.include_router(chat.router, prefix=settings.API_V1_STR, tags=["chat"])
 app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
 app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
+app.include_router(briefing.router, prefix=settings.API_V1_STR, tags=["briefing"])
+
+
+import logging
+logger = logging.getLogger("eaios.security")
+
+@app.on_event("startup")
+async def startup_security_checks():
+    env = getattr(settings, "ENVIRONMENT", "development")
+    if env != "development":
+        logger.warning(
+            "CRITICAL SECURITY NOTICE: Running in non-development environment '%s'. "
+            "Confirm VITE_BYPASS_AUTH and dev-only auth bypass flags are disabled across all client builds.",
+            env
+        )
+    if settings.LLM_PROVIDER.lower() == "gemini" or settings.EMBEDDING_PROVIDER.lower() == "gemini":
+        if not settings.GEMINI_API_KEY:
+            logger.warning(
+                "CONFIG WARNING: GEMINI_API_KEY is not set while LLM_PROVIDER or EMBEDDING_PROVIDER is 'gemini'."
+            )
+        else:
+            try:
+                from google import genai
+                _ = genai.Client(api_key=settings.GEMINI_API_KEY)
+                logger.info("Gemini provider validation successful at startup.")
+            except Exception as exc:
+                logger.warning("Gemini provider initialization check failed at startup: %s", exc)
+
 
 @app.get("/")
 def root():
@@ -40,3 +68,4 @@ def root():
         "docs": "/docs",
         "health": f"{settings.API_V1_STR}/health",
     }
+
