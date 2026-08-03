@@ -1,20 +1,64 @@
-import { useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import {
+  Menu,
+  Search,
+  Bell,
+  LayoutDashboard,
+  User,
+  Settings,
+  LogOut,
+  MessageSquare,
+  Kanban,
+  CheckCircle2,
+  Circle,
+} from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
-import { Badge } from '@/components/ui/Badge';
-import { NAV_ITEMS, ROUTES } from '@/constants/routes';
-import { ROLES } from '@/constants/roles';
-import type { Role } from '@/types/auth.types';
+import { useAvatar } from '@/hooks/useAvatar';
+import { ROUTES } from '@/constants/routes';
+import { SearchOverlay } from './SearchOverlay';
 import './layout.css';
 
-// Map role → Badge variant
-const ROLE_BADGE_VARIANT: Record<Role, 'purple' | 'blue' | 'green' | 'slate'> = {
-  admin:    'purple',
-  manager:  'blue',
-  hr:       'green',
-  employee: 'slate',
-};
+interface NotificationItem {
+  id: string;
+  source: string;
+  sourceIcon: React.ReactNode;
+  title: string;
+  description: string;
+  timestamp: string;
+  read: boolean;
+}
+
+const NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: '1',
+    source: 'Slack',
+    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    title: 'John mentioned you in #engineering',
+    description: '@you Can you review the latest PR when you get a chance?',
+    timestamp: '2 min ago',
+    read: false,
+  },
+  {
+    id: '2',
+    source: 'Jira',
+    sourceIcon: <Kanban size={16} className="text-[#0052CC]" />,
+    title: 'TASK-142 moved to "In Review"',
+    description: 'Status changed from In Progress to In Review by Sarah',
+    timestamp: '15 min ago',
+    read: false,
+  },
+  {
+    id: '3',
+    source: 'Slack',
+    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    title: 'Daily standup starts in 10 minutes',
+    description: 'Reminder: Engineering standup in #engineering channel',
+    timestamp: 'Today',
+    read: true,
+  },
+];
 
 interface TopbarProps {
   isCollapsed: boolean;
@@ -22,70 +66,249 @@ interface TopbarProps {
 }
 
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
-  const { user } = useAuth();
-  const location = useLocation();
+  const { logout, user } = useAuth();
+  const { avatarUrl } = useAvatar(user?.id);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Derive current page label from the active route
-  const currentPage =
-    NAV_ITEMS.find((item) => item.path === location.pathname)?.label ??
-    (location.pathname === ROUTES.ROOT ? 'Dashboard' : 'EAIOS');
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Build avatar initials from full_name or email
-  const initials = (() => {
-    if (user?.full_name) {
-      const parts = user.full_name.trim().split(' ');
-      return parts.length >= 2
-        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-        : parts[0].slice(0, 2).toUpperCase();
-    }
-    return user?.email?.slice(0, 2).toUpperCase() ?? 'U';
-  })();
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDropdownOpen(false);
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
-  const displayName = user?.full_name ?? user?.email ?? 'User';
-  const role = user?.role ?? ROLES.EMPLOYEE;
-  const badgeVariant = ROLE_BADGE_VARIANT[role];
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = () => {
+    setIsNotificationsOpen((prev) => !prev);
+  };
 
   return (
     <header
       className={cn('topbar', isCollapsed && 'topbar-collapsed')}
       role="banner"
     >
-      {/* ── Hamburger (mobile only) ── */}
-      <button
-        type="button"
-        className="topbar-hamburger"
-        onClick={onToggleMobile}
-        aria-label="Toggle navigation menu"
-      >
-        <Menu size={22} />
-      </button>
+      {/* ── Left: Hamburger + Search ── */}
+      <div className="topbar-left">
+        <button
+          type="button"
+          className="topbar-hamburger"
+          onClick={onToggleMobile}
+          aria-label="Toggle navigation menu"
+        >
+          <Menu size={22} />
+        </button>
 
-      {/* ── Breadcrumb ── */}
-      <div className="topbar-breadcrumb" aria-label="Breadcrumb">
-        <span>EAIOS</span>
-        <span aria-hidden="true">/</span>
-        <span className="topbar-breadcrumb-current">{currentPage}</span>
+        <div
+          className="topbar-search"
+          onClick={() => setIsSearchOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsSearchOpen(true);
+            }
+          }}
+        >
+          <Search size={16} className="topbar-search-icon" aria-hidden="true" />
+          <input
+            type="text"
+            className="topbar-search-input"
+            placeholder="Search documents, meetings, workflows..."
+            readOnly
+            aria-label="Global search"
+          />
+          <kbd className="topbar-search-kbd">Ctrl K</kbd>
+        </div>
       </div>
 
       {/* ── Right Actions ── */}
       <div className="topbar-actions">
-        {user?.role && (
-          <Badge variant={badgeVariant}>
-            {role.charAt(0).toUpperCase() + role.slice(1)}
-          </Badge>
-        )}
+        {/* Notification Bell */}
+        <div className="topbar-notification-wrapper" ref={notificationRef}>
+          <button
+            type="button"
+            className="topbar-icon-btn"
+            aria-label="Notifications"
+            onClick={handleNotificationClick}
+            aria-expanded={isNotificationsOpen}
+          >
+            <Bell size={18} aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="topbar-notification-badge" aria-label={`${unreadCount} unread notifications`}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
-        <button
-          type="button"
-          className="topbar-avatar-btn"
-          aria-label={`Signed in as ${displayName}`}
-        >
-          <div className="topbar-avatar-ring" aria-hidden="true">
-            {initials}
-          </div>
-          <span className="topbar-user-name">{displayName}</span>
-        </button>
+          {isNotificationsOpen && (
+            <div className="topbar-notification-dropdown" role="menu">
+              <div className="topbar-notification-header">
+                <h3 className="topbar-notification-title">Notifications</h3>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="topbar-notification-mark-all"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+
+              <div className="topbar-notification-list">
+                {notifications.length === 0 ? (
+                  <div className="topbar-notification-empty">
+                    <MessageSquare size={32} className="topbar-notification-empty-icon" />
+                    <p>No notifications yet</p>
+                    <span>You're all caught up!</span>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        'topbar-notification-item',
+                        !notification.read && 'topbar-notification-item-unread'
+                      )}
+                      role="menuitem"
+                    >
+                      <div className="topbar-notification-item-icon">
+                        {notification.sourceIcon}
+                      </div>
+                      <div className="topbar-notification-item-content">
+                        <div className="topbar-notification-item-header">
+                          <span className="topbar-notification-item-source">{notification.source}</span>
+                          <span className="topbar-notification-item-time">{notification.timestamp}</span>
+                        </div>
+                        <p className="topbar-notification-item-title">{notification.title}</p>
+                        <p className="topbar-notification-item-desc">{notification.description}</p>
+                      </div>
+                      <div className="topbar-notification-item-indicator">
+                        {notification.read ? (
+                          <CheckCircle2 size={16} className="text-muted" />
+                        ) : (
+                          <Circle size={16} className="text-accent" />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User Avatar Dropdown */}
+        <div className="topbar-dropdown-wrapper" ref={dropdownRef}>
+          <button
+            type="button"
+            className="topbar-avatar-btn"
+            onClick={() => setIsDropdownOpen((prev) => !prev)}
+            aria-expanded={isDropdownOpen}
+            aria-haspopup="true"
+          >
+            <div className="topbar-avatar" aria-hidden="true">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Profile" />
+              ) : (
+                <User size={22} strokeWidth={1.5} />
+              )}
+            </div>
+          </button>
+
+          {isDropdownOpen && (
+            <div className="topbar-dropdown" role="menu">
+              <div className="topbar-dropdown-user">
+                <div className="topbar-dropdown-avatar" aria-hidden="true">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" />
+                  ) : (
+                    <User size={20} strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="topbar-dropdown-user-info">
+                  <span className="topbar-dropdown-user-name">{user?.full_name || 'User'}</span>
+                  <span className="topbar-dropdown-user-email">{user?.email || ''}</span>
+                </div>
+              </div>
+              <div className="topbar-dropdown-divider" role="separator" />
+              <NavLink
+                to={ROUTES.DASHBOARD}
+                className="topbar-dropdown-item"
+                onClick={() => setIsDropdownOpen(false)}
+                role="menuitem"
+              >
+                <LayoutDashboard size={16} aria-hidden="true" />
+                Dashboard
+              </NavLink>
+              <NavLink
+                to={ROUTES.PROFILE}
+                className="topbar-dropdown-item"
+                onClick={() => setIsDropdownOpen(false)}
+                role="menuitem"
+              >
+                <User size={16} aria-hidden="true" />
+                Profile
+              </NavLink>
+              <div className="topbar-dropdown-divider" role="separator" />
+              <button
+                type="button"
+                className="topbar-dropdown-item"
+                disabled
+                role="menuitem"
+              >
+                <Settings size={16} aria-hidden="true" />
+                Settings
+              </button>
+              <div className="topbar-dropdown-divider" role="separator" />
+              <button
+                type="button"
+                className="topbar-dropdown-item"
+                onClick={() => {
+                  logout();
+                  setIsDropdownOpen(false);
+                }}
+                role="menuitem"
+              >
+                <LogOut size={16} aria-hidden="true" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {isSearchOpen && (
+        <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      )}
     </header>
   );
 };
+

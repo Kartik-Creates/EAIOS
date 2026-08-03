@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -12,6 +12,15 @@ from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
+from app.core.rate_limit import limiter
+from app.core.redis import (
+    add_active_jti,
+    clear_active_jtis,
+    get_active_jtis,
+    is_jti_revoked,
+    remove_active_jti,
+    revoke_jti,
+)
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -19,18 +28,10 @@ from app.core.security import (
     get_password_hash,
     verify_password,
 )
-from app.core.redis import (
-    add_active_jti,
-    remove_active_jti,
-    get_active_jtis,
-    clear_active_jtis,
-    is_jti_revoked,
-    revoke_jti,
-)
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
 from app.schemas.oauth import OAuthConnectionRead, TokenManualInput
-from app.schemas.user import RefreshRequest, Token, UserCreate, UserRead
+from app.schemas.user import RefreshRequest, Token, UserCreate, UserRead, UserUpdate
 
 router = APIRouter()
 
@@ -66,10 +67,13 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ):
+
     stmt = select(User).where(User.email == form_data.username)
     res = await db.execute(stmt)
     user = res.scalars().first()
@@ -181,6 +185,52 @@ async def logout(
     db.add(current_user)
     await db.commit()
     return {"detail": "Successfully logged out — all refresh tokens revoked."}
+
+
+@router.put("/me", response_model=UserRead)
+async def update_user_me(
+    user_in: UserUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Update current user's profile information."""
+    if user_in.full_name is not None:
+        current_user.full_name = user_in.full_name
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password")
+async def change_password(
+    body: dict,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Change the current user's password after verifying the current password."""
+    current_password = body.get("current_password")
+    new_password = body.get("new_password")
+    if not current_password or not new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both current_password and new_password are required.",
+        )
+    if not verify_password(current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password.",
+        )
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters long.",
+        )
+    current_user.hashed_password = get_password_hash(new_password)
+    current_user.token_version += 1
+    db.add(current_user)
+    await db.commit()
+    return {"detail": "Password updated successfully. Please sign in again."}
 
 
 @router.get("/me", response_model=UserRead)

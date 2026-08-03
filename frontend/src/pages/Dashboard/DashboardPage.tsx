@@ -8,8 +8,6 @@ import {
   Activity,
   Database,
   ArrowRight,
-  Sparkles,
-  RefreshCw,
   FileText,
   CheckCircle2,
   HardDrive,
@@ -21,6 +19,7 @@ import {
   GitBranch,
   MessageCircle,
   SearchCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { healthService } from '@/services/healthService';
@@ -147,28 +146,28 @@ export const DashboardPage = () => {
       value: '1,284',
       change: '+12%',
       trend: 'up',
-      icon: <MessageCircle size={18} className="text-blue-400" />,
+      icon: <MessageCircle size={18} className="text-muted" />,
     },
     {
       label: 'Semantic Searches',
       value: '862',
       change: '+8%',
       trend: 'up',
-      icon: <SearchCheck size={18} className="text-purple-400" />,
+      icon: <SearchCheck size={18} className="text-muted" />,
     },
     {
       label: 'Workflow Triggers',
       value: '142',
       change: '+24%',
       trend: 'up',
-      icon: <GitBranch size={18} className="text-green-400" />,
+      icon: <GitBranch size={18} className="text-muted" />,
     },
     {
       label: 'Avg Response Time',
       value: '1.8s',
       change: '-0.3s',
       trend: 'up',
-      icon: <TrendingUp size={18} className="text-amber-400" />,
+      icon: <TrendingUp size={18} className="text-muted" />,
     },
   ];
 
@@ -184,24 +183,14 @@ export const DashboardPage = () => {
                 {backendHealth === 'checking'
                   ? 'Checking System Status...'
                   : backendHealth === 'online'
-                  ? 'System Operational'
-                  : 'Backend Disconnected'}
+                    ? 'System Operational'
+                    : 'Backend Disconnected'}
               </div>
-              {user?.role === 'admin' ? (
-                <Badge variant="purple">Admin Privilege</Badge>
-              ) : (
-                <Badge variant="blue">Enterprise Tier</Badge>
-              )}
             </div>
 
             <h1>
-              {getGreeting()}, <span className="gradient-text">{userName}</span>
+              {getGreeting()}, <span className="text-accent">{userName}</span>
             </h1>
-
-            <p className="hero-subtitle">
-              Welcome to your Enterprise AI Operating System. Orchestrate RAG searches, continuous
-              cloud data syncs, and intelligent neural chat agents from a single unified hub.
-            </p>
           </div>
 
           <div className="hero-actions">
@@ -221,7 +210,7 @@ export const DashboardPage = () => {
       <section className="kpi-grid" aria-label="System Metrics">
         <div className="kpi-card">
           <div className="kpi-header">
-            <div className="kpi-icon-wrapper kpi-icon-blue">
+            <div className="kpi-icon-wrapper bg-secondary text-muted">
               <Database size={22} />
             </div>
             <span className="kpi-trend positive">+14% this week</span>
@@ -232,8 +221,8 @@ export const DashboardPage = () => {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <div className="kpi-icon-wrapper kpi-icon-purple">
-              <Sparkles size={22} />
+            <div className="kpi-icon-wrapper bg-secondary text-muted">
+              <Activity size={22} />
             </div>
             <span className="kpi-trend positive">Active</span>
           </div>
@@ -243,7 +232,7 @@ export const DashboardPage = () => {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <div className="kpi-icon-wrapper kpi-icon-green">
+            <div className="kpi-icon-wrapper bg-secondary text-muted">
               <Plug size={22} />
             </div>
             <span className="kpi-trend neutral">
@@ -256,7 +245,7 @@ export const DashboardPage = () => {
 
         <div className="kpi-card">
           <div className="kpi-header">
-            <div className="kpi-icon-wrapper kpi-icon-amber">
+            <div className="kpi-icon-wrapper bg-secondary text-muted">
               <Activity size={22} />
             </div>
             <span className={`kpi-trend ${backendHealth === 'online' ? 'positive' : 'neutral'}`}>
@@ -273,7 +262,7 @@ export const DashboardPage = () => {
       {/* ── Quick Prompt Launch Bar ── */}
       <section className="quick-prompt-banner" aria-label="Quick Prompt Assistant">
         <div className="quick-prompt-header">
-          <Sparkles size={20} className="text-blue-400" />
+          <MessageSquare size={20} className="text-muted" />
           <h2>Instant Knowledge Query</h2>
         </div>
 
@@ -309,7 +298,7 @@ export const DashboardPage = () => {
           <button
             type="button"
             className="chip-btn"
-            onClick={() => handleChipClick('Explain current user roles and permissions in EAIOS')}
+            onClick={() => handleChipClick('Explain current user roles and permissions in UNIFY-AI')}
           >
             <Users size={14} /> System permissions guide
           </button>
@@ -378,7 +367,7 @@ export const DashboardPage = () => {
         <section className="section-card" aria-label="Recent System Activity">
           <div className="section-card-header">
             <div className="section-card-title">
-              <Activity size={20} className="text-blue-400" />
+              <Activity size={20} className="text-muted" />
               <h3>System Activity & Index Audit</h3>
             </div>
             <Badge variant="slate">Live Feed</Badge>
@@ -386,7 +375,7 @@ export const DashboardPage = () => {
 
           <div className="activity-list">
             <div className="activity-item">
-              <div className="activity-icon bg-blue-500/20 text-blue-400">
+              <div className="activity-icon bg-secondary text-muted">
                 <CheckCircle2 size={18} />
               </div>
               <div className="activity-details">
@@ -399,7 +388,7 @@ export const DashboardPage = () => {
             </div>
 
             <div className="activity-item">
-              <div className="activity-icon bg-purple-500/20 text-purple-400">
+              <div className="activity-icon bg-secondary text-muted">
                 <MessageSquare size={18} />
               </div>
               <div className="activity-details">
@@ -412,7 +401,7 @@ export const DashboardPage = () => {
             </div>
 
             <div className="activity-item">
-              <div className="activity-icon bg-green-500/20 text-green-400">
+              <div className="activity-icon bg-secondary text-muted">
                 <ShieldCheck size={18} />
               </div>
               <div className="activity-details">
@@ -425,13 +414,13 @@ export const DashboardPage = () => {
             </div>
 
             <div className="activity-item">
-              <div className="activity-icon bg-amber-500/20 text-amber-400">
+              <div className="activity-icon bg-secondary text-muted">
                 <RefreshCw size={18} />
               </div>
               <div className="activity-details">
                 <div className="activity-title">Embeddings Cache Warming</div>
                 <div className="activity-desc">
-                  Pre-computed FAISS vector index for fast semantic lookup responses.
+                  Pre-computed pgvector index for fast semantic lookup responses.
                 </div>
               </div>
               <span className="activity-time">3h ago</span>
@@ -443,7 +432,7 @@ export const DashboardPage = () => {
         <section className="section-card" aria-label="Connected Services & Shortcuts">
           <div className="section-card-header">
             <div className="section-card-title">
-              <Plug size={20} className="text-purple-400" />
+              <Plug size={20} className="text-muted" />
               <h3>Integrations</h3>
             </div>
             <Button
@@ -458,7 +447,7 @@ export const DashboardPage = () => {
           <div className="integrations-list">
             <div className="integration-item">
               <div className="integration-meta">
-                <HardDrive size={18} className="text-blue-400" />
+                <HardDrive size={18} className="text-muted" />
                 <span className="integration-name">Google Drive</span>
               </div>
               <Badge variant="green" className="integration-status-badge">
@@ -468,7 +457,7 @@ export const DashboardPage = () => {
 
             <div className="integration-item">
               <div className="integration-meta">
-                <MessageSquare size={18} className="text-purple-400" />
+                <MessageSquare size={18} className="text-muted" />
                 <span className="integration-name">Slack Workspace</span>
               </div>
               <Badge variant="slate" className="integration-status-badge">
@@ -478,7 +467,7 @@ export const DashboardPage = () => {
 
             <div className="integration-item">
               <div className="integration-meta">
-                <FileText size={18} className="text-yellow-400" />
+                <FileText size={18} className="text-muted" />
                 <span className="integration-name">Jira / Confluence</span>
               </div>
               <Badge variant="slate" className="integration-status-badge">
@@ -489,7 +478,7 @@ export const DashboardPage = () => {
 
           <div className="section-card-header" style={{ marginTop: '0.5rem', paddingTop: '1rem' }}>
             <div className="section-card-title">
-              <Sparkles size={20} className="text-blue-400" />
+              <ArrowRight size={20} className="text-muted" />
               <h3>Quick Shortcuts</h3>
             </div>
           </div>
@@ -503,7 +492,7 @@ export const DashboardPage = () => {
                 <div className="quick-link-title">AI Assistant Chat</div>
                 <div className="quick-link-sub">Interactive RAG conversation</div>
               </div>
-              <ArrowRight size={16} className="text-slate-400" />
+              <ArrowRight size={16} className="text-muted" />
             </div>
 
             <div className="quick-link-card" onClick={() => navigate(ROUTES.SEARCH)}>
@@ -514,7 +503,7 @@ export const DashboardPage = () => {
                 <div className="quick-link-title">Semantic Document Search</div>
                 <div className="quick-link-sub">Vector index query tool</div>
               </div>
-              <ArrowRight size={16} className="text-slate-400" />
+              <ArrowRight size={16} className="text-muted" />
             </div>
 
             {user?.role === 'admin' && (
@@ -526,7 +515,7 @@ export const DashboardPage = () => {
                   <div className="quick-link-title">Admin Management</div>
                   <div className="quick-link-sub">User privileges & system audit</div>
                 </div>
-                <ArrowRight size={16} className="text-slate-400" />
+                <ArrowRight size={16} className="text-muted" />
               </div>
             )}
           </div>

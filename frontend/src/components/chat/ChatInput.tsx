@@ -1,22 +1,15 @@
 import { useState, useRef, type KeyboardEvent, type FormEvent } from 'react';
-import { Send, Trash2, CornerDownLeft } from 'lucide-react';
+import { Send, Paperclip, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface ChatInputProps {
   onSendMessage: (query: string) => void;
-  onClearChat: () => void;
   isLoading: boolean;
-  hasMessages: boolean;
 }
 
 const MAX_CHAR_LIMIT = 4000;
 
-export const ChatInput = ({
-  onSendMessage,
-  onClearChat,
-  isLoading,
-  hasMessages,
-}: ChatInputProps) => {
+export const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const [query, setQuery] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -27,7 +20,6 @@ export const ChatInput = ({
     onSendMessage(query);
     setQuery('');
 
-    // Reset height of textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -46,7 +38,6 @@ export const ChatInput = ({
       setQuery(val);
     }
 
-    // Auto-expand textarea height up to a max limit
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
@@ -56,38 +47,39 @@ export const ChatInput = ({
   return (
     <div className="chat-input-container">
       <form onSubmit={handleSubmit} className="chat-input-form">
-        <div className="textarea-wrapper">
+        <div className="chat-input-bar">
+          <button
+            type="button"
+            className="chat-input-action-btn"
+            aria-label="Attach file"
+            title="Attach file"
+            tabIndex={-1}
+          >
+            <Paperclip size={18} />
+          </button>
+
           <textarea
             ref={textareaRef}
             rows={1}
             value={query}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about internal documents, APIs, or company guidelines (Press Enter to send)..."
+            placeholder="Ask anything..."
             disabled={isLoading}
             className="chat-textarea"
             aria-label="Ask AI Assistant query input"
           />
 
-          <div className="chat-input-controls">
-            <span className="char-count">
-              {query.length} / {MAX_CHAR_LIMIT}
-            </span>
-
-            {hasMessages && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onClearChat}
-                disabled={isLoading}
-                title="Clear current conversation"
-                className="clear-chat-btn"
-              >
-                <Trash2 size={16} />
-                <span className="clear-label">Reset Chat</span>
-              </Button>
-            )}
+          <div className="chat-input-actions">
+            <button
+              type="button"
+              className="chat-input-action-btn"
+              aria-label="Voice input"
+              title="Voice input"
+              tabIndex={-1}
+            >
+              <Mic size={18} />
+            </button>
 
             <Button
               type="submit"
@@ -96,20 +88,13 @@ export const ChatInput = ({
               disabled={!query.trim() || isLoading}
               isLoading={isLoading}
               className="send-message-btn"
+              aria-label="Send message"
             >
-              <span>Send</span>
-              {!isLoading && <Send size={16} className="ml-1" />}
+              {!isLoading && <Send size={16} />}
             </Button>
           </div>
         </div>
       </form>
-      <div className="chat-input-hint">
-        <span>
-          <CornerDownLeft size={12} className="inline mr-1" />
-          ProTip: Use <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for line breaks. RAG
-          searches are scoped to your RBAC permissions.
-        </span>
-      </div>
     </div>
   );
 };

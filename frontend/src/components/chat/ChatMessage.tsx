@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Sparkles, User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
+import { User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
 import type { Message } from '@/types/chat.types';
+
 import { Badge } from '@/components/ui/Badge';
 import { CitationCard } from './CitationCard';
 
@@ -53,14 +54,15 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
           </div>
         ) : (
           <div className="assistant-avatar-icon">
-            <Sparkles size={18} />
+            <img src="/logo-icon-dark-mode.png" alt="UnifyAI" style={{ width: 18, height: 18, objectFit: 'contain' }} />
           </div>
+
         )}
       </div>
 
       <div className="message-bubble-wrapper">
         <div className="message-header">
-          <span className="sender-name">{isUser ? userName : 'EAIOS Assistant'}</span>
+           <span className="sender-name">{isUser ? userName : 'UNIFY-AI Assistant'}</span>
           <span className="message-time">{formattedTime}</span>
           {!isUser && getConfidenceBadge(message.confidence)}
         </div>

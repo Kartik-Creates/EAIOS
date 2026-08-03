@@ -26,5 +26,15 @@ export const integrationsService = {
   triggerDriveSync: async (): Promise<DriveSyncResult> => {
     const response = await apiClient.post<DriveSyncResult>('/integrations/drive/sync');
     return response.data;
+  },
+
+  /**
+   * Request OAuth authorization URL for a given provider (e.g. google, github).
+   * @param provider Provider identifier
+   * @returns Target OAuth authorization URL
+   */
+  connectOAuth: async (provider: string): Promise<string> => {
+    const response = await apiClient.get<{ url: string }>(`/integrations/${provider}/connect`);
+    return response.data.url;
   }
 };

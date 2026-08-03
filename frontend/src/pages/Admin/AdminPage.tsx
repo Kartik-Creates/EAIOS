@@ -17,7 +17,6 @@ import { adminService } from '@/services/adminService';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import type { AdminUser } from '@/types/admin.types';
-import type { Role } from '@/types/auth.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -131,27 +130,13 @@ export const AdminPage = () => {
     );
   }, [users, searchTerm]);
 
-  // Helper for role badge variant
-  const getRoleBadgeVariant = (role: Role) => {
-    switch (role) {
-      case 'admin':
-        return 'purple';
-      case 'manager':
-        return 'blue';
-      case 'hr':
-        return 'yellow';
-      default:
-        return 'green';
-    }
-  };
-
   return (
     <div className="admin-page">
       {/* ── Admin Hero ── */}
       <header className="admin-hero-panel">
         <div className="admin-hero-text">
           <h1>
-            <ShieldCheck size={24} className="text-purple-400" />
+            <ShieldCheck size={24} className="text-muted" />
             Platform Administration Console
           </h1>
           <p>
@@ -162,19 +147,19 @@ export const AdminPage = () => {
 
         <div className="admin-stats-row">
           <div className="admin-stat-pill">
-            <span className="admin-stat-number purple">{users.length}</span>
+            <span className="admin-stat-number">{users.length}</span>
             <span className="admin-stat-label">Total Users</span>
           </div>
           <div className="admin-stat-pill">
-            <span className="admin-stat-number green">{activeCount}</span>
+            <span className="admin-stat-number">{activeCount}</span>
             <span className="admin-stat-label">Active</span>
           </div>
           <div className="admin-stat-pill">
-            <span className="admin-stat-number red">{inactiveCount}</span>
+            <span className="admin-stat-number">{inactiveCount}</span>
             <span className="admin-stat-label">Inactive</span>
           </div>
           <div className="admin-stat-pill">
-            <span className="admin-stat-number amber">{adminCount}</span>
+            <span className="admin-stat-number">{adminCount}</span>
             <span className="admin-stat-label">Admins</span>
           </div>
         </div>
@@ -254,7 +239,7 @@ export const AdminPage = () => {
                       </div>
                     </td>
                     <td>
-                      <Badge variant={getRoleBadgeVariant(u.role)}>
+                      <Badge variant="slate">
                         {u.role.toUpperCase()}
                       </Badge>
                     </td>
@@ -266,9 +251,9 @@ export const AdminPage = () => {
                     </td>
                     <td>
                       {u.is_superuser ? (
-                        <Badge variant="purple">Yes</Badge>
+                        <Badge variant="slate">Yes</Badge>
                       ) : (
-                        <span className="text-xs text-slate-500">No</span>
+                        <span className="text-xs text-muted">No</span>
                       )}
                     </td>
                     <td>
@@ -417,7 +402,7 @@ export const AdminPage = () => {
           </div>
 
           <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-            <ShieldCheck size={20} className="text-purple-400" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
+            <ShieldCheck size={20} className="text-muted" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
             <div>
               <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-main)' }}>RBAC Document Filtering</div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '0.2rem' }}>

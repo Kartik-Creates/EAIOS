@@ -1,16 +1,15 @@
+import { useEffect } from 'react';
 import {
   Plug,
-  ShieldCheck,
-  Lock,
-  RefreshCw,
-  Eye,
   AlertCircle,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useConnections } from '@/hooks/useConnections';
 import { ConnectionCard } from '@/components/integrations/ConnectionCard';
+import { CustomIntegrationModal } from '@/components/integrations/CustomIntegrationModal';
 import { PROVIDERS } from '@/constants/providers';
-import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
+import { useState } from 'react';
 import './IntegrationsPage.css';
 
 export const IntegrationsPage = () => {
@@ -19,13 +18,36 @@ export const IntegrationsPage = () => {
     isLoading,
     isSyncingDrive,
     error,
-    submitManualToken,
     triggerDriveSync,
     getConnection,
+    refreshConnections,
   } = useConnections();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const callbackError = params.get('error');
+
+    if (connected) {
+      toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      refreshConnections();
+
+    } else if (callbackError) {
+      toast.error(`Connection cancelled or failed: ${callbackError}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refreshConnections]);
+
 
   const connectedCount = connections.length;
   const totalProvidersCount = PROVIDERS.length;
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+
+  const handleSaveCustomIntegration = (data: Record<string, unknown>) => {
+    console.log('Custom integration saved:', data);
+  };
+
 
   return (
     <div className="integrations-page">
@@ -33,13 +55,10 @@ export const IntegrationsPage = () => {
       <header className="integrations-hero-panel">
         <div className="integrations-hero-text">
           <h1>
-            <Plug size={24} className="text-purple-400" />
-            Enterprise Data Connectors & Integrations
+            <Plug size={24} className="text-muted" />
+            Enterprise Data Connectors
           </h1>
-          <p>
-            Connect cloud document stores, code repositories, and collaboration workspaces. EAIOS
-            continuously indexes connected assets into secure vector embeddings scoped by RBAC.
-          </p>
+
         </div>
 
         <div className="integrations-stats-pill">
@@ -87,9 +106,9 @@ export const IntegrationsPage = () => {
                 key={providerMeta.id}
                 providerMeta={providerMeta}
                 connection={activeConnection}
-                onSubmitManualToken={submitManualToken}
                 onTriggerDriveSync={triggerDriveSync}
                 isSyncingDrive={isSyncingDrive}
+                onAddCustom={providerMeta.id === 'custom' ? () => setIsCustomModalOpen(true) : undefined}
               />
             );
           })}
@@ -97,45 +116,12 @@ export const IntegrationsPage = () => {
       )}
 
       {/* ── Security & Data Compliance Section ── */}
-      <section className="security-assurance-card" aria-label="Security Assurance">
-        <div className="security-header">
-          <ShieldCheck size={22} className="text-blue-400" />
-          <h3>Data Security & Encryption Guarantees</h3>
-          <Badge variant="blue">Enterprise Security</Badge>
-        </div>
 
-        <div className="security-grid">
-          <div className="security-feature-item">
-            <Lock size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">AES-256 Encryption at Rest</div>
-              <div className="security-feature-desc">
-                All OAuth refresh tokens and manual API keys are stored encrypted using Fernet symmetric key cryptography.
-              </div>
-            </div>
-          </div>
-
-          <div className="security-feature-item">
-            <Eye size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">Read-Only Scope Enforcement</div>
-              <div className="security-feature-desc">
-                Integrations request minimum read-only permissions (`drive.readonly`, `repo`). No write access is ever requested.
-              </div>
-            </div>
-          </div>
-
-          <div className="security-feature-item">
-            <RefreshCw size={20} className="security-feature-icon" />
-            <div>
-              <div className="security-feature-title">Continuous Background Ingestion</div>
-              <div className="security-feature-desc">
-                Document changes and new files are automatically chunked into 500-character vector embeddings upon sync.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CustomIntegrationModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        onSave={handleSaveCustomIntegration}
+      />
     </div>
   );
 };

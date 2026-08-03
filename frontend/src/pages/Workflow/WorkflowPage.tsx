@@ -7,7 +7,6 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
-  RefreshCw,
   Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -162,25 +161,7 @@ export const WorkflowPage = () => {
   return (
     <div className="workflow-page">
       {/* ── Hero Header ── */}
-      <header className="workflow-hero-panel">
-        <div className="workflow-hero-text">
-          <h1>
-            <Wand2 size={24} className="text-purple-400" />
-            Workflow Automation
-          </h1>
-          <p>
-            Trigger deterministic enterprise workflows with human-in-the-loop confirmation for
-            write actions. All executions are audit-logged and reversible.
-          </p>
-        </div>
 
-        <div className="workflow-hero-actions">
-          <Button variant="ghost" size="sm" onClick={fetchTools} disabled={isLoadingTools}>
-            <RefreshCw size={14} className="mr-1" />
-            Refresh Tools
-          </Button>
-        </div>
-      </header>
 
       {/* ── Error Banner ── */}
       {error && (
@@ -201,7 +182,7 @@ export const WorkflowPage = () => {
               {renderStatusIcon(activeRun.status, 20)}
               <h2>Active Workflow Run</h2>
             </div>
-            <Badge variant={activeRun.status === 'completed' ? 'green' : activeRun.status === 'failed' ? 'red' : 'purple'}>
+            <Badge variant="slate">
               {activeRun.status.toUpperCase()}
             </Badge>
           </div>
@@ -258,20 +239,20 @@ export const WorkflowPage = () => {
       <section className="workflow-section-card">
         <div className="workflow-section-header">
           <div className="workflow-section-title">
-            <Play size={20} className="text-blue-400" />
+            <Play size={20} className="text-muted" />
             <h2>Available Workflows</h2>
           </div>
-          <Badge variant="blue">{tools.length} Tools</Badge>
+          <Badge variant="slate">{tools.length} Tools</Badge>
         </div>
 
         {isLoadingTools ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 0', gap: '1rem' }}>
             <Spinner size="lg" />
-            <p className="text-sm text-slate-400">Loading workflow tool catalog...</p>
+            <p className="text-sm text-muted">Loading workflow tool catalog...</p>
           </div>
         ) : tools.length === 0 ? (
           <div className="workflow-empty-state">
-            <Wand2 size={32} className="text-slate-500" style={{ margin: '0 auto 1rem' }} />
+            <Wand2 size={32} className="text-muted" style={{ margin: '0 auto 1rem' }} />
             <p>No workflow tools available. Contact your administrator.</p>
           </div>
         ) : (
@@ -311,7 +292,7 @@ export const WorkflowPage = () => {
         <section className="workflow-section-card workflow-form-card">
           <div className="workflow-section-header">
             <div className="workflow-section-title">
-              <Wand2 size={20} className="text-purple-400" />
+              <Wand2 size={20} className="text-muted" />
               <h2>Configure: {selectedTool.name}</h2>
             </div>
             <Button variant="ghost" size="sm" onClick={() => { setSelectedTool(null); setFormValues({}); }}>
@@ -319,7 +300,7 @@ export const WorkflowPage = () => {
             </Button>
           </div>
 
-          <p className="text-xs text-slate-400" style={{ margin: '0 0 1rem 0' }}>
+          <p className="text-xs text-muted" style={{ margin: '0 0 1rem 0' }}>
             {selectedTool.description}
           </p>
 
@@ -404,15 +385,7 @@ export const WorkflowPage = () => {
                   </div>
                 </div>
                 <Badge
-                  variant={
-                    run.status === 'completed'
-                      ? 'green'
-                      : run.status === 'failed'
-                        ? 'red'
-                        : run.status === 'running'
-                          ? 'blue'
-                          : 'slate'
-                  }
+                  variant="slate"
                 >
                   {run.status}
                 </Badge>
@@ -433,7 +406,7 @@ export const WorkflowPage = () => {
       >
         <div className="workflow-confirm-modal">
           <div className="workflow-confirm-warning">
-            <AlertCircle size={24} className="text-amber-400" />
+            <AlertCircle size={24} className="text-muted" />
             <p>
               This workflow performs a <strong>write action</strong> and requires explicit human confirmation.
             </p>

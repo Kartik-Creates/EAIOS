@@ -70,10 +70,10 @@ export const SearchPage = () => {
       <header className="search-header-panel">
         <div className="search-title-area">
           <h1>
-            <Database size={24} className="text-blue-400" />
+            <Database size={24} className="text-muted" />
             Semantic Knowledge Base Search
           </h1>
-          <Badge variant="blue">Vector Index Scope: Active Role</Badge>
+          <Badge variant="slate">Vector Index Scope: Active Role</Badge>
         </div>
 
         <form onSubmit={handleSubmit} className="search-form-group">
@@ -135,7 +135,7 @@ export const SearchPage = () => {
             </div>
 
             <span className="text-xs text-slate-400">
-              Powered by FAISS Vector Database & Cosine Distance Scoring
+              Powered by pgvector (PostgreSQL) & Cosine Distance Scoring
             </span>
           </div>
         </form>
@@ -156,7 +156,7 @@ export const SearchPage = () => {
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem 0', gap: '1rem' }}>
           <Spinner size="lg" />
-          <p className="text-slate-400 text-sm">Querying FAISS vector index & scoring similarity...</p>
+          <p className="text-slate-400 text-sm">Querying pgvector index & scoring similarity...</p>
         </div>
       ) : hasSearched && results.length > 0 ? (
         <main className="search-results-container">
@@ -165,7 +165,7 @@ export const SearchPage = () => {
               Found <strong>{results.length}</strong> matching document chunk{results.length === 1 ? '' : 's'} for{' '}
               <strong>"{query}"</strong>
             </span>
-            <Badge variant="purple">Ranked by Vector Similarity</Badge>
+            <Badge variant="slate">Ranked by Vector Similarity</Badge>
           </div>
 
           <div className="search-results-list" style={{ marginTop: '1rem' }}>
@@ -201,7 +201,7 @@ export const SearchPage = () => {
               onClick={() => handleTopicClick('Security policy and compliance guidelines')}
             >
               <div className="topic-card-title">
-                <ShieldCheck size={16} className="text-blue-400" />
+                <ShieldCheck size={16} className="text-muted" />
                 Security & Compliance
               </div>
               <div className="topic-card-desc">
@@ -214,7 +214,7 @@ export const SearchPage = () => {
               onClick={() => handleTopicClick('Google Drive continuous integration sync')}
             >
               <div className="topic-card-title">
-                <HardDrive size={16} className="text-purple-400" />
+                <HardDrive size={16} className="text-muted" />
                 Google Drive Connector
               </div>
               <div className="topic-card-desc">
@@ -227,7 +227,7 @@ export const SearchPage = () => {
               onClick={() => handleTopicClick('FastAPI backend API endpoints rate limits')}
             >
               <div className="topic-card-title">
-                <Code2 size={16} className="text-green-400" />
+                <Code2 size={16} className="text-muted" />
                 API Specifications
               </div>
               <div className="topic-card-desc">
@@ -240,7 +240,7 @@ export const SearchPage = () => {
               onClick={() => handleTopicClick('User authentication and RBAC roles matrix')}
             >
               <div className="topic-card-title">
-                <Users size={16} className="text-amber-400" />
+                <Users size={16} className="text-muted" />
                 RBAC Access Control
               </div>
               <div className="topic-card-desc">

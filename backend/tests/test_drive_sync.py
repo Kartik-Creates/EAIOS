@@ -1,11 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
+from app.core.security import encrypt_token
+from app.models.integration import Integration
+from app.models.oauth_token import OAuthToken
+from app.models.user import User
 from sqlalchemy.future import select
 
-from app.core.security import encrypt_token
-from app.models.oauth_token import OAuthToken
-from app.models.integration import Integration
-from app.models.user import User
 
 @pytest.mark.asyncio
 async def test_drive_sync_success(client, db_session, monkeypatch):
@@ -133,3 +134,129 @@ async def test_drive_sync_success(client, db_session, monkeypatch):
     assert integration is not None
     assert integration.status == "active"
     assert integration.last_sync_at is not None
+
+@pytest.mark.asyncio
+async def test_drive_sync_routes_meet_transcripts_to_meeting_pipeline(client, db_session, monkeypatch):
+    """A Drive file named like a Google Meet transcript must be summarized as a
+    meeting, not ingested as a generic Company Brain document."""
+    client.post("/api/v1/auth/register", json={
+        "email": "meetsync@example.com", "password": "securepassword", "full_name": "Meet Sync User"
+    })
+    login_resp = client.post("/api/v1/auth/login", data={
+        "username": "meetsync@example.com", "password": "securepassword"
+    })
+    access_token = login_resp.json()["access_token"]
+
+    res = await db_session.execute(select(User).where(User.email == "meetsync@example.com"))
+    user = res.scalars().first()
+
+    token_row = OAuthToken(
+        user_id=user.id,
+        provider="google",
+        access_token_encrypted=encrypt_token("fake-google-access-token"),
+        refresh_token_encrypted=encrypt_token("fake-google-refresh-token"),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    db_session.add(token_row)
+    await db_session.commit()
+
+    mock_files = [
+        {
+            "id": "file-transcript-1",
+            "name": "Q4 Planning - Transcript (2026-08-02 10:00 GMT+5:30)",
+            "mimeType": "application/vnd.google-apps.document",
+            "webViewLink": "https://docs.google.com/document/d/file-transcript-1",
+        },
+        {
+            "id": "file-doc-normal",
+            "name": "Vacation Policy.gdoc",
+            "mimeType": "application/vnd.google-apps.document",
+            "webViewLink": "https://docs.google.com/document/d/file-doc-normal",
+        },
+    ]
+
+    class MockResponse:
+        def __init__(self, json_data, text_data=None, status_code=200):
+            self._json = json_data
+            self.text = text_data
+            self.status_code = status_code
+
+        def json(self):
+            return self._json
+
+        def raise_for_status(self):
+            pass
+
+    async def mock_get(self, url, *args, **kwargs):
+        url_str = str(url)
+        if "export" in url_str:
+            if "file-transcript-1" in url_str:
+                return MockResponse(None, text_data="Alice: Let's finalize Q4 scope.\nBob: Agreed.")
+            return MockResponse(None, text_data="Employees get 20 days PTO per year.")
+        return MockResponse({"files": mock_files})
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    ingested_docs = []
+
+    async def mock_ingest(db, *, title, content, source, source_uri=None, restricted_role=None, owner_id=None):
+        ingested_docs.append({"title": title})
+        from app.models.document import Document
+        return Document(title=title, source=source)
+
+    monkeypatch.setattr("app.services.drive_sync_service.ingest_document", mock_ingest)
+
+    summarized_meetings = []
+
+    async def mock_summarize_meeting(db, *, transcript, organizer_user_id, source="manual"):
+        summarized_meetings.append(
+            {"transcript": transcript, "organizer_user_id": organizer_user_id, "source": source}
+        )
+        from app.models.meeting import Meeting
+        from app.models.meeting_summary import MeetingSummary
+        meeting = Meeting(title="Q4 Planning", organizer_user_id=organizer_user_id, source=source)
+        summary = MeetingSummary(summary_text="stub", decisions=[], action_items=[], embedding=[0.0] * 768)
+        return meeting, summary, {"decisions": [], "action_items": []}
+
+    monkeypatch.setattr(
+        "app.services.drive_sync_service.summarize_meeting", mock_summarize_meeting
+    )
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    sync_resp = client.post("/api/v1/integrations/drive/sync", headers=headers)
+    assert sync_resp.status_code == 200
+    summary = sync_resp.json()
+
+    # The transcript file must NOT have been ingested as a generic document...
+    assert len(ingested_docs) == 1
+    assert ingested_docs[0]["title"] == "Vacation Policy.gdoc"
+
+    # ...it must have gone through the meeting pipeline instead, tagged google_meet.
+    assert len(summarized_meetings) == 1
+    assert summarized_meetings[0]["source"] == "google_meet"
+    assert summarized_meetings[0]["organizer_user_id"] == user.id
+    assert "finalize Q4 scope" in summarized_meetings[0]["transcript"]
+
+    assert summary["meetings_synced"] == 1
+    assert summary["synced"] == 1
+    assert summary["skipped"] == 0
+    assert summary["errors"] == 0
+
+
+@pytest.mark.asyncio
+async def test_drive_sync_rbac_scoping(client):
+    """A non-admin user cannot trigger Drive sync for another user's account."""
+    client.post("/api/v1/auth/register", json={
+        "email": "employee_sync@example.com", "password": "securepassword", "full_name": "Employee Sync"
+    })
+    login_resp = client.post("/api/v1/auth/login", data={
+        "username": "employee_sync@example.com", "password": "securepassword"
+    })
+    access_token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Attempt to sync another user's Drive account as a non-admin
+    resp = client.post("/api/v1/integrations/drive/sync?target_user_id=some-other-user-uuid", headers=headers)
+    assert resp.status_code == 403
+    assert "Insufficient permissions" in resp.json()["detail"]
+
