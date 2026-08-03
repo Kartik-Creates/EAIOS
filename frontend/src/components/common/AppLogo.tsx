@@ -1,23 +1,21 @@
 import { cn } from '@/utils/cn';
-import brandLogo from '@/components/images/Brand_logo.png';
-import brand2Logo from '@/components/images/Brand2_logo.png';
-import { useTheme } from '@/hooks/useTheme';
+import UnifyLogo from '@/components/common/UnifyLogo';
 import './AppLogo.css';
 
 interface AppLogoProps {
   className?: string;
+  size?: number;
 }
 
-export const AppLogo = ({ className }: AppLogoProps) => {
-  const { theme } = useTheme();
-  const logoSrc = theme === 'dark' ? brand2Logo : brandLogo;
-
+export const AppLogo = ({ className, size = 28 }: AppLogoProps) => {
   return (
     <div className={cn('app-logo', className)}>
       <div className="app-logo-image">
-        <img src={logoSrc} alt="UNIFY-AI" />
+        <UnifyLogo size={size} color="#5B8CFF" />
       </div>
-      <span className="app-logo-text">UNIFY-AI</span>
+      <span className="app-logo-text">UnifyAI</span>
     </div>
   );
 };
+
+export default AppLogo;
