@@ -63,7 +63,7 @@ async def connect_oauth_provider(
     await store_oauth_state(jti=jti, user_id=current_user.id, expire_seconds=600)
 
     # 3. Build authorization URL
-    redirect_uri = f"http://localhost:8000/api/v1/integrations/{canonical_provider}/callback"
+    redirect_uri = f"{settings.BACKEND_URL}/api/v1/integrations/{canonical_provider}/callback"
     params = {
         "response_type": "code",
         "client_id": client_id,
@@ -90,7 +90,7 @@ async def oauth_provider_callback(
     Validates CSRF state token against Redis (single-use enforcement), exchanges code
     for tokens server-to-server, encrypts tokens at rest, and updates Integration status.
     """
-    frontend_base = "http://localhost:5173/integrations"
+    frontend_base = f"{settings.FRONTEND_URL}/integrations"
 
     if error:
         logger.warning("OAuth authorization denied by user for provider '%s': %s", provider, error)
@@ -126,7 +126,8 @@ async def oauth_provider_callback(
     # 3. Exchange authorization code for tokens (server-to-server)
     client_id = config["get_client_id"]()
     client_secret = config["get_client_secret"]()
-    redirect_uri = f"http://localhost:8000/api/v1/integrations/{canonical_provider}/callback"
+    redirect_uri = f"{settings.BACKEND_URL}/api/v1/integrations/{canonical_provider}/callback"
+
 
     headers = {"Accept": "application/json"}
     token_payload = {
@@ -151,7 +152,8 @@ async def oauth_provider_callback(
                     f"{frontend_base}?error={urllib.parse.quote(f'Token exchange failed for {canonical_provider}')}"
                 )
             token_data = resp.json()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — any network/parse failure here must degrade
+            # to a clean redirect with an error message, not a raw 500 during an OAuth callback.
             logger.error("HTTP error during token exchange for '%s': %s", canonical_provider, exc)
             return RedirectResponse(f"{frontend_base}?error=Failed+to+contact+OAuth+provider")
 
@@ -250,7 +252,8 @@ async def trigger_drive_sync(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — any unexpected failure during sync must still
+        # return a clean 500 to the caller rather than crash the request handler.
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during sync: {exc}",

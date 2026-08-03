@@ -183,24 +183,14 @@ export const DashboardPage = () => {
                 {backendHealth === 'checking'
                   ? 'Checking System Status...'
                   : backendHealth === 'online'
-                  ? 'System Operational'
-                  : 'Backend Disconnected'}
+                    ? 'System Operational'
+                    : 'Backend Disconnected'}
               </div>
-              {user?.role === 'admin' ? (
-                <Badge variant="purple">Admin Privilege</Badge>
-              ) : (
-                <Badge variant="blue">Enterprise Tier</Badge>
-              )}
             </div>
 
-             <h1>
+            <h1>
               {getGreeting()}, <span className="text-accent">{userName}</span>
             </h1>
-
-            <p className="hero-subtitle">
-              Orchestrate RAG searches, continuous cloud data syncs, and intelligent
-              chat agents from a single unified hub.
-            </p>
           </div>
 
           <div className="hero-actions">
@@ -271,10 +261,10 @@ export const DashboardPage = () => {
 
       {/* ── Quick Prompt Launch Bar ── */}
       <section className="quick-prompt-banner" aria-label="Quick Prompt Assistant">
-          <div className="quick-prompt-header">
-            <MessageSquare size={20} className="text-muted" />
-            <h2>Instant Knowledge Query</h2>
-          </div>
+        <div className="quick-prompt-header">
+          <MessageSquare size={20} className="text-muted" />
+          <h2>Instant Knowledge Query</h2>
+        </div>
 
         <form onSubmit={handlePromptSubmit} className="quick-prompt-input-group">
           <input
@@ -308,7 +298,7 @@ export const DashboardPage = () => {
           <button
             type="button"
             className="chip-btn"
-            onClick={() => handleChipClick('Explain current user roles and permissions in EAIOS')}
+            onClick={() => handleChipClick('Explain current user roles and permissions in UNIFY-AI')}
           >
             <Users size={14} /> System permissions guide
           </button>
@@ -398,7 +388,7 @@ export const DashboardPage = () => {
             </div>
 
             <div className="activity-item">
-               <div className="activity-icon bg-secondary text-muted">
+              <div className="activity-icon bg-secondary text-muted">
                 <MessageSquare size={18} />
               </div>
               <div className="activity-details">
@@ -442,7 +432,7 @@ export const DashboardPage = () => {
         <section className="section-card" aria-label="Connected Services & Shortcuts">
           <div className="section-card-header">
             <div className="section-card-title">
-               <Plug size={20} className="text-muted" />
+              <Plug size={20} className="text-muted" />
               <h3>Integrations</h3>
             </div>
             <Button
@@ -467,7 +457,7 @@ export const DashboardPage = () => {
 
             <div className="integration-item">
               <div className="integration-meta">
-                 <MessageSquare size={18} className="text-muted" />
+                <MessageSquare size={18} className="text-muted" />
                 <span className="integration-name">Slack Workspace</span>
               </div>
               <Badge variant="slate" className="integration-status-badge">

@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
+import SplitText from '@/components/ui/SplitText';
 import './ChatPage.css';
 
 export const ChatPage = () => {
@@ -47,7 +48,20 @@ export const ChatPage = () => {
       <main className="chat-messages-container" aria-label="Conversation thread">
         {messages.length === 0 && !isLoading && (
           <div className="chat-empty-state">
-            <h2 className="chat-empty-title">How can I help you today?</h2>
+            <SplitText
+              text="How can I help you today?"
+              className="chat-empty-title"
+              delay={50}
+              duration={1.25}
+              ease="power3.out"
+              splitType="chars"
+              from={{ opacity: 0, y: 40 }}
+              to={{ opacity: 1, y: 0 }}
+              threshold={0.1}
+              rootMargin="-100px"
+              textAlign="center"
+              tag="h2"
+            />
           </div>
         )}
 
@@ -61,7 +75,7 @@ export const ChatPage = () => {
               <Sparkles size={18} />
             </div>
             <div className="message-bubble-wrapper">
-              <span className="sender-name text-xs text-slate-400">EAIOS Assistant</span>
+               <span className="sender-name text-xs text-slate-400">UNIFY-AI Assistant</span>
               <div className="message-bubble assistant-row">
                 <div className="typing-indicator">
                   <span className="typing-dot" />

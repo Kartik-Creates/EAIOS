@@ -1,4 +1,5 @@
 import logging
+
 import httpx
 
 from app.core.config import settings
@@ -61,18 +62,20 @@ async def _generate_ollama_completion(prompt: str) -> str:
 
 
 def _generate_gemini_completion(prompt: str) -> str:
-    """Generate completion via Google Gemini API using google.generativeai."""
+    """Generate completion via Google Gemini API using google-genai SDK."""
     if not settings.GEMINI_API_KEY:
         raise LLMServiceError(
             "GEMINI_API_KEY is not configured in settings. Set GEMINI_API_KEY in your environment or .env file."
         )
 
     try:
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
-        response = model.generate_content(prompt)
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=prompt,
+        )
 
         if not response or not hasattr(response, "text") or not response.text:
             raise LLMServiceError(
@@ -83,7 +86,7 @@ def _generate_gemini_completion(prompt: str) -> str:
         if isinstance(exc, LLMServiceError):
             raise
         raise LLMServiceError(
-            f"Gemini API generation failed (model={settings.GEMINI_MODEL}): {exc}"
+            f"Gemini API generation failed (model={settings.GEMINI_MODEL}): {type(exc).__name__}: {exc}"
         ) from exc
 
 

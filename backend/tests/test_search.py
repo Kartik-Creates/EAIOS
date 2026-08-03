@@ -10,8 +10,10 @@ from app.core.security import get_password_hash
 from app.models.user import User
 
 from tests.rag_fixtures import (
+    captured_meeting_search_calls,
     captured_search_calls,
     fake_semantic_search,
+    fake_semantic_search_meetings,
     register_and_login,
 )
 
@@ -19,7 +21,11 @@ from tests.rag_fixtures import (
 @pytest.fixture(autouse=True)
 def _patch_retrieval(monkeypatch):
     captured_search_calls.clear()
+    captured_meeting_search_calls.clear()
     monkeypatch.setattr("app.routers.search.semantic_search", fake_semantic_search)
+    monkeypatch.setattr(
+        "app.routers.search.semantic_search_meetings", fake_semantic_search_meetings
+    )
 
 
 @pytest.mark.asyncio
@@ -129,3 +135,39 @@ async def test_search_missing_query_returns_422(client):
 
     response = client.get("/api/v1/search", headers=headers)
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_search_merges_meeting_results_with_document_results(client, monkeypatch):
+    """Meeting summaries must be searchable via the same endpoint as documents."""
+    from app.services.retrieval_service import RetrievedMeetingSummary
+
+    async def fake_meeting_search(db, query, *, organizer_user_id=None, top_k=5, max_distance=0.45):
+        captured_meeting_search_calls.append(
+            {"query": query, "organizer_user_id": organizer_user_id}
+        )
+        return [
+            RetrievedMeetingSummary(
+                meeting_id="meeting-42",
+                meeting_title="Sprint Retro",
+                summary_text="Decided to push the launch to October.",
+                distance=0.05,
+            )
+        ]
+
+    monkeypatch.setattr("app.routers.search.semantic_search_meetings", fake_meeting_search)
+
+    token = register_and_login(client, "search6@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/api/v1/search", params={"q": "launch"}, headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    meeting_hits = [r for r in data["results"] if r["source_type"] == "meeting"]
+    assert len(meeting_hits) == 1
+    assert meeting_hits[0]["document_id"] == "meeting-42"
+    assert meeting_hits[0]["document_title"] == "Sprint Retro"
+
+    # organizer_user_id must be derived from the authenticated user, not omitted/None
+    assert captured_meeting_search_calls[-1]["organizer_user_id"] is not None

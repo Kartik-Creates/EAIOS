@@ -22,20 +22,18 @@ to be set in the environment or backend/.env.
 import argparse
 import asyncio
 import logging
-import sys
 import os
+import sys
 
 # Ensure the backend root is on sys.path so `app.*` imports work when
 # invoked as `python -m scripts.reembed_documents` from backend/.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import Column, Text, select, text, func, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.config import settings
-from app.db.session import engine, AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
 from app.models.chunk import Chunk
-from app.services.embedding_service import embed_text, EmbeddingServiceError
+from app.services.embedding_service import EmbeddingServiceError, embed_text
+from sqlalchemy import func, select, text
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,7 +117,6 @@ async def reembed_all() -> None:
                     failed_ids.append(chunk_id)
 
             await session.commit()
-            done = total - (pending - processed - len(failed_ids))
             logger.info("Progress: %d/%d chunks re-embedded", processed, pending)
 
     logger.info("Re-embedding complete. Success: %d | Failed: %d", processed, len(failed_ids))

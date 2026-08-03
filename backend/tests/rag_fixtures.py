@@ -12,7 +12,7 @@ derives and passes the user's role through to retrieval and correctly
 handles what comes back — it does not exercise the real SQL WHERE-clause
 execution, which needs a real Postgres instance to test.
 """
-from app.services.retrieval_service import RetrievedChunk
+from app.services.retrieval_service import RetrievedChunk, RetrievedMeetingSummary
 
 # A tiny fake document index: one unrestricted doc, one hr-restricted doc.
 FAKE_INDEX = [
@@ -70,6 +70,50 @@ async def fake_semantic_search(db, query, *, allowed_roles=None, top_k=5, max_di
 async def fake_generate_answer(query, chunks):
     sources = ", ".join(c.document_title for c in chunks)
     return f"Based on {sources}: here is the answer."
+
+
+# A tiny fake meeting-summary index: one meeting owned by "organizer-1".
+FAKE_MEETING_INDEX = [
+    {
+        "meeting_id": "meeting-1",
+        "meeting_title": "Q3 Planning Sync",
+        "summary_text": "The team agreed to push the launch date to October and assigned follow-ups.",
+        "distance": 0.15,
+        "organizer_user_id": "organizer-1",
+        "keywords": ("launch", "planning", "roadmap"),
+    },
+]
+
+captured_meeting_search_calls: list[dict] = []
+
+
+async def fake_semantic_search_meetings(
+    db, query, *, organizer_user_id=None, top_k=5, max_distance=0.45
+):
+    captured_meeting_search_calls.append(
+        {"query": query, "organizer_user_id": organizer_user_id}
+    )
+
+    query_lower = query.lower()
+    matches = []
+    for entry in FAKE_MEETING_INDEX:
+        if entry["distance"] >= max_distance:
+            continue
+        if not any(kw in query_lower for kw in entry["keywords"]):
+            continue
+        if organizer_user_id is not None and entry["organizer_user_id"] != organizer_user_id:
+            continue
+        matches.append(
+            RetrievedMeetingSummary(
+                meeting_id=entry["meeting_id"],
+                meeting_title=entry["meeting_title"],
+                summary_text=entry["summary_text"],
+                distance=entry["distance"],
+            )
+        )
+
+    matches.sort(key=lambda m: m.distance)
+    return matches[:top_k]
 
 
 def register_and_login(client, email: str, password: str = "securepassword", full_name: str = "Test"):

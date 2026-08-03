@@ -3,6 +3,7 @@ import { Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { authService } from '@/services/authService';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -34,9 +35,11 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
 
     try {
       setIsLoading(true);
-      // Simulating API call for password update demonstration
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setSuccess('Password updated successfully. Your active JWT refresh tokens remain protected.');
+      const response = await authService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setSuccess(response.detail || 'Password updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -45,7 +48,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
         onClose();
       }, 1500);
     } catch (err: any) {
-      setError(err?.message || 'Failed to update password.');
+      setError(err?.response?.data?.detail || 'Failed to update password.');
     } finally {
       setIsLoading(false);
     }
@@ -60,14 +63,14 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
 
         {error && (
           <div className="form-feedback-alert error">
-            <AlertCircle size={16} />
+            <AlertCircle size={16} aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
           <div className="form-feedback-alert success">
-            <CheckCircle2 size={16} />
+            <CheckCircle2 size={16} aria-hidden="true" />
             <span>{success}</span>
           </div>
         )}
@@ -79,7 +82,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
           required
-          icon={<Lock size={16} />}
+          icon={<Lock size={16} aria-hidden="true" />}
         />
 
         <Input
@@ -89,7 +92,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           required
-          icon={<Lock size={16} />}
+          icon={<Lock size={16} aria-hidden="true" />}
         />
 
         <Input
@@ -99,7 +102,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
-          icon={<Lock size={16} />}
+          icon={<Lock size={16} aria-hidden="true" />}
         />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>

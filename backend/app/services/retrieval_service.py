@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chunk import Chunk
 from app.models.document import Document
+from app.models.meeting import Meeting
+from app.models.meeting_summary import MeetingSummary
 from app.services.embedding_service import embed_text
 
 DEFAULT_TOP_K = 5
@@ -72,4 +74,55 @@ async def semantic_search(
             distance=float(dist),
         )
         for chunk, doc, dist in rows
+    ]
+
+
+@dataclass
+class RetrievedMeetingSummary:
+    meeting_id: str
+    meeting_title: str
+    summary_text: str
+    distance: float
+
+
+async def semantic_search_meetings(
+    db: AsyncSession,
+    query: str,
+    *,
+    organizer_user_id: str | None = None,
+    top_k: int = DEFAULT_TOP_K,
+    max_distance: float = DEFAULT_MAX_DISTANCE,
+) -> list[RetrievedMeetingSummary]:
+    """Return meeting summaries similar to `query`, confidence-gated.
+
+    Meeting content is more sensitive than documents, so access is restricted to
+    meetings the caller organized — a stricter per-owner rule than the document-level
+    role filter, per the Meeting Intelligence plan's explicit security requirement.
+    True per-attendee filtering needs a real attendee list (Zoom/Teams provide one);
+    Phase A's manual-paste flow only has a single organizer to check against.
+    """
+    query_vector = await embed_text(query)
+    distance = MeetingSummary.embedding.cosine_distance(query_vector)
+
+    stmt = (
+        select(MeetingSummary, Meeting, distance.label("distance"))
+        .join(Meeting, MeetingSummary.meeting_id == Meeting.id)
+        .where(distance < max_distance)
+        .order_by(distance)
+        .limit(top_k)
+    )
+
+    if organizer_user_id is not None:
+        stmt = stmt.where(Meeting.organizer_user_id == organizer_user_id)
+
+    rows = (await db.execute(stmt)).all()
+
+    return [
+        RetrievedMeetingSummary(
+            meeting_id=meeting.id,
+            meeting_title=meeting.title,
+            summary_text=summary.summary_text,
+            distance=float(dist),
+        )
+        for summary, meeting, dist in rows
     ]

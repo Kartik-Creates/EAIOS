@@ -33,7 +33,7 @@ export const NotFoundPage = () => {
       <div className="not-found-text-block">
         <h2>Route Not Found in Knowledge Base</h2>
         <p>
-          The requested URL does not match any registered route in the UnifyAI application router.
+           The requested URL does not match any registered route in the UNIFY-AI application router.
           This may be a mistyped URL, an expired link, or a route that requires different
           permissions.
         </p>

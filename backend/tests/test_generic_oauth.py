@@ -3,12 +3,13 @@
 Gmail, Google Drive, GitHub, Slack, and Jira.
 """
 import urllib.parse
-import pytest
-from sqlalchemy.future import select
 
+import pytest
 from app.core.security import decrypt_token
 from app.models.integration import Integration
 from app.models.oauth_token import OAuthToken
+from sqlalchemy.future import select
+
 from tests.rag_fixtures import register_and_login
 
 ALL_PROVIDERS = ["gmail", "google_drive", "github", "slack", "jira"]

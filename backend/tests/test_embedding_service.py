@@ -1,15 +1,14 @@
-"""Unit tests for the swappable embedding provider abstraction (Ollama vs Gemini).
+"""Unit tests for the swappable embedding provider abstraction (Ollama vs Gemini google-genai SDK).
 
 Tests verify:
   - Ollama path routing and response handling
-  - Gemini path routing, API call shape, and dimension validation
+  - Gemini path routing via google-genai Client, API call shape, and dimension validation
   - Error handling for missing API key and unsupported providers
   - Dimension mismatch detection
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
 from app.core.config import settings
 from app.services.embedding_service import (
     EmbeddingServiceError,
@@ -70,30 +69,36 @@ async def test_embed_text_ollama_single(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_embed_texts_gemini_path(monkeypatch):
-    """When EMBEDDING_PROVIDER='gemini', embed_texts routes to Gemini text-embedding-004."""
+    """When EMBEDDING_PROVIDER='gemini', embed_texts routes to Gemini Client (google-genai)."""
     monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "gemini")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(settings, "EMBEDDING_DIM", 768)
 
     fake_vector = [0.2] * 768
 
-    mock_genai = MagicMock()
-    mock_genai.embed_content.return_value = {"embedding": fake_vector}
+    mock_client = MagicMock()
+    mock_embedding = MagicMock()
+    mock_embedding.values = fake_vector
+    mock_response = MagicMock()
+    mock_response.embeddings = [mock_embedding]
+    mock_client.models.embed_content.return_value = mock_response
 
-    monkeypatch.setattr("google.generativeai.configure", mock_genai.configure)
-    monkeypatch.setattr("google.generativeai.embed_content", mock_genai.embed_content)
+    mock_genai_module = MagicMock()
+    mock_genai_module.Client.return_value = mock_client
+
+    monkeypatch.setattr("google.genai.Client", mock_genai_module.Client)
 
     result = await embed_texts(["test text for gemini"])
     assert len(result) == 1
     assert len(result[0]) == 768
 
-    # Verify the Gemini SDK was configured and called correctly
-    mock_genai.configure.assert_called_once_with(api_key="test-key")
-    mock_genai.embed_content.assert_called_once_with(
-        model="models/text-embedding-004",
-        content="test text for gemini",
-        task_type="retrieval_document",
-    )
+    # Verify Client initialization and embed_content call
+    mock_genai_module.Client.assert_called_once_with(api_key="test-key")
+    mock_client.models.embed_content.assert_called_once()
+    call_kwargs = mock_client.models.embed_content.call_args.kwargs
+    assert call_kwargs["model"] == "gemini-embedding-001"
+    assert call_kwargs["contents"] == "test text for gemini"
+    assert call_kwargs["config"].output_dimensionality == 768
 
 
 @pytest.mark.asyncio
@@ -136,11 +141,17 @@ async def test_embed_texts_gemini_dimension_mismatch(monkeypatch):
 
     wrong_dim_vector = [0.1] * 512  # Wrong dimension
 
-    mock_genai = MagicMock()
-    mock_genai.embed_content.return_value = {"embedding": wrong_dim_vector}
+    mock_client = MagicMock()
+    mock_embedding = MagicMock()
+    mock_embedding.values = wrong_dim_vector
+    mock_response = MagicMock()
+    mock_response.embeddings = [mock_embedding]
+    mock_client.models.embed_content.return_value = mock_response
 
-    monkeypatch.setattr("google.generativeai.configure", mock_genai.configure)
-    monkeypatch.setattr("google.generativeai.embed_content", mock_genai.embed_content)
+    mock_genai_module = MagicMock()
+    mock_genai_module.Client.return_value = mock_client
+
+    monkeypatch.setattr("google.genai.Client", mock_genai_module.Client)
 
     with pytest.raises(EmbeddingServiceError) as exc_info:
         await embed_texts(["test"])
@@ -160,16 +171,21 @@ async def test_embed_texts_gemini_batch(monkeypatch):
     def mock_embed_content(**kwargs):
         nonlocal call_count
         call_count += 1
-        return {"embedding": [float(call_count)] * 768}
+        mock_emb = MagicMock()
+        mock_emb.values = [float(call_count)] * 768
+        mock_res = MagicMock()
+        mock_res.embeddings = [mock_emb]
+        return mock_res
 
-    mock_genai = MagicMock()
-    mock_genai.embed_content.side_effect = mock_embed_content
+    mock_client = MagicMock()
+    mock_client.models.embed_content.side_effect = mock_embed_content
 
-    monkeypatch.setattr("google.generativeai.configure", mock_genai.configure)
-    monkeypatch.setattr("google.generativeai.embed_content", mock_genai.embed_content)
+    mock_genai_module = MagicMock()
+    mock_genai_module.Client.return_value = mock_client
+
+    monkeypatch.setattr("google.genai.Client", mock_genai_module.Client)
 
     result = await embed_texts(["text 1", "text 2", "text 3"])
     assert len(result) == 3
-    # Each vector should be different (based on call_count)
     assert result[0][0] != result[1][0]
-    assert mock_genai.embed_content.call_count == 3
+    assert mock_client.models.embed_content.call_count == 3
