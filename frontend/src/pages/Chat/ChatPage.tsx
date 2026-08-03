@@ -1,22 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/motion';
+import { getRandomWelcomeMessage } from '@/utils/welcomeMessages';
 import './ChatPage.css';
 
 export const ChatPage = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { messages, isLoading, sendMessage } = useChat();
+  const { messages, isLoading, sendMessage, clearChat } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const promptProcessedRef = useRef(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState(() => getRandomWelcomeMessage());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +45,15 @@ export const ChatPage = () => {
     }
   }, [searchParams, sendMessage, setSearchParams]);
 
+  useEffect(() => {
+    if (location.pathname === '/chat') {
+      clearChat();
+      setHasInteracted(false);
+      setWelcomeMessage(getRandomWelcomeMessage());
+      promptProcessedRef.current = false;
+    }
+  }, [location.pathname, clearChat]);
+
   const userName = user?.full_name || user?.email || 'You';
 
   return (
@@ -50,7 +62,18 @@ export const ChatPage = () => {
         <motion.div variants={staggerContainer}>
           {messages.length === 0 && !isLoading && (
             <motion.div className="chat-empty-state" variants={staggerItem}>
-              <h2 className="chat-empty-title">How can I help you today?</h2>
+              <AnimatePresence mode="wait">
+                <motion.h2
+                  key={welcomeMessage}
+                  className="chat-empty-title"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {welcomeMessage}
+                </motion.h2>
+              </AnimatePresence>
             </motion.div>
           )}
 

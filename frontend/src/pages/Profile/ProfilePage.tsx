@@ -8,16 +8,12 @@ import {
   Laptop,
   Palette,
   ChevronRight,
-  Moon,
-  Sun,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
 import { useAvatar } from '@/hooks/useAvatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { EditProfileModal } from './EditProfileModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { cn } from '@/utils/cn';
@@ -33,7 +29,6 @@ const ROLE_LABELS: Record<string, string> = {
 
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { avatarUrl } = useAvatar(user?.id);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -147,20 +142,6 @@ export const ProfilePage = () => {
             <Palette size={20} className="text-muted" aria-hidden="true" />
             Preferences
           </h2>
-          <div className="profile-preferences-list">
-            <div className="profile-theme-row">
-              <div className="profile-theme-left">
-                <div className="profile-theme-icon">
-                  {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
-                </div>
-                <div>
-                  <span className="profile-preference-title">Theme</span>
-
-                </div>
-              </div>
-              <ToggleSwitch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
-            </div>
-          </div>
         </motion.section>
 
         {/* ── Account Actions ── */}

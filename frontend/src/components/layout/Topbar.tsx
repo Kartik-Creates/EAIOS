@@ -12,11 +12,14 @@ import {
   Kanban,
   CheckCircle2,
   Circle,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatar } from '@/hooks/useAvatar';
+import { useTheme } from '@/hooks/useTheme';
 import { ROUTES } from '@/constants/routes';
 import { SearchOverlay } from './SearchOverlay';
 import { DropdownWrapper, iconHoverVariants } from '@/lib/motion';
@@ -70,6 +73,7 @@ interface TopbarProps {
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
   const { logout, user } = useAuth();
   const { avatarUrl } = useAvatar(user?.id);
+  const { theme, toggleTheme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -152,6 +156,20 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
 
       {/* ── Right Actions ── */}
       <div className="topbar-actions">
+        {/* Theme Toggle */}
+        <motion.button
+          type="button"
+          className="topbar-icon-btn"
+          aria-label="Toggle theme"
+          onClick={toggleTheme}
+          variants={iconHoverVariants}
+          initial="rest"
+          whileHover="hover"
+          whileTap="tap"
+        >
+          {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+        </motion.button>
+
         {/* Notification Bell */}
         <div className="topbar-notification-wrapper" ref={notificationRef}>
           <motion.button
