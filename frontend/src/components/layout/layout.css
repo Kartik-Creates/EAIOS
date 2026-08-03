@@ -16,7 +16,7 @@
   width: var(--sidebar-width);
   min-height: 100vh;
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
+  border-right: 3px solid var(--border-color);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -167,7 +167,6 @@
 .sidebar-header {
   display: flex;
   padding: 0;
-  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -188,7 +187,7 @@
   height: var(--topbar-height);
   z-index: var(--z-topbar);
   background-color: var(--bg-sidebar);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 3px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;

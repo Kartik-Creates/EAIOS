@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { authService } from '@/services/authService';
@@ -8,6 +9,7 @@ import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AppLogo } from '@/components/common/AppLogo';
+import { fadeInUpVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import './RegisterPage.css';
 
 interface RegisterFormState {
@@ -101,95 +103,106 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-form-card">
-        <div className="auth-logo">
+      <motion.div className="auth-form-card" variants={fadeInUpVariants} initial="hidden" animate="visible">
+        <motion.div className="auth-logo" variants={staggerItem}>
           <AppLogo className="app-logo-vertical app-logo-large" />
-        </div>
+        </motion.div>
 
-        <div className="auth-form-header">
+        <motion.div className="auth-form-header" variants={staggerItem}>
           <h1>Create your account</h1>
-          <p>Join UNIFY-AI to start managing enterprise knowledge with AI.</p>
-        </div>
-
+          <p>Join UnifyAI to start managing enterprise knowledge with AI.</p>
+        </motion.div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <Input
-            id="register-fullname"
-            name="full_name"
-            type="text"
-            label="Full name"
-            placeholder="Jane Smith"
-            autoComplete="name"
-            value={formValues.full_name}
-            onChange={handleChange}
-            error={formErrors.full_name}
-            icon={<User size={16} />}
-            disabled={isLoading}
-            required
-          />
+          <motion.div variants={staggerContainer}>
+            <motion.div variants={staggerItem}>
+              <Input
+                id="register-fullname"
+                name="full_name"
+                type="text"
+                label="Full name"
+                placeholder="Jane Smith"
+                autoComplete="name"
+                value={formValues.full_name}
+                onChange={handleChange}
+                error={formErrors.full_name}
+                icon={<User size={16} />}
+                disabled={isLoading}
+                required
+              />
+            </motion.div>
 
-          <Input
-            id="register-email"
-            name="email"
-            type="email"
-            label="Work email"
-            placeholder="you@company.com"
-            autoComplete="email"
-            value={formValues.email}
-            onChange={handleChange}
-            error={formErrors.email}
-            icon={<Mail size={16} />}
-            disabled={isLoading}
-            required
-          />
+            <motion.div variants={staggerItem}>
+              <Input
+                id="register-email"
+                name="email"
+                type="email"
+                label="Work email"
+                placeholder="you@company.com"
+                autoComplete="email"
+                value={formValues.email}
+                onChange={handleChange}
+                error={formErrors.email}
+                icon={<Mail size={16} />}
+                disabled={isLoading}
+                required
+              />
+            </motion.div>
 
-          <Input
-            id="register-password"
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="Min. 8 characters"
-            autoComplete="new-password"
-            value={formValues.password}
-            onChange={handleChange}
-            error={formErrors.password}
-            icon={<Lock size={16} />}
-            disabled={isLoading}
-            required
-          />
+            <motion.div variants={staggerItem}>
+              <Input
+                id="register-password"
+                name="password"
+                type="password"
+                label="Password"
+                placeholder="Min. 8 characters"
+                autoComplete="new-password"
+                value={formValues.password}
+                onChange={handleChange}
+                error={formErrors.password}
+                icon={<Lock size={16} />}
+                disabled={isLoading}
+                required
+              />
+            </motion.div>
 
-          <Input
-            id="register-confirm-password"
-            name="confirmPassword"
-            type="password"
-            label="Confirm password"
-            placeholder="Re-enter your password"
-            autoComplete="new-password"
-            value={formValues.confirmPassword}
-            onChange={handleChange}
-            error={formErrors.confirmPassword}
-            icon={<Lock size={16} />}
-            disabled={isLoading}
-            required
-          />
+            <motion.div variants={staggerItem}>
+              <Input
+                id="register-confirm-password"
+                name="confirmPassword"
+                type="password"
+                label="Confirm password"
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+                value={formValues.confirmPassword}
+                onChange={handleChange}
+                error={formErrors.confirmPassword}
+                icon={<Lock size={16} />}
+                disabled={isLoading}
+                required
+              />
+            </motion.div>
 
-          <Button
-            id="register-submit"
-            type="submit"
-            variant="primary"
-            size="lg"
-            isLoading={isLoading}
-            className="auth-btn-full"
-          >
-            {isLoading ? 'Creating account…' : 'Create Account'}
-          </Button>
+            <motion.div variants={staggerItem}>
+              <Button
+                id="register-submit"
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={isLoading}
+                className="auth-btn-full"
+              >
+                {isLoading ? 'Creating account…' : 'Create Account'}
+              </Button>
+            </motion.div>
+          </motion.div>
         </form>
 
         <p className="auth-form-footer">
           Already have an account?{' '}
           <Link to={ROUTES.LOGIN}>Sign in</Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

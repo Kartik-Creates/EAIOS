@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { User, Copy, Check, AlertTriangle, BookOpen } from 'lucide-react';
 import type { Message } from '@/types/chat.types';
+import { motion } from 'framer-motion';
 
 import { Badge } from '@/components/ui/Badge';
 import { CitationCard } from './CitationCard';
+
+const messageEnter = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } },
+};
 
 interface ChatMessageProps {
   message: Message;
@@ -46,7 +52,12 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
   });
 
   return (
-    <div className={`chat-message-row ${isUser ? 'user-row' : 'assistant-row'}`}>
+    <motion.div
+      className={`chat-message-row ${isUser ? 'user-row' : 'assistant-row'}`}
+      variants={messageEnter}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="message-avatar">
         {isUser ? (
           <div className="user-avatar-icon">
@@ -62,7 +73,7 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
 
       <div className="message-bubble-wrapper">
         <div className="message-header">
-           <span className="sender-name">{isUser ? userName : 'UNIFY-AI Assistant'}</span>
+          <span className="sender-name">{isUser ? userName : 'UnifyAI Assistant'}</span>
           <span className="message-time">{formattedTime}</span>
           {!isUser && getConfidenceBadge(message.confidence)}
         </div>
@@ -129,6 +140,6 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

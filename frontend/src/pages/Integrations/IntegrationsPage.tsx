@@ -3,6 +3,7 @@ import {
   Plug,
   AlertCircle,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useConnections } from '@/hooks/useConnections';
 import { ConnectionCard } from '@/components/integrations/ConnectionCard';
@@ -10,17 +11,18 @@ import { CustomIntegrationModal } from '@/components/integrations/CustomIntegrat
 import { PROVIDERS } from '@/constants/providers';
 import { Spinner } from '@/components/ui/Spinner';
 import { useState } from 'react';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './IntegrationsPage.css';
 
 export const IntegrationsPage = () => {
   const {
     connections,
     isLoading,
-    isSyncingDrive,
     error,
-    triggerDriveSync,
     getConnection,
     refreshConnections,
+    submitManualToken,
+    disconnectConnection,
   } = useConnections();
 
   useEffect(() => {
@@ -41,7 +43,6 @@ export const IntegrationsPage = () => {
 
 
   const connectedCount = connections.length;
-  const totalProvidersCount = PROVIDERS.length;
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
   const handleSaveCustomIntegration = (data: Record<string, unknown>) => {
@@ -50,25 +51,24 @@ export const IntegrationsPage = () => {
 
 
   return (
-    <div className="integrations-page">
+    <motion.div className="integrations-page">
       {/* ── Hero Header ── */}
-      <header className="integrations-hero-panel">
+      <motion.header className="integrations-hero-panel" variants={staggerItem}>
         <div className="integrations-hero-text">
           <h1>
             <Plug size={24} className="text-muted" />
             Enterprise Data Connectors
           </h1>
 
-        </div>
 
-        <div className="integrations-stats-pill">
-          <span className="stats-count-big">{connectedCount}</span>
-          <div className="stats-count-label">
-            <span className="stats-count-title">Connected Services</span>
-            <span className="stats-count-sub">out of {totalProvidersCount} available connectors</span>
+          <div className="integrations-stats-pill">
+            <span className="stats-count-big">{connectedCount}</span>
+            <div className="stats-count-label">
+              <span className="stats-count-title">Connected Services</span>
+            </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* ── Error Banner ── */}
       {error && (
@@ -97,22 +97,23 @@ export const IntegrationsPage = () => {
           <p className="text-slate-400 text-sm">Loading integration connection states...</p>
         </div>
       ) : (
-        <section className="integrations-grid" aria-label="Available Connectors">
+        <motion.section className="integrations-grid" aria-label="Available Connectors" variants={staggerContainer}>
           {PROVIDERS.map((providerMeta) => {
             const activeConnection = getConnection(providerMeta.id);
 
             return (
-              <ConnectionCard
-                key={providerMeta.id}
-                providerMeta={providerMeta}
-                connection={activeConnection}
-                onTriggerDriveSync={triggerDriveSync}
-                isSyncingDrive={isSyncingDrive}
-                onAddCustom={providerMeta.id === 'custom' ? () => setIsCustomModalOpen(true) : undefined}
-              />
+              <motion.div key={providerMeta.id} variants={staggerItem}>
+                <ConnectionCard
+                  providerMeta={providerMeta}
+                  connection={activeConnection}
+                  onSubmitManualToken={submitManualToken}
+                  onAddCustom={providerMeta.id === 'custom' ? () => setIsCustomModalOpen(true) : undefined}
+                  onDisconnect={disconnectConnection}
+                />
+              </motion.div>
             );
           })}
-        </section>
+        </motion.section>
       )}
 
       {/* ── Security & Data Compliance Section ── */}
@@ -122,7 +123,7 @@ export const IntegrationsPage = () => {
         onClose={() => setIsCustomModalOpen(false)}
         onSave={handleSaveCustomIntegration}
       />
-    </div>
+    </motion.div>
   );
 };
 
