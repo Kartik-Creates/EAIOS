@@ -4,7 +4,6 @@ import {
   Menu,
   Search,
   Bell,
-  LayoutDashboard,
   User,
   Settings,
   LogOut,
@@ -303,15 +302,6 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                   </div>
                 </div>
                 <div className="topbar-dropdown-divider" role="separator" />
-                <NavLink
-                  to={ROUTES.DASHBOARD}
-                  className="topbar-dropdown-item"
-                  onClick={() => setIsDropdownOpen(false)}
-                  role="menuitem"
-                >
-                  <LayoutDashboard size={16} aria-hidden="true" />
-                  Dashboard
-                </NavLink>
                 <NavLink
                   to={ROUTES.PROFILE}
                   className="topbar-dropdown-item"

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { cn } from '@/utils/cn';
+import { FloatingChatAssistant } from '@/components/chat/FloatingChatAssistant';
 import './layout.css';
 
 export const DashboardLayout = () => {
@@ -45,6 +46,8 @@ export const DashboardLayout = () => {
           <Outlet />
         </motion.main>
       </AnimatePresence>
+
+      <FloatingChatAssistant />
     </div>
   );
 };

@@ -37,7 +37,7 @@ export const AppRoutes = () => {
         {/* ── Protected Main Application Routes ── */}
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
-            <Route path={ROUTES.ROOT}         element={<Navigate to={ROUTES.CHAT} replace />} />
+            <Route path={ROUTES.ROOT}         element={<Navigate to={ROUTES.DASHBOARD} replace />} />
             <Route path={ROUTES.DASHBOARD}    element={<DashboardPage />} />
             <Route path={ROUTES.CHAT}         element={<ChatPage />} />
             <Route path={ROUTES.SEARCH}       element={<SearchPage />} />

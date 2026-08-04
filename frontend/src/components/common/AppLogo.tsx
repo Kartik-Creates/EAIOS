@@ -35,7 +35,6 @@ export const AppLogo = ({ className }: AppLogoProps) => {
           />
         </AnimatePresence>
       </div>
-      <span className="app-logo-text">UnifyAI</span>
     </div>
   );
 };

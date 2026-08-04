@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
   MessageSquare,
   Plug,
   ShieldCheck,
@@ -16,6 +17,7 @@ import { iconHoverVariants } from '@/lib/motion';
 import './layout.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
   MessageSquare,
   Plug,
   ShieldCheck,
@@ -43,7 +45,6 @@ export const Sidebar = ({
   const visibleNavItems = NAV_ITEMS.filter(
     (item) =>
       (!item.adminOnly || user?.role === 'admin') &&
-      item.label !== 'Dashboard' &&
       item.label !== 'Profile' &&
       item.label !== 'Search'
   );
