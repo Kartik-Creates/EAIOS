@@ -48,7 +48,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (BYPASS_AUTH) {
-      navigate(ROUTES.CHAT, { replace: true });
+      navigate(ROUTES.DASHBOARD, { replace: true });
     }
   }, [navigate]);
 
@@ -71,7 +71,7 @@ export default function LoginPage() {
     try {
       await login({ username: formValues.email, password: formValues.password });
       toast.success('Welcome back!');
-      navigate(ROUTES.CHAT, { replace: true });
+      navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??

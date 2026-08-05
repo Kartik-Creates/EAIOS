@@ -13,7 +13,7 @@ const WELCOME_MESSAGES = [
   "What's on your mind today?",
   "What are we building today?",
   "Need help debugging?",
-  "How can UNIFY-AI assist you today?",
+  "How can UnifyAI assist you today?",
   "Let's get started.",
   "Need help with your enterprise data?",
   "Start a conversation...",

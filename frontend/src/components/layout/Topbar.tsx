@@ -1,26 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
 import {
   Menu,
-  Search,
   Bell,
-  User,
-  Settings,
-  LogOut,
-  MessageSquare,
-  Kanban,
-  CheckCircle2,
-  Circle,
   Moon,
   Sun,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
-import { useAuth } from '@/hooks/useAuth';
-import { useAvatar } from '@/hooks/useAvatar';
 import { useTheme } from '@/hooks/useTheme';
-import { ROUTES } from '@/constants/routes';
-import { SearchOverlay } from './SearchOverlay';
 import { DropdownWrapper, iconHoverVariants } from '@/lib/motion';
 import './layout.css';
 
@@ -38,7 +25,7 @@ const NOTIFICATIONS: NotificationItem[] = [
   {
     id: '1',
     source: 'Slack',
-    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    sourceIcon: <span className="text-[#E01E5A]">S</span>,
     title: 'John mentioned you in #engineering',
     description: '@you Can you review the latest PR when you get a chance?',
     timestamp: '2 min ago',
@@ -47,7 +34,7 @@ const NOTIFICATIONS: NotificationItem[] = [
   {
     id: '2',
     source: 'Jira',
-    sourceIcon: <Kanban size={16} className="text-[#0052CC]" />,
+    sourceIcon: <span className="text-[#0052CC]">J</span>,
     title: 'TASK-142 moved to "In Review"',
     description: 'Status changed from In Progress to In Review by Sarah',
     timestamp: '15 min ago',
@@ -56,7 +43,7 @@ const NOTIFICATIONS: NotificationItem[] = [
   {
     id: '3',
     source: 'Slack',
-    sourceIcon: <MessageSquare size={16} className="text-[#E01E5A]" />,
+    sourceIcon: <span className="text-[#E01E5A]">S</span>,
     title: 'Daily standup starts in 10 minutes',
     description: 'Reminder: Engineering standup in #engineering channel',
     timestamp: 'Today',
@@ -70,30 +57,21 @@ interface TopbarProps {
 }
 
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
-  const { logout, user } = useAuth();
-  const { avatarUrl } = useAvatar(user?.id);
   const { theme, toggleTheme } = useTheme();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setIsNotificationsOpen(false);
       }
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsDropdownOpen(false);
         setIsNotificationsOpen(false);
       }
     };
@@ -118,7 +96,7 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
       className={cn('topbar', isCollapsed && 'topbar-collapsed')}
       role="banner"
     >
-      {/* ── Left: Hamburger + Search ── */}
+      {/* ── Left: Hamburger ── */}
       <div className="topbar-left">
         <button
           type="button"
@@ -128,29 +106,6 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
         >
           <Menu size={22} />
         </button>
-
-        <div
-          className="topbar-search"
-          onClick={() => setIsSearchOpen(true)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setIsSearchOpen(true);
-            }
-          }}
-        >
-          <Search size={16} className="topbar-search-icon" aria-hidden="true" />
-          <input
-            type="text"
-            className="topbar-search-input"
-            placeholder="Search documents, meetings, workflows..."
-            readOnly
-            aria-label="Global search"
-          />
-          <kbd className="topbar-search-kbd">Ctrl K</kbd>
-        </div>
       </div>
 
       {/* ── Right Actions ── */}
@@ -219,7 +174,7 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                 <div className="topbar-notification-list">
                   {notifications.length === 0 ? (
                     <div className="topbar-notification-empty">
-                      <MessageSquare size={32} className="topbar-notification-empty-icon" />
+                      <span className="topbar-notification-empty-icon">📭</span>
                       <p>No notifications yet</p>
                       <span>You're all caught up!</span>
                     </div>
@@ -249,9 +204,9 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                         </div>
                         <div className="topbar-notification-item-indicator">
                           {notification.read ? (
-                            <CheckCircle2 size={16} className="text-muted" />
+                            <span className="text-muted">✓</span>
                           ) : (
-                            <Circle size={16} className="text-accent" />
+                            <span className="text-accent">●</span>
                           )}
                         </div>
                       </motion.div>
@@ -262,88 +217,7 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
             )}
           </AnimatePresence>
         </div>
-
-        {/* User Avatar Dropdown */}
-        <div className="topbar-dropdown-wrapper" ref={dropdownRef}>
-          <motion.button
-            type="button"
-            className="topbar-avatar-btn"
-            onClick={() => setIsDropdownOpen((prev) => !prev)}
-            aria-expanded={isDropdownOpen}
-            aria-haspopup="true"
-            variants={iconHoverVariants}
-            initial="rest"
-            whileHover="hover"
-            whileTap="tap"
-          >
-            <div className="topbar-avatar" aria-hidden="true">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile" />
-              ) : (
-                <User size={22} strokeWidth={1.5} />
-              )}
-            </div>
-          </motion.button>
-
-          <AnimatePresence>
-            {isDropdownOpen && (
-              <DropdownWrapper className="topbar-dropdown" isOpen={isDropdownOpen}>
-                <div className="topbar-dropdown-user">
-                  <div className="topbar-dropdown-avatar" aria-hidden="true">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Profile" />
-                    ) : (
-                      <User size={20} strokeWidth={1.5} />
-                    )}
-                  </div>
-                  <div className="topbar-dropdown-user-info">
-                    <span className="topbar-dropdown-user-name">{user?.full_name || 'User'}</span>
-                    <span className="topbar-dropdown-user-email">{user?.email || ''}</span>
-                  </div>
-                </div>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <NavLink
-                  to={ROUTES.PROFILE}
-                  className="topbar-dropdown-item"
-                  onClick={() => setIsDropdownOpen(false)}
-                  role="menuitem"
-                >
-                  <User size={16} aria-hidden="true" />
-                  Profile
-                </NavLink>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <button
-                  type="button"
-                  className="topbar-dropdown-item"
-                  disabled
-                  role="menuitem"
-                >
-                  <Settings size={16} aria-hidden="true" />
-                  Settings
-                </button>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <button
-                  type="button"
-                  className="topbar-dropdown-item"
-                  onClick={() => {
-                    logout();
-                    setIsDropdownOpen(false);
-                  }}
-                  role="menuitem"
-                >
-                  <LogOut size={16} aria-hidden="true" />
-                  Sign Out
-                </button>
-              </DropdownWrapper>
-            )}
-          </AnimatePresence>
-        </div>
       </div>
-
-      {isSearchOpen && (
-        <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      )}
     </header>
   );
 };
-
