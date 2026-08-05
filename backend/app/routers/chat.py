@@ -11,6 +11,10 @@ from app.core.rate_limit import limiter
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, Citation
+from app.services.live_data_service import (
+    answer_live_data_query,
+    classify_live_data_intent,
+)
 from app.services.llm_service import generate_answer
 from app.services.retrieval_service import (
     confidence_from_distance,
@@ -33,6 +37,39 @@ async def chat(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ChatResponse:
     conversation_id = body.conversation_id or str(uuid.uuid4())
+
+    # Route queries about the user's own live connected-app data (meetings,
+    # mail, tickets, PRs) to the Briefing Agent tools instead of the static
+    # document knowledge base.
+    live_source = classify_live_data_intent(body.query)
+    if live_source:
+        answer, source_result = await answer_live_data_query(db, current_user, body.query, live_source)
+
+        citations = [
+            Citation(document_title=item.title, document_id=live_source, excerpt=item.detail)
+            for item in source_result.items
+        ]
+        # Live-data answers aren't a "match confidence" the way document
+        # retrieval is — 1.0 once we've successfully queried the connected
+        # source (even with zero items), 0.0 if we couldn't (not connected /
+        # API error), so the frontend's confidence badge stays meaningful.
+        confidence = 1.0 if source_result.connected and not source_result.error else 0.0
+
+        logger.info(
+            "chat_live_data user_id=%s source=%s connected=%s items=%d",
+            current_user.id,
+            live_source,
+            source_result.connected,
+            len(source_result.items),
+        )
+
+        return ChatResponse(
+            answer=answer,
+            confidence=confidence,
+            citations=citations,
+            conversation_id=conversation_id,
+            flagged_for_review=False,
+        )
 
     # allowed_roles is derived from the authenticated user — never omitted/None,
     # which would fall back to unrestricted access inside semantic_search().

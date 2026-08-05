@@ -4,9 +4,10 @@ See tests/rag_fixtures.py for why retrieval is faked instead of hitting a
 real pgvector query in this test suite.
 """
 import pytest
-from app.models.unanswered_query import UnansweredQuery
 from sqlalchemy import select
 
+from app.models.unanswered_query import UnansweredQuery
+from app.schemas.briefing import BriefingItem, SourceResult
 from tests.rag_fixtures import (
     captured_search_calls,
     fake_generate_answer,
@@ -178,3 +179,85 @@ async def test_chat_rate_limit_returns_429(client):
     assert statuses.count(200) == limit
     assert statuses.count(429) == 3
     assert statuses[-1] == 429
+
+
+# ── Live connected-app data routing ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_chat_routes_meeting_question_to_live_calendar_data(client, monkeypatch):
+    async def fake_answer_live_data_query(db, user, query, source):
+        assert source == "calendar"
+        result = SourceResult(
+            source="calendar",
+            connected=True,
+            items=[BriefingItem(source="calendar", title="Sprint Planning", detail="Time: 10:00", priority_hint="today")],
+        )
+        return "You have Sprint Planning at 10:00 today.", result
+
+    monkeypatch.setattr("app.routers.chat.answer_live_data_query", fake_answer_live_data_query)
+
+    token = register_and_login(client, "livecal@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "what meetings do I have today?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["answer"] == "You have Sprint Planning at 10:00 today."
+    assert data["confidence"] == 1.0
+    assert data["flagged_for_review"] is False
+    assert data["citations"] == [
+        {"document_title": "Sprint Planning", "document_id": "calendar", "excerpt": "Time: 10:00"}
+    ]
+
+    # Must not fall through to document retrieval for a live-data query.
+    assert captured_search_calls == []
+
+
+@pytest.mark.asyncio
+async def test_chat_live_data_not_connected_gives_clear_message_not_flagged(client, monkeypatch):
+    async def fake_answer_live_data_query(db, user, query, source):
+        result = SourceResult(source="gmail", connected=False, items=[])
+        return "Your Gmail account isn't connected yet. Connect it from the Integrations page to get answers from your live gmail data.", result
+
+    monkeypatch.setattr("app.routers.chat.answer_live_data_query", fake_answer_live_data_query)
+
+    token = register_and_login(client, "livemail@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "show me my latest mails"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "isn't connected" in data["answer"]
+    assert data["confidence"] == 0.0
+    # Not a document-review flag — must not trigger the "no document match" banner copy.
+    assert data["flagged_for_review"] is False
+    assert data["citations"] == []
+
+
+@pytest.mark.asyncio
+async def test_chat_non_live_query_still_uses_document_retrieval(client):
+    """A query with no live-data keywords must still go through the existing RAG path."""
+    token = register_and_login(client, "stilldocs@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What's our leave policy?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["citations"][0]["document_title"] == "Employee_Handbook.pdf"
+    assert captured_search_calls[-1]["query"] == "What's our leave policy?"
