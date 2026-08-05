@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import {
-  HardDrive,
-  GitBranch,
-  Mail,
-  MessageSquare,
-  Kanban,
-  Plug,
-  type LucideIcon,
+  X,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import type {
@@ -20,44 +15,34 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
 import { integrationsService } from '@/services/integrationsService';
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Mail,
-  HardDrive,
-  Github: GitBranch,
-  MessageSquare,
-  Kanban,
-  Plug,
-};
+import { iconHoverVariants } from '@/lib/motion';
+import { ICON_MAP } from './IntegrationIcon';
 
 interface ConnectionCardProps {
   providerMeta: ProviderMeta;
   connection?: OAuthConnection;
   onSubmitManualToken?: (payload: TokenManualInput) => Promise<void>;
-  onAddCustom?: () => void;
   onDisconnect?: (providerId: string) => Promise<void>;
+  onRemove?: (providerId: string) => void;
+  isRemoving?: boolean;
 }
 
 export const ConnectionCard = ({
   providerMeta,
   connection,
   onSubmitManualToken,
-  onAddCustom,
   onDisconnect,
+  onRemove,
+  isRemoving = false,
 }: ConnectionCardProps) => {
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
-  const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
+  const BrandIcon = ICON_MAP[providerMeta.id] || ICON_MAP.custom;
   const isConnected = !!connection;
 
   const handleConnect = async () => {
-    if (providerMeta.authMethod === 'custom') {
-      onAddCustom?.();
-      return;
-    }
-
     if (providerMeta.authMethod === 'manual') {
       setIsTokenModalOpen(true);
       return;
@@ -102,17 +87,20 @@ export const ConnectionCard = ({
     setIsTokenModalOpen(false);
   };
 
-  const ctaLabel = providerMeta.authMethod === 'custom'
-    ? 'Add Integration'
-    : isConnected
-      ? 'Disconnect'
-      : 'Connect';
-
-  const handleCtaClick = () => {
-    if (providerMeta.authMethod === 'custom') {
-      onAddCustom?.();
+  const handleRemoveClick = async () => {
+    if (!onRemove) return;
+    if (isConnected) {
+      toast.error('Please disconnect the service before removing this integration.');
       return;
     }
+    await onRemove(providerMeta.id);
+  };
+
+  const ctaLabel = isConnected
+    ? 'Disconnect'
+    : 'Connect';
+
+  const handleCtaClick = () => {
     if (isConnected) {
       handleDisconnect();
     } else {
@@ -123,8 +111,23 @@ export const ConnectionCard = ({
   return (
     <>
       <div className="connection-card">
+        <motion.button
+          type="button"
+          className="connection-card-remove"
+          onClick={handleRemoveClick}
+          disabled={isRemoving}
+          variants={iconHoverVariants}
+          initial="rest"
+          whileHover="hover"
+          whileTap="tap"
+          aria-label="Remove integration"
+          title="Remove Integration"
+        >
+          <X size={14} />
+        </motion.button>
+
         <div className="connection-card-logo">
-          <IconComponent size={32} />
+          <BrandIcon size={24} className="connection-card-logo-img" />
         </div>
 
         <h3 className="connection-card-title">{providerMeta.label}</h3>

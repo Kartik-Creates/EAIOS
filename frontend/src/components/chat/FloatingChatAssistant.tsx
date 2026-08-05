@@ -98,7 +98,7 @@ export const FloatingChatAssistant = () => {
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <h3 className="floating-chat-title">AI Assistant</h3>
+                  <h3 className="floating-chat-title">UnifyAI</h3>
                   <span className="floating-chat-subtitle">Online</span>
                 </div>
               </div>
