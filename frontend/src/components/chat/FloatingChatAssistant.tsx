@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, X } from 'lucide-react';
+import { Sparkles, Send, ChevronUp, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { modalContentVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import './FloatingChatAssistant.css';
@@ -12,6 +13,8 @@ interface Message {
 }
 
 export const FloatingChatAssistant = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -67,6 +70,15 @@ export const FloatingChatAssistant = () => {
     }
   };
 
+  const handleHeaderButtonClick = () => {
+    if (location.pathname === '/chat') {
+      setIsOpen(false);
+    } else {
+      navigate('/chat');
+      setIsOpen(false);
+    }
+  };
+
   return (
     <>
       {/* Floating Toggle Button */}
@@ -105,12 +117,13 @@ export const FloatingChatAssistant = () => {
               <motion.button
                 type="button"
                 className="floating-chat-close"
-                onClick={() => setIsOpen(false)}
-                whileHover={{ scale: 1.1 }}
+                onClick={handleHeaderButtonClick}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label="Close chat"
+                aria-label="Open Chat Page"
+                title="Open Chat"
               >
-                <X size={18} />
+                <ChevronUp size={18} />
               </motion.button>
             </div>
 
