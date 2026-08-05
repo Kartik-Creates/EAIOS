@@ -1,17 +1,15 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import Ferrofluid from '@/components/ui/Ferrofluid';
-import RotatingText from '@/components/ui/RotatingText';
-import LogoLoop, { LogoItem } from '@/components/ui/LogoLoop';
-import UnifyLogo from '@/components/common/UnifyLogo';
-
+import { AppLogo } from '@/components/common/AppLogo';
+import { fadeInUpVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import './LoginPage.css';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
@@ -180,32 +178,10 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-bg-canvas">
-        <Ferrofluid
-          colors={['#ffffff', '#ffffff', '#ffffff']}
-          speed={0.3}
-          scale={1.6}
-          turbulence={1}
-          fluidity={0.1}
-          rimWidth={0.2}
-          sharpness={2.5}
-          shimmer={1.5}
-          glow={2}
-          flowDirection="down"
-          opacity={1}
-          mouseInteraction
-          mouseStrength={1}
-          mouseRadius={0.35}
-        />
-      </div>
-
-      <div className="auth-container">
-        {/* Left Column: Product Branding */}
-        <div className="auth-branding-section">
-          <h1 className="auth-brand-title">Unify<span className="auth-brand-accent">AI</span></h1>
-          <p className="auth-brand-subtitle">Your AI Workspace</p>
-          <RotatingText />
-        </div>
+      <motion.div className="auth-form-card" variants={fadeInUpVariants} initial="hidden" animate="visible">
+        <motion.div className="auth-logo" variants={staggerItem}>
+          <AppLogo className="app-logo-vertical app-logo-large" />
+        </motion.div>
 
         {/* Right Column: Authentication Card */}
         <div className="auth-card-section">
@@ -220,7 +196,14 @@ export default function LoginPage() {
               <p>Sign in to continue to your workspace.</p>
             </div>
 
-            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+        <motion.div className="auth-form-header" variants={staggerItem}>
+          <h1>Welcome Back</h1>
+          <p>Sign in to continue to your workspace.</p>
+        </motion.div>
+
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
+          <motion.div variants={staggerContainer}>
+            <motion.div variants={staggerItem}>
               <Input
                 id="login-email"
                 name="email"
@@ -231,11 +214,13 @@ export default function LoginPage() {
                 value={formValues.email}
                 onChange={handleChange}
                 error={formErrors.email}
-                icon={<Mail size={18} />}
+                icon={<Mail size={16} />}
                 disabled={isLoading}
                 required
               />
+              </motion.div>
 
+            <motion.div variants={staggerItem}>
               <Input
                 id="login-password"
                 name="password"
@@ -246,11 +231,13 @@ export default function LoginPage() {
                 value={formValues.password}
                 onChange={handleChange}
                 error={formErrors.password}
-                icon={<Lock size={18} />}
+                icon={<Lock size={16} />}
                 disabled={isLoading}
                 required
               />
+            </motion.div>
 
+            <motion.div variants={staggerItem}>
               <Button
                 id="login-submit"
                 type="submit"
@@ -259,32 +246,17 @@ export default function LoginPage() {
                 isLoading={isLoading}
                 className="auth-btn-full"
               >
-                {isLoading ? 'Signing in…' : 'Sign In'}
-              </Button>
-            </form>
+              {isLoading ? 'Signing in…' : 'Sign In'}
+            </Button>
+          </motion.div>
+          </motion.div>
+        </form>
 
-            <p className="auth-form-footer">
-              Don't have an account?{' '}
-              <Link to={ROUTES.REGISTER}>Create one</Link>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Integrations Logo Loop (Positioned 36px above bottom) */}
-      <div className="auth-bottom-logo-loop">
-        <LogoLoop
-          logos={integrationLogos}
-          speed={80}
-          direction="left"
-          logoHeight={26}
-          gap={48}
-          scaleOnHover
-          fadeOut
-          fadeOutColor="#03010A"
-          ariaLabel="Supported workspace integrations"
-        />
-      </div>
+        <p className="auth-form-footer">
+          Don't have an account?{' '}
+          <Link to={ROUTES.REGISTER}>Create one</Link>
+        </p>
+      </motion.div>
     </div>
   );
 }

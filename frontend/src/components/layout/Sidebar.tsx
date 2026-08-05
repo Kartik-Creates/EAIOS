@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
   MessageSquare,
   Plug,
   ShieldCheck,
@@ -7,13 +8,16 @@ import {
   Wand2,
   type LucideIcon,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_ITEMS } from '@/constants/routes';
 import { AppLogo } from '@/components/common/AppLogo';
+import { iconHoverVariants } from '@/lib/motion';
 import './layout.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
   MessageSquare,
   Plug,
   ShieldCheck,
@@ -41,7 +45,6 @@ export const Sidebar = ({
   const visibleNavItems = NAV_ITEMS.filter(
     (item) =>
       (!item.adminOnly || user?.role === 'admin') &&
-      item.label !== 'Dashboard' &&
       item.label !== 'Profile' &&
       item.label !== 'Search'
   );
@@ -65,7 +68,7 @@ export const Sidebar = ({
         onMouseLeave={onMouseLeave}
       >
         <div className="sidebar-header">
-          <NavLink to="/" className="sidebar-logo" aria-label="UNIFY-AI Home">
+          <NavLink to="/" className="sidebar-logo" aria-label="UnifyAI Home">
             <AppLogo className="app-logo-sidebar" />
           </NavLink>
         </div>
@@ -85,9 +88,14 @@ export const Sidebar = ({
                 aria-label={item.label}
               >
                 {Icon && (
-                  <span className="sidebar-nav-icon">
+                  <motion.span
+                    className="sidebar-nav-icon"
+                    variants={iconHoverVariants}
+                    initial="rest"
+                    whileHover="hover"
+                  >
                     <Icon size={20} aria-hidden="true" />
-                  </span>
+                  </motion.span>
                 )}
                 <span className="sidebar-nav-label">{item.label}</span>
               </NavLink>

@@ -1,24 +1,18 @@
 import { useState } from 'react';
 import {
-  Mail,
   HardDrive,
   GitBranch,
+  Mail,
   MessageSquare,
   Kanban,
   Plug,
-  CheckCircle2,
-  ExternalLink,
-  RefreshCw,
-  Key,
   type LucideIcon,
 } from 'lucide-react';
-
 import toast from 'react-hot-toast';
 
 import type {
   ProviderMeta,
   OAuthConnection,
-  DriveSyncResult,
   TokenManualInput,
 } from '@/types/integration.types';
 
@@ -39,28 +33,36 @@ const ICON_MAP: Record<string, LucideIcon> = {
 interface ConnectionCardProps {
   providerMeta: ProviderMeta;
   connection?: OAuthConnection;
-  onTriggerDriveSync: () => Promise<DriveSyncResult>;
-  isSyncingDrive: boolean;
   onSubmitManualToken?: (payload: TokenManualInput) => Promise<void>;
   onAddCustom?: () => void;
+  onDisconnect?: (providerId: string) => Promise<void>;
 }
 
 export const ConnectionCard = ({
   providerMeta,
   connection,
-  onTriggerDriveSync,
-  isSyncingDrive,
   onSubmitManualToken,
   onAddCustom,
+  onDisconnect,
 }: ConnectionCardProps) => {
-  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const IconComponent = ICON_MAP[providerMeta.icon] || HardDrive;
   const isConnected = !!connection;
 
-  const handleOAuthConnect = async () => {
+  const handleConnect = async () => {
+    if (providerMeta.authMethod === 'custom') {
+      onAddCustom?.();
+      return;
+    }
+
+    if (providerMeta.authMethod === 'manual') {
+      setIsTokenModalOpen(true);
+      return;
+    }
+
     try {
       setIsConnecting(true);
       const url = await integrationsService.connectOAuth(providerMeta.id);
@@ -80,169 +82,82 @@ export const ConnectionCard = ({
     }
   };
 
-  const handleSyncDrive = async () => {
+  const handleDisconnect = async () => {
+    if (!onDisconnect) return;
     try {
-      setSyncFeedback(null);
-      const res = await onTriggerDriveSync();
-      setSyncFeedback(
-        `Sync Complete: ${res.synced} files synced (${res.errors} errors).`
-      );
+      setIsDisconnecting(true);
+      await onDisconnect(providerMeta.id);
+      toast.success(`Disconnected ${providerMeta.label}.`);
     } catch (err: any) {
-      setSyncFeedback(
-        `Sync Error: ${err.message || 'Drive sync failed.'}`
-      );
+      const msg = err?.response?.data?.detail || err?.message || `Failed to disconnect ${providerMeta.label}.`;
+      toast.error(msg);
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
-  const handleManualTokenSubmit = async (
-    payload: TokenManualInput
-  ) => {
+  const handleManualTokenSubmit = async (payload: TokenManualInput) => {
     if (!onSubmitManualToken) return;
-
     await onSubmitManualToken(payload);
     setIsTokenModalOpen(false);
+  };
+
+  const ctaLabel = providerMeta.authMethod === 'custom'
+    ? 'Add Integration'
+    : isConnected
+      ? 'Disconnect'
+      : 'Connect';
+
+  const handleCtaClick = () => {
+    if (providerMeta.authMethod === 'custom') {
+      onAddCustom?.();
+      return;
+    }
+    if (isConnected) {
+      handleDisconnect();
+    } else {
+      handleConnect();
+    }
   };
 
   return (
     <>
       <div className="connection-card">
-        <div className="connection-card-header">
-          <div
-            className="provider-icon-badge"
-            style={{ backgroundColor: 'var(--bg-dark)' }}
-          >
-            <IconComponent
-              size={24}
-              className="text-blue-400"
-            />
-          </div>
-
-          <div className="provider-info">
-            <h3 className="provider-label">
-              {providerMeta.label}
-            </h3>
-
-            <span className="auth-method-tag">
-              {providerMeta.authMethod === 'oauth'
-                ? 'OAuth2 SSO'
-                : providerMeta.authMethod === 'manual'
-                ? 'Manual Token'
-                : 'API / OAuth / Webhook'}
-            </span>
-          </div>
-
-          <div className="connection-status">
-            {isConnected ? (
-              <Badge variant="green">
-                <CheckCircle2
-                  size={12}
-                  className="inline mr-1"
-                />
-                Connected
-              </Badge>
-            ) : (
-              <Badge variant="slate">
-                Not Connected
-              </Badge>
-            )}
-          </div>
+        <div className="connection-card-logo">
+          <IconComponent size={32} />
         </div>
 
-        <p className="provider-description">
-          {providerMeta.description}
-        </p>
+        <h3 className="connection-card-title">{providerMeta.label}</h3>
 
-        {isConnected && connection?.scopes && (
-          <div className="connection-meta-box">
-            <span className="meta-label">
-              Granted Scopes:
-            </span>
-            <span className="meta-value">
-              {connection.scopes}
-            </span>
-          </div>
-        )}
-
-        {syncFeedback && (
-          <div className="sync-feedback-banner">
-            <span>{syncFeedback}</span>
-          </div>
-        )}
-
-        <div className="connection-card-actions">
-          {providerMeta.authMethod === 'custom' ? (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onAddCustom}
-            >
-              <ExternalLink
-                size={14}
-                className="mr-1"
-              />
-              Add Integration
-            </Button>
-          ) : providerMeta.authMethod === 'oauth' ? (
-            <Button
-              variant={isConnected ? 'secondary' : 'primary'}
-              size="sm"
-              onClick={handleOAuthConnect}
-              disabled={isConnecting}
-            >
-              <ExternalLink
-                size={14}
-                className="mr-1"
-              />
-              {isConnecting
-                ? 'Connecting...'
-                : isConnected
-                ? 'Reconnect OAuth'
-                : 'Connect via OAuth'}
-            </Button>
+        <div className="connection-card-status">
+          {isConnected ? (
+            <Badge variant="green">Connected</Badge>
           ) : (
-            <Button
-              variant={isConnected ? 'secondary' : 'primary'}
-              size="sm"
-              onClick={() => setIsTokenModalOpen(true)}
-            >
-              <Key
-                size={14}
-                className="mr-1"
-              />
-              {isConnected
-                ? 'Update Token'
-                : 'Configure Token'}
-            </Button>
-          )}
-
-          {providerMeta.id === 'google' && isConnected && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSyncDrive}
-              isLoading={isSyncingDrive}
-              disabled={isSyncingDrive}
-            >
-              <RefreshCw
-                size={14}
-                className="mr-1"
-              />
-              Trigger RAG Sync
-            </Button>
+            <Badge variant="slate">Not Connected</Badge>
           )}
         </div>
+
+        <Button
+          variant={isConnected ? 'secondary' : 'primary'}
+          size="md"
+          className="connection-card-button"
+          onClick={handleCtaClick}
+          disabled={isConnecting || isDisconnecting}
+          isLoading={isConnecting || isDisconnecting}
+        >
+          {ctaLabel}
+        </Button>
       </div>
 
-      {providerMeta.authMethod === 'manual' &&
-        onSubmitManualToken && (
-          <ManualTokenModal
-            isOpen={isTokenModalOpen}
-            onClose={() => setIsTokenModalOpen(false)}
-            provider={providerMeta.id as 'slack' | 'jira'}
-            providerLabel={providerMeta.label}
-            onSubmitToken={handleManualTokenSubmit}
-          />
-        )}
+      {providerMeta.authMethod === 'manual' && onSubmitManualToken && (
+        <ManualTokenModal
+          isOpen={isTokenModalOpen}
+          onClose={() => setIsTokenModalOpen(false)}
+          provider={providerMeta.id as 'slack' | 'jira'}
+          providerLabel={providerMeta.label}
+          onSubmitToken={handleManualTokenSubmit}
+        />
+      )}
     </>
   );
 };

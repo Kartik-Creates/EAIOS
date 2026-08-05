@@ -11,11 +11,13 @@ import {
   Users,
   AlertCircle,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useSearch } from '@/hooks/useSearch';
 import { SearchResultCard } from '@/components/search/SearchResultCard';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
+import { staggerContainer, staggerItem, fadeInDownVariants } from '@/lib/motion';
 import './SearchPage.css';
 
 export const SearchPage = () => {
@@ -65,9 +67,9 @@ export const SearchPage = () => {
   };
 
   return (
-    <div className="search-page">
+    <motion.div className="search-page" variants={fadeInDownVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-10px' }}>
       {/* ── Header Search Panel ── */}
-      <header className="search-header-panel">
+      <motion.header className="search-header-panel" variants={staggerItem}>
         <div className="search-title-area">
           <h1>
             <Database size={24} className="text-muted" />
@@ -139,7 +141,7 @@ export const SearchPage = () => {
             </span>
           </div>
         </form>
-      </header>
+      </motion.header>
 
       {/* ── Search Error Alert ── */}
       {error && (
@@ -168,14 +170,16 @@ export const SearchPage = () => {
             <Badge variant="slate">Ranked by Vector Similarity</Badge>
           </div>
 
-          <div className="search-results-list" style={{ marginTop: '1rem' }}>
+          <motion.div className="search-results-list" style={{ marginTop: '1rem' }} variants={staggerContainer}>
             {results.map((res, index) => (
-              <SearchResultCard key={`${res.document_id}-${index}`} result={res} index={index} />
+              <motion.div key={`${res.document_id}-${index}`} variants={staggerItem}>
+                <SearchResultCard result={res} index={index} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </main>
       ) : hasSearched && results.length === 0 ? (
-        <div className="no-results-panel">
+        <motion.div className="no-results-panel" variants={staggerItem}>
           <div className="no-results-icon">
             <AlertCircle size={28} />
           </div>
@@ -186,71 +190,43 @@ export const SearchPage = () => {
           <Button variant="ghost" size="sm" onClick={() => performSearch(query, 20)}>
             Try Top 20 Results
           </Button>
-        </div>
+        </motion.div>
       ) : (
         /* ── Pre-Search Suggested Topics State ── */
-        <section className="search-empty-state" aria-label="Suggested search topics">
-          <div className="empty-search-hero">
+        <motion.section className="search-empty-state" aria-label="Suggested search topics" variants={staggerItem}>
+          <motion.div className="empty-search-hero" variants={staggerItem}>
             <h2>Explore Knowledge Base Vectors</h2>
             <p>Select a pre-computed vector topic below or enter any search term above.</p>
-          </div>
+          </motion.div>
 
-          <div className="topics-grid">
-            <div
-              className="topic-card"
-              onClick={() => handleTopicClick('Security policy and compliance guidelines')}
-            >
-              <div className="topic-card-title">
-                <ShieldCheck size={16} className="text-muted" />
-                Security & Compliance
-              </div>
-              <div className="topic-card-desc">
-                Data privacy, password rotation policies, & encryption standards
-              </div>
-            </div>
-
-            <div
-              className="topic-card"
-              onClick={() => handleTopicClick('Google Drive continuous integration sync')}
-            >
-              <div className="topic-card-title">
-                <HardDrive size={16} className="text-muted" />
-                Google Drive Connector
-              </div>
-              <div className="topic-card-desc">
-                OAuth authentication, webhook sync, and document ingestion
-              </div>
-            </div>
-
-            <div
-              className="topic-card"
-              onClick={() => handleTopicClick('FastAPI backend API endpoints rate limits')}
-            >
-              <div className="topic-card-title">
-                <Code2 size={16} className="text-muted" />
-                API Specifications
-              </div>
-              <div className="topic-card-desc">
-                Endpoint rate limiting, CORS configuration, & JWT headers
-              </div>
-            </div>
-
-            <div
-              className="topic-card"
-              onClick={() => handleTopicClick('User authentication and RBAC roles matrix')}
-            >
-              <div className="topic-card-title">
-                <Users size={16} className="text-muted" />
-                RBAC Access Control
-              </div>
-              <div className="topic-card-desc">
-                Role hierarchies: Employee, Manager, HR, and Admin privileges
-              </div>
-            </div>
-          </div>
-        </section>
+          <motion.div className="topics-grid" variants={staggerContainer}>
+            {[
+              { icon: ShieldCheck, label: 'Security & Compliance', desc: 'Data privacy, password rotation policies, & encryption standards', query: 'Security policy and compliance guidelines' },
+              { icon: HardDrive, label: 'Google Drive Connector', desc: 'OAuth authentication, webhook sync, and document ingestion', query: 'Google Drive continuous integration sync' },
+              { icon: Code2, label: 'API Specifications', desc: 'Endpoint rate limiting, CORS configuration, & JWT headers', query: 'FastAPI backend API endpoints rate limits' },
+              { icon: Users, label: 'RBAC Access Control', desc: 'Role hierarchies: Employee, Manager, HR, and Admin privileges', query: 'User authentication and RBAC roles matrix' },
+            ].map((topic) => (
+              <motion.div
+                key={topic.query}
+                className="topic-card"
+                variants={staggerItem}
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleTopicClick(topic.query)}
+              >
+                <div className="topic-card-title">
+                  <topic.icon size={16} className="text-muted" />
+                  {topic.label}
+                </div>
+                <div className="topic-card-desc">
+                  {topic.desc}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.section>
       )}
-    </div>
+    </motion.div>
   );
 };
 

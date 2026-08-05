@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { Citation } from '@/types/chat.types';
 import { Badge } from '@/components/ui/Badge';
 
@@ -12,7 +13,14 @@ export const CitationCard = ({ citation, index }: CitationCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="citation-card">
+    <motion.div
+      className="citation-card"
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-10px' }}
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div
         className="citation-header"
         onClick={() => setIsExpanded((prev) => !prev)}
@@ -48,6 +56,6 @@ export const CitationCard = ({ citation, index }: CitationCardProps) => {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };

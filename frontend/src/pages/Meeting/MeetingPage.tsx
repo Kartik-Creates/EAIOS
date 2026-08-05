@@ -9,12 +9,14 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { meetingService } from '@/services/meetingService';
 import type { MeetingSummary, ActionItem, Decision } from '@/types/meeting.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './MeetingPage.css';
 
 export const MeetingPage = () => {
@@ -68,23 +70,20 @@ export const MeetingPage = () => {
   };
 
   return (
-    <div className="meeting-page">
-      {/* ── Hero Header ── */}
-
-
+    <motion.div className="meeting-page" variants={staggerContainer}>
       {/* ── Error Banner ── */}
       {error && !isLoading && (
-        <div className="meeting-error-banner" style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
+        <motion.div className="meeting-error-banner" variants={staggerItem} style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
           <AlertCircle size={20} style={{ color: 'var(--color-error)' }} />
           <span style={{ color: '#fca5a5' }}>{error}</span>
           <Button variant="ghost" size="sm" onClick={() => setError(null)}>
             Dismiss
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* ── Input Panel ── */}
-      <section className="meeting-section-card">
+      <motion.section className="meeting-section-card" variants={staggerItem}>
         <div className="meeting-section-header">
           <div className="meeting-section-title">
             <FileText size={20} className="text-muted" />
@@ -129,7 +128,7 @@ export const MeetingPage = () => {
             Generate Summary
           </Button>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Loading State ── */}
       {isLoading && (
@@ -142,9 +141,9 @@ export const MeetingPage = () => {
 
       {/* ── Results Sections ── */}
       {summary && !isLoading && (
-        <div className="meeting-results-grid">
+        <motion.div className="meeting-results-grid" variants={staggerContainer}>
           {/* Summary Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card" variants={staggerItem}>
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <Sparkles size={20} className="text-muted" />
@@ -169,10 +168,10 @@ export const MeetingPage = () => {
                 </span>
               )}
             </div>
-          </section>
+          </motion.section>
 
           {/* Decisions Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card">
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <CheckCircle2 size={20} className="text-muted" />
@@ -184,9 +183,9 @@ export const MeetingPage = () => {
             {summary.decisions.length === 0 ? (
               <p className="text-xs text-slate-400">No explicit decisions detected in this transcript.</p>
             ) : (
-              <div className="meeting-list">
+              <motion.div className="meeting-list" variants={staggerContainer}>
                 {summary.decisions.map((decision: Decision) => (
-                  <div key={decision.id} className="meeting-decision-item">
+                  <motion.div key={decision.id} className="meeting-decision-item" variants={staggerItem}>
                     <div className="meeting-decision-bullet" />
                     <div className="meeting-decision-content">
                       <div className="meeting-decision-desc">{decision.description}</div>
@@ -194,14 +193,14 @@ export const MeetingPage = () => {
                         <div className="text-xs text-slate-400">{decision.context}</div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+                </motion.div>
             )}
-          </section>
+          </motion.section>
 
           {/* Action Items Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card" variants={staggerItem}>
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <Clock size={20} className="text-muted" />
@@ -215,9 +214,9 @@ export const MeetingPage = () => {
             {summary.action_items.length === 0 ? (
               <p className="text-xs text-slate-400">No action items detected in this transcript.</p>
             ) : (
-              <div className="meeting-list">
+              <motion.div className="meeting-list" variants={staggerContainer}>
                 {summary.action_items.map((item: ActionItem) => (
-                  <div
+                  <motion.div
                     key={item.id}
                     className={`meeting-action-item ${item.completed ? 'completed' : ''}`}
                   >
@@ -246,12 +245,12 @@ export const MeetingPage = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                   </motion.div>
                 ))}
-              </div>
+               </motion.div>
             )}
-          </section>
-        </div>
+           </motion.section>
+         </motion.div>
       )}
 
       {/* ── Empty State ── */}
@@ -264,7 +263,7 @@ export const MeetingPage = () => {
           <p>Paste a meeting transcript above and click <strong>Generate Summary</strong> to produce an intelligent meeting report.</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
