@@ -62,6 +62,17 @@ export const useConnections = () => {
     return connections.find((c) => c.provider === providerId);
   };
 
+  const disconnectConnection = async (providerId: string) => {
+    try {
+      setError(null);
+      await integrationsService.disconnectConnection(providerId);
+      await fetchConnections();
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || `Failed to disconnect ${providerId}.`;
+      throw new Error(msg);
+    }
+  };
+
   return {
     connections,
     isLoading,
@@ -73,5 +84,6 @@ export const useConnections = () => {
     triggerDriveSync,
     isConnected,
     getConnection,
+    disconnectConnection,
   };
 };

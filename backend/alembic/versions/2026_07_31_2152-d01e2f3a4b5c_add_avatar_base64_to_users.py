@@ -9,7 +9,6 @@ NOTE: hand-written migration to add avatar_base64 column.
 import sqlalchemy as sa
 from alembic import op
 
-
 revision = "d01e2f3a4b5c"
 down_revision = "c23d4e5f6a7b"
 branch_labels = None

@@ -21,13 +21,16 @@ import {
   SearchCheck,
   RefreshCw,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { healthService } from '@/services/healthService';
 import { integrationsService } from '@/services/integrationsService';
 import type { OAuthConnection } from '@/types/integration.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { MotionCard } from '@/lib/motion';
 import { ROUTES } from '@/constants/routes';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './DashboardPage.css';
 
 /**
@@ -207,57 +210,65 @@ export const DashboardPage = () => {
       </section>
 
       {/* ── Key Metrics Grid ── */}
-      <section className="kpi-grid" aria-label="System Metrics">
-        <div className="kpi-card">
-          <div className="kpi-header">
-            <div className="kpi-icon-wrapper bg-secondary text-muted">
-              <Database size={22} />
+      <motion.section className="kpi-grid" aria-label="System Metrics" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Database size={22} />
+              </div>
+              <span className="kpi-trend positive">+14% this week</span>
             </div>
-            <span className="kpi-trend positive">+14% this week</span>
-          </div>
-          <div className="kpi-value">1,248</div>
-          <div className="kpi-label">Indexed Vector Chunks</div>
-        </div>
+            <div className="kpi-value">1,248</div>
+            <div className="kpi-label">Indexed Vector Chunks</div>
+          </MotionCard>
+        </motion.div>
 
-        <div className="kpi-card">
-          <div className="kpi-header">
-            <div className="kpi-icon-wrapper bg-secondary text-muted">
-              <Activity size={22} />
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Activity size={22} />
+              </div>
+              <span className="kpi-trend positive">Active</span>
             </div>
-            <span className="kpi-trend positive">Active</span>
-          </div>
-          <div className="kpi-value">RAG Engine v1</div>
-          <div className="kpi-label">Neural Retrieval Pipeline</div>
-        </div>
+            <div className="kpi-value">RAG Engine v1</div>
+            <div className="kpi-label">Neural Retrieval Pipeline</div>
+          </MotionCard>
+        </motion.div>
 
-        <div className="kpi-card">
-          <div className="kpi-header">
-            <div className="kpi-icon-wrapper bg-secondary text-muted">
-              <Plug size={22} />
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Plug size={22} />
+              </div>
+              <span className="kpi-trend neutral">
+                {isLoadingConnections ? 'Loading...' : `${connections.length} Connected`}
+              </span>
             </div>
-            <span className="kpi-trend neutral">
-              {isLoadingConnections ? 'Loading...' : `${connections.length} Connected`}
-            </span>
-          </div>
-          <div className="kpi-value">{connections.length}</div>
-          <div className="kpi-label">Active Cloud Integrations</div>
-        </div>
+            <div className="kpi-value">{connections.length}</div>
+            <div className="kpi-label">Active Cloud Integrations</div>
+          </MotionCard>
+        </motion.div>
 
-        <div className="kpi-card">
-          <div className="kpi-header">
-            <div className="kpi-icon-wrapper bg-secondary text-muted">
-              <Activity size={22} />
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Activity size={22} />
+              </div>
+              <span className={`kpi-trend ${backendHealth === 'online' ? 'positive' : 'neutral'}`}>
+                {backendHealth === 'online' ? '99.9% Uptime' : 'Offline'}
+              </span>
             </div>
-            <span className={`kpi-trend ${backendHealth === 'online' ? 'positive' : 'neutral'}`}>
-              {backendHealth === 'online' ? '99.9% Uptime' : 'Offline'}
-            </span>
-          </div>
-          <div className="kpi-value">
-            {backendHealth === 'online' ? 'Healthy' : backendHealth === 'checking' ? 'Checking...' : 'Down'}
-          </div>
-          <div className="kpi-label">FastAPI Backend Status</div>
-        </div>
-      </section>
+            <div className="kpi-value">
+              {backendHealth === 'online' ? 'Healthy' : backendHealth === 'checking' ? 'Checking...' : 'Down'}
+            </div>
+            <div className="kpi-label">FastAPI Backend Status</div>
+          </MotionCard>
+        </motion.div>
+      </motion.section>
 
       {/* ── Quick Prompt Launch Bar ── */}
       <section className="quick-prompt-banner" aria-label="Quick Prompt Assistant">
@@ -298,7 +309,7 @@ export const DashboardPage = () => {
           <button
             type="button"
             className="chip-btn"
-            onClick={() => handleChipClick('Explain current user roles and permissions in UNIFY-AI')}
+            onClick={() => handleChipClick('Explain current user roles and permissions in UnifyAI')}
           >
             <Users size={14} /> System permissions guide
           </button>
@@ -306,8 +317,8 @@ export const DashboardPage = () => {
       </section>
 
       {/* ── Executive: Pending Approvals & AI Usage Stats ── */}
-      <div className="dashboard-executive-grid">
-        <section className="section-card" aria-label="Pending Approvals">
+      <motion.div className="dashboard-executive-grid" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
+        <motion.section className="section-card" aria-label="Pending Approvals" variants={staggerItem}>
           <div className="section-card-header">
             <div className="section-card-title">
               <Clock size={20} className="text-amber-400" />
@@ -316,9 +327,9 @@ export const DashboardPage = () => {
             <Badge variant="yellow">{pendingApprovals.length} Open</Badge>
           </div>
 
-          <div className="approvals-list">
+          <motion.div className="approvals-list" variants={staggerContainer}>
             {pendingApprovals.map((apr) => (
-              <div key={apr.id} className="approval-item">
+              <motion.div key={apr.id} className="approval-item" variants={staggerItem}>
                 <div className="approval-meta">
                   <div className="approval-title">{apr.title}</div>
                   <div className="text-xs text-slate-400">
@@ -329,12 +340,12 @@ export const DashboardPage = () => {
                   <Button variant="primary" size="sm">Approve</Button>
                   <Button variant="ghost" size="sm">Review</Button>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        <section className="section-card" aria-label="AI Usage Statistics">
+        <motion.section className="section-card" aria-label="AI Usage Statistics" variants={staggerItem}>
           <div className="section-card-header">
             <div className="section-card-title">
               <BarChart3 size={20} className="text-green-400" />
@@ -343,9 +354,9 @@ export const DashboardPage = () => {
             <Badge variant="green">This Month</Badge>
           </div>
 
-          <div className="usage-stats-grid">
+          <motion.div className="usage-stats-grid" variants={staggerContainer}>
             {usageStats.map((stat, idx) => (
-              <div key={idx} className="usage-stat-card">
+              <motion.div key={idx} className="usage-stat-card" variants={staggerItem}>
                 <div className="usage-stat-icon">{stat.icon}</div>
                 <div className="usage-stat-content">
                   <div className="usage-stat-value">{stat.value}</div>
@@ -355,11 +366,11 @@ export const DashboardPage = () => {
                     {stat.change}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
-      </div>
+          </motion.div>
+        </motion.section>
+      </motion.div>
 
       {/* ── 2-Column Section: Recent Activity & Integration Overview ── */}
       <div className="dashboard-grid-main">

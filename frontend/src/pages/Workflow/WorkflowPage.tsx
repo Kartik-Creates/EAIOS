@@ -9,6 +9,7 @@ import {
   Loader2,
   Trash2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { workflowService } from '@/services/workflowService';
 import type { WorkflowTool, WorkflowRun, WorkflowExecuteRequest } from '@/types/workflow.types';
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './WorkflowPage.css';
 
 export const WorkflowPage = () => {
@@ -159,24 +161,21 @@ export const WorkflowPage = () => {
   };
 
   return (
-    <div className="workflow-page">
-      {/* ── Hero Header ── */}
-
-
+    <motion.div className="workflow-page" variants={staggerContainer}>
       {/* ── Error Banner ── */}
       {error && (
-        <div className="workflow-error-banner" style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
+        <motion.div className="workflow-error-banner" variants={staggerItem} style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
           <AlertCircle size={20} style={{ color: 'var(--color-error)' }} />
           <span style={{ color: '#fca5a5' }}>{error}</span>
           <Button variant="ghost" size="sm" onClick={() => setError(null)}>
             Dismiss
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* ── Active Run / Status Stepper ── */}
       {activeRun && (
-        <section className="workflow-section-card workflow-active-run-card">
+        <motion.section className="workflow-section-card workflow-active-run-card" variants={staggerItem}>
           <div className="workflow-section-header">
             <div className="workflow-section-title">
               {renderStatusIcon(activeRun.status, 20)}
@@ -232,11 +231,11 @@ export const WorkflowPage = () => {
               </div>
             )}
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* ── Tools Grid ── */}
-      <section className="workflow-section-card">
+      <motion.section className="workflow-section-card" variants={staggerItem}>
         <div className="workflow-section-header">
           <div className="workflow-section-title">
             <Play size={20} className="text-muted" />
@@ -256,9 +255,9 @@ export const WorkflowPage = () => {
             <p>No workflow tools available. Contact your administrator.</p>
           </div>
         ) : (
-          <div className="workflow-tools-grid">
+          <motion.div className="workflow-tools-grid" variants={staggerContainer}>
             {tools.map((tool) => (
-              <div
+              <motion.div
                 key={tool.name}
                 className={`workflow-tool-card ${selectedTool?.name === tool.name ? 'selected' : ''}`}
                 onClick={() => handleToolSelect(tool)}
@@ -281,15 +280,15 @@ export const WorkflowPage = () => {
                   )}
                   <span className="workflow-tool-params">{tool.parameters.length} parameters</span>
                 </div>
-              </div>
+                 </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </section>
+      </motion.section>
 
       {/* ── Selected Tool Form ── */}
       {selectedTool && !isExecuting && (
-        <section className="workflow-section-card workflow-form-card">
+        <motion.section className="workflow-section-card workflow-form-card" variants={staggerItem}>
           <div className="workflow-section-header">
             <div className="workflow-section-title">
               <Wand2 size={20} className="text-muted" />
@@ -343,7 +342,7 @@ export const WorkflowPage = () => {
               </span>
             )}
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* ── Execution Loading State ── */}
@@ -360,7 +359,7 @@ export const WorkflowPage = () => {
 
       {/* ── Run History ── */}
       {runs.length > 0 && (
-        <section className="workflow-section-card">
+        <motion.section className="workflow-section-card" variants={staggerItem}>
           <div className="workflow-section-header">
             <div className="workflow-section-title">
               <Clock size={20} className="text-green-400" />
@@ -372,9 +371,9 @@ export const WorkflowPage = () => {
             </Button>
           </div>
 
-          <div className="workflow-history-list">
+          <motion.div className="workflow-history-list" variants={staggerContainer}>
             {runs.map((run) => (
-              <div key={run.id} className="workflow-history-item">
+              <motion.div key={run.id} className="workflow-history-item" variants={staggerItem}>
                 <div className="workflow-history-icon">
                   {renderStatusIcon(run.status, 16)}
                 </div>
@@ -389,10 +388,10 @@ export const WorkflowPage = () => {
                 >
                   {run.status}
                 </Badge>
-              </div>
+               </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
       )}
 
       {/* ── Confirmation Modal ── */}
@@ -450,7 +449,7 @@ export const WorkflowPage = () => {
           </div>
         </div>
       </Modal>
-    </div>
+    </motion.div>
   );
 };
 

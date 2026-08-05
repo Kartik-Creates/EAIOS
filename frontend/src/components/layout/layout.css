@@ -16,7 +16,7 @@
   width: var(--sidebar-width);
   min-height: 100vh;
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
+  border-right: 3px solid var(--border-color);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -45,11 +45,11 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   min-height: auto;
   flex-shrink: 0;
-  overflow: hidden;
   text-decoration: none;
   color: var(--text-main);
 }
@@ -166,8 +166,8 @@
 /* ── Sidebar Header ── */
 .sidebar-header {
   display: flex;
-  padding: 0;
-  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -188,7 +188,7 @@
   height: var(--topbar-height);
   z-index: var(--z-topbar);
   background-color: var(--bg-sidebar);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 3px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;

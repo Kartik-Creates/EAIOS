@@ -10,7 +10,6 @@
   margin: 0 auto;
   width: 100%;
   padding-bottom: var(--space-12);
-  animation: fade-in-up var(--transition-slow) ease-out;
 }
 
 /* ── Header Search Panel ── */

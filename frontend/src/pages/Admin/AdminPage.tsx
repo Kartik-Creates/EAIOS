@@ -13,6 +13,7 @@ import {
   Send,
   Clock,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { adminService } from '@/services/adminService';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ import type { AdminUser } from '@/types/admin.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './AdminPage.css';
 
 export const AdminPage = () => {
@@ -131,10 +133,10 @@ export const AdminPage = () => {
   }, [users, searchTerm]);
 
   return (
-    <div className="admin-page">
+    <motion.div className="admin-page">
       {/* ── Admin Hero ── */}
-      <header className="admin-hero-panel">
-        <div className="admin-hero-text">
+      <motion.header className="admin-hero-panel" variants={staggerItem}>
+        <motion.div className="admin-hero-text" variants={staggerItem}>
           <h1>
             <ShieldCheck size={24} className="text-muted" />
             Platform Administration Console
@@ -143,27 +145,22 @@ export const AdminPage = () => {
             Manage system user accounts, RBAC role assignments, and monitor platform-wide
             operational statistics. All mutations are audit-logged.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="admin-stats-row">
-          <div className="admin-stat-pill">
-            <span className="admin-stat-number">{users.length}</span>
-            <span className="admin-stat-label">Total Users</span>
-          </div>
-          <div className="admin-stat-pill">
-            <span className="admin-stat-number">{activeCount}</span>
-            <span className="admin-stat-label">Active</span>
-          </div>
-          <div className="admin-stat-pill">
-            <span className="admin-stat-number">{inactiveCount}</span>
-            <span className="admin-stat-label">Inactive</span>
-          </div>
-          <div className="admin-stat-pill">
-            <span className="admin-stat-number">{adminCount}</span>
-            <span className="admin-stat-label">Admins</span>
-          </div>
-        </div>
-      </header>
+        <motion.div className="admin-stats-row" variants={staggerContainer}>
+          {[
+            { label: 'Total Users', value: users.length },
+            { label: 'Active', value: activeCount },
+            { label: 'Inactive', value: inactiveCount },
+            { label: 'Admins', value: adminCount },
+          ].map((stat) => (
+            <motion.div key={stat.label} className="admin-stat-pill" variants={staggerItem}>
+              <span className="admin-stat-number">{stat.value}</span>
+              <span className="admin-stat-label">{stat.label}</span>
+            </motion.div>
+          ))}
+        </motion.div>
+      </motion.header>
 
       {/* ── Error Banner ── */}
       {error && (
@@ -174,7 +171,7 @@ export const AdminPage = () => {
       )}
 
       {/* ── Users Management Table ── */}
-      <section className="admin-section-card">
+      <motion.section className="admin-section-card" variants={staggerItem}>
         <div className="admin-section-header">
           <h2>
             <Users size={20} className="text-blue-400" />
@@ -211,7 +208,7 @@ export const AdminPage = () => {
             <p>No users match your filter criteria "{searchTerm}".</p>
           </div>
         ) : (
-          <div className="users-table-wrapper">
+          <motion.div className="users-table-wrapper" variants={staggerItem}>
             <table className="users-table">
               <thead>
                 <tr>
@@ -222,9 +219,9 @@ export const AdminPage = () => {
                   <th>Account ID</th>
                 </tr>
               </thead>
-              <tbody>
+              <motion.tbody variants={staggerContainer}>
                 {filteredUsers.map((u) => (
-                  <tr key={u.id}>
+                  <motion.tr key={u.id} variants={staggerItem}>
                     <td>
                       <div className="user-cell-email">
                         <span className="user-cell-name">
@@ -261,16 +258,16 @@ export const AdminPage = () => {
                         {u.id.slice(0, 12)}...
                       </code>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
+              </motion.tr>
+            ))}
+          </motion.tbody>
             </table>
-          </div>
+          </motion.div>
         )}
-      </section>
+      </motion.section>
 
       {/* ── Admin Queue: Unanswered Questions ── */}
-      <section className="admin-section-card admin-queue-card">
+      <motion.section className="admin-section-card admin-queue-card" variants={staggerItem}>
         <div className="admin-section-header">
           <div className="admin-section-title">
             <HelpCircle size={20} className="text-amber-400" />
@@ -284,11 +281,12 @@ export const AdminPage = () => {
           authoritative answers to improve the knowledge base.
         </p>
 
-        <div className="admin-queue-list">
+        <motion.div className="admin-queue-list" variants={staggerContainer}>
           {unansweredQuestions.map((item) => (
-            <div
+            <motion.div
               key={item.id}
               className={`admin-queue-item ${selectedQuestion === item.id ? 'expanded' : ''}`}
+              variants={staggerItem}
             >
               <div
                 className="admin-queue-summary"
@@ -375,13 +373,13 @@ export const AdminPage = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           ))}
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* ── Platform Security Overview Card ── */}
-      <section className="admin-section-card">
+      <motion.section className="admin-section-card" variants={staggerItem}>
         <div className="admin-section-header">
           <h2>
             <ShieldCheck size={20} className="text-green-400" />
@@ -421,8 +419,8 @@ export const AdminPage = () => {
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 };
 

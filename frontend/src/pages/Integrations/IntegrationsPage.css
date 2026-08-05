@@ -7,20 +7,23 @@
   flex-direction: column;
   gap: var(--space-6);
   padding-bottom: var(--space-12);
-  animation: fade-in-up var(--transition-slow) ease-out;
 }
 
-/* ── Hero Panel ── */
 .integrations-hero-panel {
-  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-6);
+  padding: var(--space-4);
+}
+
+.integrations-hero-text {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-6);
-  flex-wrap: wrap;
+  align-items: center;
+  flex: 1;
 }
 
 .integrations-hero-text h1 {
@@ -42,15 +45,17 @@
 .integrations-stats-pill {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin-left: auto;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-5);
+  flex-shrink: 0;
 }
 
 .stats-count-big {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
   line-height: 1;
@@ -62,7 +67,7 @@
 }
 
 .stats-count-title {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: var(--text-main);
 }
@@ -75,98 +80,58 @@
 /* ── Integrations Grid ── */
 .integrations-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
+  align-items: stretch;
 }
 
+/* ── Compact Connection Card ── */
 .connection-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: var(--space-6);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-}
-
-.connection-card-header {
-  display: flex;
   align-items: center;
+  text-align: center;
   gap: var(--space-3);
+  height: 100%;
+  transition: transform 250ms ease, box-shadow 250ms ease;
 }
 
-.provider-icon-badge {
+.connection-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.connection-card-logo {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-color);
-  flex-shrink: 0;
-  background: var(--bg-secondary);
+  color: var(--text-muted);
 }
 
-.provider-info {
-  flex: 1;
-}
-
-.provider-label {
-  font-size: var(--font-size-base);
+.connection-card-title {
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
   margin: 0;
 }
 
-.auth-method-tag {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-}
-
-.provider-description {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.connection-meta-box {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
-  font-size: var(--font-size-xs);
+.connection-card-status {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  justify-content: center;
 }
 
-.meta-label {
-  color: var(--text-muted);
-  font-weight: var(--font-weight-medium);
-}
-
-.meta-value {
-  color: var(--text-main);
-  word-break: break-all;
-}
-
-.sync-feedback-banner {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.connection-card-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.connection-card-button {
+  width: 100%;
   margin-top: auto;
-  padding-top: var(--space-2);
 }
 
 /* ── Security & Compliance Card ── */
@@ -228,10 +193,16 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 1024px) {
+  .integrations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .integrations-hero-panel {
-    padding: var(--space-5) var(--space-4);
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .integrations-stats-pill {

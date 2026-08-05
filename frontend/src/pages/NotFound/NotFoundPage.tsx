@@ -8,9 +8,11 @@ import {
   Plug,
   ShieldCheck,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './NotFoundPage.css';
 
 export const NotFoundPage = () => {
@@ -18,76 +20,77 @@ export const NotFoundPage = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <div className="not-found-page">
+    <motion.div className="not-found-page" variants={staggerContainer}>
       {/* ── Animated 404 Code ── */}
-      <div className="not-found-glitch-wrapper">
+      <motion.div className="not-found-glitch-wrapper" variants={staggerItem}>
         <div className="not-found-code">404</div>
-      </div>
+      </motion.div>
 
       {/* ── Icon Ring ── */}
-      <div className="not-found-icon-ring">
+      <motion.div className="not-found-icon-ring" variants={staggerItem}>
         <Compass size={32} className="text-muted" />
-      </div>
+      </motion.div>
 
       {/* ── Text Content ── */}
-      <div className="not-found-text-block">
+      <motion.div className="not-found-text-block" variants={staggerItem}>
         <h2>Route Not Found in Knowledge Base</h2>
         <p>
-           The requested URL does not match any registered route in the UNIFY-AI application router.
+          The requested URL does not match any registered route in the UnifyAI application router.
           This may be a mistyped URL, an expired link, or a route that requires different
           permissions.
         </p>
 
-      </div>
+      </motion.div>
 
       {/* ── Primary Actions ── */}
-      <div className="not-found-actions">
-        <Button variant="primary" size="lg" onClick={() => navigate(-1)}>
-          <ArrowLeft size={18} className="mr-1" />
-          Go Back
-        </Button>
+      <motion.div className="not-found-actions" variants={staggerItem}>
+        <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>
+          <Button variant="primary" size="lg" onClick={() => navigate(-1)}>
+            <ArrowLeft size={18} className="mr-1" />
+            Go Back
+          </Button>
+        </motion.div>
 
-        <Button
-          variant="ghost"
-          size="lg"
-          onClick={() => navigate(isAuthenticated ? ROUTES.DASHBOARD : ROUTES.LOGIN)}
-        >
-          <Home size={18} className="mr-1" />
-          {isAuthenticated ? 'Dashboard' : 'Login'}
-        </Button>
-      </div>
+        <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => navigate(isAuthenticated ? ROUTES.DASHBOARD : ROUTES.LOGIN)}
+          >
+            <Home size={18} className="mr-1" />
+            {isAuthenticated ? 'Dashboard' : 'Login'}
+          </Button>
+        </motion.div>
+      </motion.div>
 
       {/* ── Quick Navigation Suggestions ── */}
       {isAuthenticated && (
-        <div className="not-found-suggestions">
-          <span className="suggestions-label">Quick Navigation</span>
+        <motion.div className="not-found-suggestions" variants={staggerItem}>
+          <motion.span className="suggestions-label" variants={staggerItem}>Quick Navigation</motion.span>
 
-          <div className="suggestions-grid">
-            <div className="suggestion-card" onClick={() => navigate(ROUTES.CHAT)}>
-              <MessageSquare size={18} className="suggestion-icon text-muted" />
-              <span>AI Assistant</span>
-            </div>
-
-            <div className="suggestion-card" onClick={() => navigate(ROUTES.SEARCH)}>
-              <Search size={18} className="suggestion-icon text-muted" />
-              <span>Vector Search</span>
-            </div>
-
-            <div className="suggestion-card" onClick={() => navigate(ROUTES.INTEGRATIONS)}>
-              <Plug size={18} className="suggestion-icon text-muted" />
-              <span>Integrations</span>
-            </div>
-
-            {user?.role === 'admin' && (
-              <div className="suggestion-card" onClick={() => navigate(ROUTES.ADMIN)}>
-                <ShieldCheck size={18} className="suggestion-icon text-muted" />
-                <span>Admin Panel</span>
-              </div>
-            )}
-          </div>
-        </div>
+          <motion.div className="suggestions-grid" variants={staggerContainer}>
+            {[
+              { icon: MessageSquare, label: 'AI Assistant', route: ROUTES.CHAT },
+              { icon: Search, label: 'Vector Search', route: ROUTES.SEARCH },
+              { icon: Plug, label: 'Integrations', route: ROUTES.INTEGRATIONS },
+              ...(user?.role === 'admin' ? [{ icon: ShieldCheck, label: 'Admin Panel', route: ROUTES.ADMIN }] : []),
+            ].map((suggestion) => (
+              <motion.div
+                key={suggestion.route}
+                className="suggestion-card"
+                variants={staggerItem}
+                whileHover={{ y: -3, scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate(suggestion.route)}
+              >
+                <suggestion.icon size={18} className="suggestion-icon text-muted" />
+                <span>{suggestion.label}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

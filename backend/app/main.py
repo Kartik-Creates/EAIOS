@@ -5,9 +5,17 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.rate_limit import limiter
-
-from app.routers import admin, auth, briefing, chat, health, integrations, meeting, search
-
+from app.routers import (
+    admin,
+    auth,
+    briefing,
+    chat,
+    documents,
+    health,
+    integrations,
+    meeting,
+    search,
+)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -36,6 +44,7 @@ app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
 app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
 app.include_router(briefing.router, prefix=settings.API_V1_STR, tags=["briefing"])
 app.include_router(meeting.router, prefix=settings.API_V1_STR, tags=["meeting"])
+app.include_router(documents.router, prefix=settings.API_V1_STR, tags=["documents"])
 
 
 import logging
