@@ -91,7 +91,6 @@ export default function LoginPage() {
           <AppLogo className="app-logo-vertical app-logo-large" />
         </motion.div>
 
-
         <motion.div className="auth-form-header" variants={staggerItem}>
           <h1>Welcome Back</h1>
           <p>Sign in to continue to your workspace.</p>
@@ -114,7 +113,7 @@ export default function LoginPage() {
                 disabled={isLoading}
                 required
               />
-              </motion.div>
+            </motion.div>
 
             <motion.div variants={staggerItem}>
               <Input
@@ -142,9 +141,9 @@ export default function LoginPage() {
                 isLoading={isLoading}
                 className="auth-btn-full"
               >
-              {isLoading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </motion.div>
+                {isLoading ? 'Signing in…' : 'Sign In'}
+              </Button>
+            </motion.div>
           </motion.div>
         </form>
 
