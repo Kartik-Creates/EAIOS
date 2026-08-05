@@ -251,27 +251,55 @@
 .sidebar-profile-dropdown {
   position: absolute;
   bottom: calc(100% + var(--space-2));
-  left: calc(var(--sidebar-collapsed) + var(--space-2));
-  min-width: clamp(180px, 25vw, 220px);
+  left: calc(var(--space-3));
+  width: clamp(200px, 18vw, 240px);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  padding: var(--space-2);
   z-index: var(--z-dropdown);
-  animation: dropdown-enter 0.15s ease-out;
+  overflow: hidden;
+  transform: translateX(-50%);
+  animation: dropdown-enter 0.2s ease-out;
 }
 
-.sidebar-profile-dropdown-user {
+.sidebar-collapsed .sidebar-profile-dropdown {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Profile Dropdown Header ── */
+.profile-dropdown-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background-color var(--transition-fast);
 }
 
-.sidebar-profile-dropdown-avatar {
-  width: 36px;
-  height: 36px;
+.profile-dropdown-header:hover {
+  background: var(--bg-hover);
+}
+
+.profile-dropdown-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-dropdown-avatar {
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -283,7 +311,7 @@
   overflow: hidden;
 }
 
-.sidebar-profile-dropdown-avatar img {
+.profile-dropdown-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -291,14 +319,14 @@
   display: block;
 }
 
-.sidebar-profile-dropdown-info {
+.profile-dropdown-info {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.sidebar-profile-dropdown-name {
-  font-size: var(--font-size-sm);
+.profile-dropdown-name {
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
   white-space: nowrap;
@@ -306,12 +334,82 @@
   text-overflow: ellipsis;
 }
 
-.sidebar-profile-dropdown-email {
-  font-size: var(--font-size-xs);
+.profile-dropdown-email {
+  font-size: 0.65rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.profile-dropdown-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ── Profile Dropdown Menu ── */
+.profile-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) var(--space-1) var(--space-2);
+  gap: var(--space-1);
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+  width: 100%;
+}
+
+.profile-dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.profile-dropdown-item:active {
+  transform: scale(0.98);
+}
+
+.profile-dropdown-item-danger {
+  color: var(--color-error);
+}
+
+.profile-dropdown-item-danger:hover {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  background: var(--border-divider);
+  margin: var(--space-1) var(--space-2);
+  border: none;
 }
 
 /* ── Sidebar Header ── */

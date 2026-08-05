@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -10,16 +10,20 @@ import {
   User,
   Settings,
   LogOut,
+  ChevronRight,
+  Palette,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatar } from '@/hooks/useAvatar';
 import { NAV_ITEMS } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { AppLogo } from '@/components/common/AppLogo';
-import { iconHoverVariants } from '@/lib/motion';
-import { DropdownWrapper } from '@/lib/motion';
+import { iconHoverVariants, dropdownVariants } from '@/lib/motion';
 import './layout.css';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -48,6 +52,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const { user, logout } = useAuth();
   const { avatarUrl } = useAvatar(user?.id);
+  const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +81,12 @@ export const Sidebar = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isHovered) {
+      setIsProfileOpen(false);
+    }
+  }, [isHovered]);
 
   return (
     <>
@@ -132,16 +143,12 @@ export const Sidebar = ({
 
         {/* ── Sidebar Profile ── */}
         <div className="sidebar-profile-wrapper" ref={profileRef}>
-          <motion.button
+          <button
             type="button"
             className="sidebar-profile-btn"
             onClick={() => setIsProfileOpen((prev) => !prev)}
             aria-expanded={isProfileOpen}
             aria-haspopup="true"
-            variants={iconHoverVariants}
-            initial="rest"
-            whileHover="hover"
-            whileTap="tap"
           >
             <div className="sidebar-profile-avatar" aria-hidden="true">
               {avatarUrl ? (
@@ -154,78 +161,100 @@ export const Sidebar = ({
               <span className="sidebar-profile-name">{user?.full_name || 'User'}</span>
               <span className="sidebar-profile-email">{user?.email || ''}</span>
             </div>
-          </motion.button>
+          </button>
 
           <AnimatePresence>
             {isProfileOpen && (
-              <DropdownWrapper className="sidebar-profile-dropdown" isOpen={isProfileOpen}>
-                <div className="sidebar-profile-dropdown-user">
-                  <div className="sidebar-profile-dropdown-avatar" aria-hidden="true">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Profile" />
-                    ) : (
-                      <User size={20} strokeWidth={1.5} />
-                    )}
-                  </div>
-                  <div className="sidebar-profile-dropdown-info">
-                    <span className="sidebar-profile-dropdown-name">{user?.full_name || 'User'}</span>
-                    <span className="sidebar-profile-dropdown-email">{user?.email || ''}</span>
+              <motion.div
+                className="sidebar-profile-dropdown"
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <div role="menu">
+                  <button
+                    type="button"
+                    className="profile-dropdown-header"
+                    onClick={() => navigate(ROUTES.PROFILE)}
+                    role="menuitem"
+                  >
+                    <div className="profile-dropdown-user">
+                      <div className="profile-dropdown-avatar" aria-hidden="true">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Profile" />
+                        ) : (
+                          <User size={20} strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <div className="profile-dropdown-info">
+                        <span className="profile-dropdown-name">{user?.full_name || 'User'}</span>
+                        <span className="profile-dropdown-email">{user?.email || ''}</span>
+                      </div>
+                    </div>
+                    <div className="profile-dropdown-header-right">
+                      <ChevronRight size={12} className="text-muted" />
+                    </div>
+                  </button>
+
+                  <div className="profile-dropdown-divider" role="separator" />
+
+                  <div className="profile-dropdown-menu">
+
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => toast.success('Personalization coming soon')}
+                      role="menuitem"
+                    >
+                      <Palette size={14} aria-hidden="true" />
+                      <span>Personalization</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => navigate(ROUTES.PROFILE)}
+                      role="menuitem"
+                    >
+                      <User size={14} aria-hidden="true" />
+                      <span>Profile</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => toast.success('Settings coming soon')}
+                      role="menuitem"
+                    >
+                      <Settings size={14} aria-hidden="true" />
+                      <span>Settings</span>
+                    </button>
+
+                    <div className="profile-dropdown-divider" role="separator" />
+
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => toast.success('Help coming soon')}
+                      role="menuitem"
+                    >
+                      <HelpCircle size={14} aria-hidden="true" />
+                      <span>Help</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item profile-dropdown-item-danger"
+                      onClick={() => {
+                        logout();
+                        setIsProfileOpen(false);
+                      }}
+                      role="menuitem"
+                    >
+                      <LogOut size={14} aria-hidden="true" />
+                      <span>Log Out</span>
+                    </button>
                   </div>
                 </div>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <NavLink
-                  to="/profile"
-                  className="topbar-dropdown-item"
-                  onClick={() => setIsProfileOpen(false)}
-                  role="menuitem"
-                >
-                  <User size={16} aria-hidden="true" />
-                  Profile
-                </NavLink>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <NavLink
-                  to="/dashboard"
-                  className="topbar-dropdown-item"
-                  onClick={() => setIsProfileOpen(false)}
-                  role="menuitem"
-                >
-                  <LayoutDashboard size={16} aria-hidden="true" />
-                  Dashboard
-                </NavLink>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <button
-                  type="button"
-                  className="topbar-dropdown-item"
-                  disabled
-                  role="menuitem"
-                >
-                  <Settings size={16} aria-hidden="true" />
-                  Settings
-                </button>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <button
-                  type="button"
-                  className="topbar-dropdown-item"
-                  disabled
-                  role="menuitem"
-                >
-                  <LogOut size={16} aria-hidden="true" />
-                  Change Password
-                </button>
-                <div className="topbar-dropdown-divider" role="separator" />
-                <button
-                  type="button"
-                  className="topbar-dropdown-item"
-                  onClick={() => {
-                    logout();
-                    setIsProfileOpen(false);
-                  }}
-                  role="menuitem"
-                >
-                  <LogOut size={16} aria-hidden="true" />
-                  Sign Out
-                </button>
-              </DropdownWrapper>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
