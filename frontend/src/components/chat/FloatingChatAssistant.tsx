@@ -1,27 +1,28 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, type KeyboardEvent } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Send, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { modalContentVariants, staggerContainer, staggerItem } from '@/lib/motion';
+import { useAuth } from '@/hooks/useAuth';
+import { useChat } from '@/hooks/useChat';
+import { ChatMessage } from './ChatMessage';
 import './FloatingChatAssistant.css';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
+/**
+ * Floating quick-access chat widget, rendered on every page except /chat
+ * itself (see DashboardLayout / ROUTES.CHAT check below) — it shares the
+ * exact same conversation (via ChatContext/useChat) as the full ChatPage,
+ * so a message sent from either surface continues one real conversation
+ * against the real backend, not a separate fake one.
+ */
 export const FloatingChatAssistant = () => {
+  const location = useLocation();
+  const { user } = useAuth();
+  const { messages, isLoading, sendMessage } = useChat();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hi! How can I help you today?",
-    },
-  ]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -32,35 +33,25 @@ export const FloatingChatAssistant = () => {
     if (isOpen) {
       scrollToBottom();
     }
-  }, [isOpen, messages, isTyping]);
+  }, [isOpen, messages, isLoading]);
 
-  const handleSend = async () => {
+  // Hidden entirely on the real Chat page — that page already has the full
+  // conversation UI; showing a second copy of the same conversation there
+  // would just be redundant.
+  if (location.pathname === '/chat') {
+    return null;
+  }
+
+  const userName = user?.full_name || user?.email || 'You';
+
+  const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed) return;
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: trimmed,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    if (!trimmed || isLoading) return;
+    sendMessage(trimmed);
     setInput('');
-    setIsTyping(true);
-
-    // Simulate assistant response for demo purposes
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: "Thanks for your message! I'm here to help with anything you need.",
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 1200);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -116,24 +107,21 @@ export const FloatingChatAssistant = () => {
 
             {/* Messages */}
             <div className="floating-chat-messages">
+              {messages.length === 0 && !isLoading && (
+                <div className="floating-chat-empty">
+                  <p>Hi! Ask me anything about your company knowledge base.</p>
+                </div>
+              )}
+
               <motion.div variants={staggerContainer} initial="hidden" animate="visible">
                 {messages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    variants={staggerItem}
-                    className={cn(
-                      'floating-chat-message',
-                      msg.role === 'user' ? 'floating-chat-message-user' : 'floating-chat-message-assistant'
-                    )}
-                  >
-                    <div className="floating-chat-bubble">
-                      <p className="floating-chat-bubble-text">{msg.content}</p>
-                    </div>
+                  <motion.div key={msg.id} variants={staggerItem} className="floating-chat-message-wrapper">
+                    <ChatMessage message={msg} userName={userName} />
                   </motion.div>
                 ))}
               </motion.div>
 
-              {isTyping && (
+              {isLoading && (
                 <div className="floating-chat-message floating-chat-message-assistant">
                   <div className="floating-chat-bubble">
                     <div className="floating-chat-typing">
@@ -157,13 +145,14 @@ export const FloatingChatAssistant = () => {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   rows={1}
+                  disabled={isLoading}
                   aria-label="Chat message input"
                 />
                 <motion.button
                   type="button"
                   className="floating-chat-send"
                   onClick={handleSend}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || isLoading}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   aria-label="Send message"
