@@ -165,10 +165,22 @@ export const IntegrationsPage = () => {
 
           {/* ── Add Integration Card ── */}
           <motion.div variants={staggerItem}>
-            <button
-              type="button"
+            {/* A <div role="button"> here, not a real <button> — the inner
+                "Choose Service" is itself a <button> (via <Button>), and
+                nesting <button> inside <button> is invalid HTML that breaks
+                click targeting (browsers auto-close the nested button while
+                parsing, so it doesn't actually end up where React thinks). */}
+            <div
+              role="button"
+              tabIndex={0}
               className="add-integration-card"
               onClick={() => setIsServicePickerOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsServicePickerOpen(true);
+                }
+              }}
             >
               <div className="add-integration-icon">
                 <Plug size={24} />
@@ -178,7 +190,7 @@ export const IntegrationsPage = () => {
               <Button variant="primary" size="md" className="add-integration-button">
                 Choose Service
               </Button>
-            </button>
+            </div>
           </motion.div>
         </motion.section>
       )}
