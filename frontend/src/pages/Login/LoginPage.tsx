@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useEffect } from 'react';
+import { useState, type FormEvent, useEffect, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,7 +24,12 @@ interface LoginFormErrors {
   password?: string;
 }
 
-const integrationLogos: LogoItem[] = [
+interface LogoItem {
+  node: ReactNode;
+  title: string;
+}
+
+const _integrationLogos: LogoItem[] = [
   {
     node: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="#FAFAFA">
@@ -183,79 +188,66 @@ export default function LoginPage() {
           <AppLogo className="app-logo-vertical app-logo-large" />
         </motion.div>
 
-        {/* Right Column: Authentication Card */}
-        <div className="auth-card-section">
-          <div className="auth-form-card">
-            {/* Top Center Logo (Standalone without container border/background) */}
-            <div className="auth-card-top-logo">
-              <UnifyLogo width={54} height={27} color="#FAFAFA" />
-            </div>
-
-            <div className="auth-form-header">
+            <motion.div className="auth-form-header" variants={staggerItem}>
               <h1>Welcome Back</h1>
               <p>Sign in to continue to your workspace.</p>
-            </div>
-
-        <motion.div className="auth-form-header" variants={staggerItem}>
-          <h1>Welcome Back</h1>
-          <p>Sign in to continue to your workspace.</p>
-        </motion.div>
-
-        <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <motion.div variants={staggerContainer}>
-            <motion.div variants={staggerItem}>
-              <Input
-                id="login-email"
-                name="email"
-                type="email"
-                label="Email address"
-                placeholder="you@company.com"
-                autoComplete="email"
-                value={formValues.email}
-                onChange={handleChange}
-                error={formErrors.email}
-                icon={<Mail size={16} />}
-                disabled={isLoading}
-                required
-              />
-              </motion.div>
-
-            <motion.div variants={staggerItem}>
-              <Input
-                id="login-password"
-                name="password"
-                type="password"
-                label="Password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                value={formValues.password}
-                onChange={handleChange}
-                error={formErrors.password}
-                icon={<Lock size={16} />}
-                disabled={isLoading}
-                required
-              />
             </motion.div>
 
-            <motion.div variants={staggerItem}>
-              <Button
-                id="login-submit"
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="auth-btn-full"
-              >
-              {isLoading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </motion.div>
-          </motion.div>
-        </form>
+            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+              <motion.div variants={staggerContainer}>
+                <motion.div variants={staggerItem}>
+                  <Input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    label="Email address"
+                    placeholder="you@company.com"
+                    autoComplete="email"
+                    value={formValues.email}
+                    onChange={handleChange}
+                    error={formErrors.email}
+                    icon={<Mail size={16} />}
+                    disabled={isLoading}
+                    required
+                  />
+                </motion.div>
 
-        <p className="auth-form-footer">
-          Don't have an account?{' '}
-          <Link to={ROUTES.REGISTER}>Create one</Link>
-        </p>
+                <motion.div variants={staggerItem}>
+                  <Input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    label="Password"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    value={formValues.password}
+                    onChange={handleChange}
+                    error={formErrors.password}
+                    icon={<Lock size={16} />}
+                    disabled={isLoading}
+                    required
+                  />
+                </motion.div>
+
+                <motion.div variants={staggerItem}>
+                  <Button
+                    id="login-submit"
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    isLoading={isLoading}
+                    className="auth-btn-full"
+                  >
+                    {isLoading ? 'Signing in…' : 'Sign In'}
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </form>
+
+            <p className="auth-form-footer">
+              Don't have an account?{' '}
+              <Link to={ROUTES.REGISTER}>Create one</Link>
+            </p>
       </motion.div>
     </div>
   );
