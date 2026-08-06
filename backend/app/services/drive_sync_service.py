@@ -78,11 +78,9 @@ async def _refresh_google_token(db: AsyncSession, db_token: OAuthToken) -> str:
 async def sync_drive_documents(db: AsyncSession, user_id: str) -> dict:
     """Sync all text files and Google Docs accessible via user's Google Drive OAuth integration."""
     # 1. Fetch Google OAuth token
-    # canonical provider name is "google_drive" (see oauth_config.PROVIDER_ALIASES);
-    # "google" is also accepted defensively in case of legacy/manually-inserted rows.
     stmt = select(OAuthToken).where(
         OAuthToken.user_id == user_id,
-        OAuthToken.provider.in_(["google_drive", "google"]),
+        OAuthToken.provider == "google"
     )
     res = await db.execute(stmt)
     db_token = res.scalars().first()

@@ -14,27 +14,7 @@
 // OAuth redirect: "google" | "github"
 // Manual token:  "slack"  | "jira"
 // ─────────────────────────────────────────────
-export type OAuthProvider = 
-  | 'google' 
-  | 'github' 
-  | 'slack' 
-  | 'jira' 
-  | 'notion'
-  | 'confluence'
-  | 'microsoft-teams'
-  | 'microsoft-sharepoint'
-  | 'onedrive'
-  | 'dropbox'
-  | 'gitlab'
-  | 'bitbucket'
-  | 'linear'
-  | 'asana'
-  | 'trello'
-  | 'clickup'
-  | 'salesforce'
-  | 'hubspot'
-  | 'zendesk'
-  | 'discord';
+export type OAuthProvider = 'google' | 'github' | 'slack' | 'jira' | 'custom';
 
 export interface OAuthConnection {
   provider: OAuthProvider;
@@ -85,5 +65,6 @@ export interface ProviderMeta {
   id: OAuthProvider;
   label: string;
   description: string;
-  authMethod: 'oauth' | 'manual';
+  authMethod: 'oauth' | 'manual' | 'custom';
+  icon: string;
 }

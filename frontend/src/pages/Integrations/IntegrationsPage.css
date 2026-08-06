@@ -85,7 +85,7 @@
   align-items: stretch;
 }
 
-/* ── Connection Card ── */
+/* ── Compact Connection Card ── */
 .connection-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -97,37 +97,12 @@
   text-align: center;
   gap: var(--space-3);
   height: 100%;
-  position: relative;
   transition: transform 250ms ease, box-shadow 250ms ease;
 }
 
 .connection-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
-}
-
-.connection-card-remove {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 2;
-  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-}
-
-.connection-card-remove:hover {
-  background: var(--color-error-bg);
-  color: var(--color-error);
-  border-color: var(--color-error);
 }
 
 .connection-card-logo {
@@ -140,13 +115,6 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  overflow: hidden;
-}
-
-.connection-card-logo-img {
-  width: 24px;
-  height: 24px;
-  display: block;
 }
 
 .connection-card-title {
@@ -164,130 +132,6 @@
 .connection-card-button {
   width: 100%;
   margin-top: auto;
-}
-
-/* ── Add Integration Card ── */
-.add-integration-card {
-  background-color: var(--bg-card);
-  border: 2px dashed var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-3);
-  height: 100%;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform 250ms ease, box-shadow 250ms ease;
-}
-
-.add-integration-card:hover {
-  border-color: var(--accent-primary);
-  background: var(--bg-secondary);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-}
-
-.add-integration-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-}
-
-.add-integration-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-main);
-  margin: 0;
-}
-
-.add-integration-subtitle {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  margin: 0;
-  max-width: 200px;
-}
-
-.add-integration-button {
-  margin-top: auto;
-}
-
-/* ── Modals ── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: var(--space-4);
-}
-
-.modal-content {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.modal-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-main);
-  margin: 0;
-}
-
-.modal-close {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-1);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.modal-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
-}
-
-.modal-body {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.modal-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding-top: var(--space-2);
 }
 
 /* ── Security & Compliance Card ── */
@@ -374,10 +218,6 @@
     padding: var(--space-5);
   }
 
-  .add-integration-card {
-    padding: var(--space-5);
-  }
-
   .security-grid {
     grid-template-columns: 1fr;
   }
@@ -399,10 +239,6 @@
   }
 
   .connection-card {
-    padding: var(--space-4);
-  }
-
-  .add-integration-card {
     padding: var(--space-4);
   }
 

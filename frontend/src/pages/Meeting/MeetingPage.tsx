@@ -8,8 +8,6 @@ import {
   User,
   Sparkles,
   Trash2,
-  Paperclip,
-  X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -28,32 +26,6 @@ export const MeetingPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setAttachedFiles((prev) => [...prev, ...files]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleAttachClick = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleSummarize = async () => {
     if (!transcript.trim()) {
@@ -130,57 +102,16 @@ export const MeetingPage = () => {
           action items with assignees, and generate a concise executive summary.
         </p>
 
-        {attachedFiles.length > 0 && (
-          <div className="meeting-attachments-area">
-            {attachedFiles.map((file, index) => (
-              <div key={`${file.name}-${index}`} className="meeting-attachment-chip">
-                <FileText size={14} className="meeting-attachment-icon" />
-                <div className="meeting-attachment-info">
-                  <span className="meeting-attachment-name">{file.name}</span>
-                  <span className="meeting-attachment-size">{formatFileSize(file.size)}</span>
-                </div>
-                <button
-                  type="button"
-                  className="meeting-attachment-remove"
-                  onClick={() => handleRemoveFile(index)}
-                  aria-label={`Remove ${file.name}`}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="meeting-textarea-wrapper">
-          <button
-            type="button"
-            className="meeting-attach-btn"
-            onClick={handleAttachClick}
-            aria-label="Attach files"
-            title="Attach files"
-          >
-            <Paperclip size={18} />
-          </button>
-          <textarea
-            ref={textareaRef}
-            className="meeting-transcript-input meeting-transcript-input-with-attach"
-            placeholder="Paste meeting transcript here..."
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            disabled={isLoading}
-            rows={10}
-            aria-label="Meeting transcript input"
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-            aria-hidden="true"
-          />
-        </div>
+        <textarea
+          ref={textareaRef}
+          className="meeting-transcript-input"
+          placeholder="Paste meeting transcript here...&#10;&#10;Example:&#10;Alice: We need to decide on the Q4 roadmap priority.&#10;Bob: I recommend focusing on the RAG pipeline improvements.&#10;Carol: Agreed. Let's schedule a follow-up for next Tuesday.&#10;..."
+          value={transcript}
+          onChange={(e) => setTranscript(e.target.value)}
+          disabled={isLoading}
+          rows={10}
+          aria-label="Meeting transcript input"
+        />
 
         <div className="meeting-input-footer">
           <span className="text-xs text-slate-400">

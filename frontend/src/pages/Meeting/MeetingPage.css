@@ -110,108 +110,6 @@
   border-color: var(--border-focus);
 }
 
-/* ── Attachments Area ── */
-.meeting-attachments-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.meeting-attachment-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  max-width: 100%;
-}
-
-.meeting-attachment-icon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.meeting-attachment-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.meeting-attachment-name {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-}
-
-.meeting-attachment-size {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  line-height: 1.2;
-}
-
-.meeting-attachment-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.meeting-attachment-remove:hover {
-  background: var(--bg-hover);
-  color: var(--color-error);
-}
-
-/* ── Textarea Wrapper with Attach Button ── */
-.meeting-textarea-wrapper {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-}
-
-.meeting-attach-btn {
-  position: absolute;
-  left: var(--space-3);
-  bottom: var(--space-3);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-  z-index: 2;
-}
-
-.meeting-attach-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
-}
-
-.meeting-transcript-input-with-attach {
-  padding-left: calc(var(--space-3) + 32px + var(--space-2));
-  padding-bottom: calc(var(--space-3) + 32px + var(--space-2));
-}
-
 .meeting-input-footer {
   display: flex;
   align-items: center;
@@ -255,7 +153,7 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .meeting-results-grid> :first-child {
+  .meeting-results-grid > :first-child {
     grid-column: 1 / -1;
   }
 }

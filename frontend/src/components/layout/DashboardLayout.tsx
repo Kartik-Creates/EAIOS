@@ -47,7 +47,7 @@ export const DashboardLayout = () => {
         </motion.main>
       </AnimatePresence>
 
-      {location.pathname !== '/chat' && <FloatingChatAssistant />}
+      <FloatingChatAssistant />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
@@ -6,9 +6,12 @@ import {
   Plug,
   ShieldCheck,
   Activity,
+  Database,
   ArrowRight,
   FileText,
   CheckCircle2,
+  HardDrive,
+  Users,
   Clock,
   TrendingUp,
   BarChart3,
@@ -17,49 +20,63 @@ import {
   MessageCircle,
   SearchCheck,
   RefreshCw,
-  GitPullRequest,
-  Calendar,
-  FolderOpen,
-  Workflow,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { healthService } from '@/services/healthService';
 import { integrationsService } from '@/services/integrationsService';
 import type { OAuthConnection } from '@/types/integration.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { MotionCard } from '@/lib/motion';
 import { ROUTES } from '@/constants/routes';
-import { staggerContainer, staggerItem, fadeInUpVariants } from '@/lib/motion';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './DashboardPage.css';
 
+/**
+ * Gets a friendly dynamic greeting based on the current hour of the day.
+ */
 const getGreeting = (): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
-};
-
-const getCurrentDate = (): string => {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 };
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [promptQuery, setPromptQuery] = useState('');
+  const [backendHealth, setBackendHealth] = useState<'online' | 'offline' | 'checking'>('checking');
   const [connections, setConnections] = useState<OAuthConnection[]>([]);
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
 
+  // Check health and load user connections on mount
   useEffect(() => {
     let isMounted = true;
 
     const fetchDashboardData = async () => {
+      // 1. Health check
+      try {
+        const health = await healthService.check();
+        if (isMounted) {
+          if (health.status === 'ok') {
+            setBackendHealth('online');
+          } else {
+            setBackendHealth('offline');
+          }
+        }
+      } catch (err) {
+        if (isMounted) setBackendHealth('offline');
+      }
 
+      // 2. Fetch user connected integrations
       try {
         const list = await integrationsService.listConnections();
         if (isMounted) setConnections(list);
       } catch (err) {
+        // Safe fallback if token is invalid or endpoint fails
         if (isMounted) setConnections([]);
       } finally {
         if (isMounted) setIsLoadingConnections(false);
@@ -73,155 +90,231 @@ export const DashboardPage = () => {
     };
   }, []);
 
+  const handlePromptSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!promptQuery.trim()) return;
+    navigate(`${ROUTES.CHAT}?prompt=${encodeURIComponent(promptQuery.trim())}`);
+  };
+
+  const handleChipClick = (promptText: string) => {
+    navigate(`${ROUTES.CHAT}?prompt=${encodeURIComponent(promptText)}`);
+  };
+
   const userName = user?.full_name || user?.email || 'Enterprise User';
 
-  const pendingApprovals = [
-    { id: 'apr-1', title: 'PTO Request — Alice Johnson', requester: 'alice@eaios.enterprise', type: 'leave', submittedAt: '2h ago' },
-    { id: 'apr-2', title: 'HR-Only Document Access — Bob Smith', requester: 'bob@eaios.enterprise', type: 'access', submittedAt: '4h ago' },
-    { id: 'apr-3', title: 'Workflow: Bulk Drive Sync Approval', requester: 'system', type: 'workflow', submittedAt: '6h ago' },
+  // ── Mock executive data (pending real backend endpoints) ──
+  interface ApprovalItem {
+    id: string;
+    title: string;
+    requester: string;
+    type: 'leave' | 'access' | 'workflow';
+    submittedAt: string;
+  }
+
+  interface UsageStat {
+    label: string;
+    value: string | number;
+    change: string;
+    trend: 'up' | 'down' | 'neutral';
+    icon: React.ReactNode;
+  }
+
+  const pendingApprovals: ApprovalItem[] = [
+    {
+      id: 'apr-1',
+      title: 'PTO Request — Alice Johnson',
+      requester: 'alice@eaios.enterprise',
+      type: 'leave',
+      submittedAt: '2h ago',
+    },
+    {
+      id: 'apr-2',
+      title: 'HR-Only Document Access — Bob Smith',
+      requester: 'bob@eaios.enterprise',
+      type: 'access',
+      submittedAt: '4h ago',
+    },
+    {
+      id: 'apr-3',
+      title: 'Workflow: Bulk Drive Sync Approval',
+      requester: 'system',
+      type: 'workflow',
+      submittedAt: '6h ago',
+    },
   ];
 
-  const usageStats = [
-    { label: 'AI Chat Queries', value: '1,284', change: '+12%', trend: 'up' as const, icon: <MessageCircle size={18} className="text-muted" /> },
-    { label: 'Semantic Searches', value: '862', change: '+8%', trend: 'up' as const, icon: <SearchCheck size={18} className="text-muted" /> },
-    { label: 'Workflow Triggers', value: '142', change: '+24%', trend: 'up' as const, icon: <GitBranch size={18} className="text-muted" /> },
-    { label: 'Avg Response Time', value: '1.8s', change: '-0.3s', trend: 'up' as const, icon: <TrendingUp size={18} className="text-muted" /> },
+  const usageStats: UsageStat[] = [
+    {
+      label: 'AI Chat Queries',
+      value: '1,284',
+      change: '+12%',
+      trend: 'up',
+      icon: <MessageCircle size={18} className="text-muted" />,
+    },
+    {
+      label: 'Semantic Searches',
+      value: '862',
+      change: '+8%',
+      trend: 'up',
+      icon: <SearchCheck size={18} className="text-muted" />,
+    },
+    {
+      label: 'Workflow Triggers',
+      value: '142',
+      change: '+24%',
+      trend: 'up',
+      icon: <GitBranch size={18} className="text-muted" />,
+    },
+    {
+      label: 'Avg Response Time',
+      value: '1.8s',
+      change: '-0.3s',
+      trend: 'up',
+      icon: <TrendingUp size={18} className="text-muted" />,
+    },
   ];
 
   return (
-    <motion.div className="dashboard-page" variants={fadeInUpVariants} initial="hidden" animate="visible">
-      {/* ── Header: Greeting + Date ── */}
-      <motion.header className="dashboard-header" variants={staggerItem}>
-        <div className="header-top">
-          <div>
-            <h1 className="dashboard-greeting">{getGreeting()}, {userName}</h1>
-            <p className="dashboard-date">{getCurrentDate()}</p>
+    <div className="dashboard-page">
+      {/* ── Hero Welcome Section ── */}
+      <section className="dashboard-hero" aria-label="Welcome banner">
+        <div className="hero-content-wrapper">
+          <div className="hero-title-area">
+            <div className="hero-badge-row">
+              <div className="status-pill">
+                <span className="status-dot" />
+                {backendHealth === 'checking'
+                  ? 'Checking System Status...'
+                  : backendHealth === 'online'
+                    ? 'System Operational'
+                    : 'Backend Disconnected'}
+              </div>
+            </div>
+
+            <h1>
+              {getGreeting()}, <span className="text-accent">{userName}</span>
+            </h1>
           </div>
 
+          <div className="hero-actions">
+            <Button variant="primary" onClick={() => navigate(ROUTES.CHAT)}>
+              <MessageSquare size={18} className="mr-2" />
+              Ask AI Assistant
+            </Button>
+            <Button variant="ghost" onClick={() => navigate(ROUTES.SEARCH)}>
+              <Search size={18} className="mr-2" />
+              Semantic Search
+            </Button>
+          </div>
         </div>
-      </motion.header>
+      </section>
 
-      {/* ── Today's Priorities ── */}
-      <motion.section className="priorities-card" variants={staggerItem}>
-        <div className="priorities-header">
-          <h2>Today's Priorities</h2>
-          <button type="button" className="priorities-link">View Full Briefing →</button>
-        </div>
-        <ul className="priorities-list">
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>2 Jira tickets due today</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>Slack messages requiring attention</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>GitHub PR waiting for review</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>Meeting at 2:30 PM</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>One workflow pending approval</span>
-          </li>
-        </ul>
+      {/* ── Key Metrics Grid ── */}
+      <motion.section className="kpi-grid" aria-label="System Metrics" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Database size={22} />
+              </div>
+              <span className="kpi-trend positive">+14% this week</span>
+            </div>
+            <div className="kpi-value">1,248</div>
+            <div className="kpi-label">Indexed Vector Chunks</div>
+          </MotionCard>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Activity size={22} />
+              </div>
+              <span className="kpi-trend positive">Active</span>
+            </div>
+            <div className="kpi-value">RAG Engine v1</div>
+            <div className="kpi-label">Neural Retrieval Pipeline</div>
+          </MotionCard>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Plug size={22} />
+              </div>
+              <span className="kpi-trend neutral">
+                {isLoadingConnections ? 'Loading...' : `${connections.length} Connected`}
+              </span>
+            </div>
+            <div className="kpi-value">{connections.length}</div>
+            <div className="kpi-label">Active Cloud Integrations</div>
+          </MotionCard>
+        </motion.div>
+
+        <motion.div variants={staggerItem}>
+          <MotionCard className="kpi-card">
+            <div className="kpi-header">
+              <div className="kpi-icon-wrapper bg-secondary text-muted">
+                <Activity size={22} />
+              </div>
+              <span className={`kpi-trend ${backendHealth === 'online' ? 'positive' : 'neutral'}`}>
+                {backendHealth === 'online' ? '99.9% Uptime' : 'Offline'}
+              </span>
+            </div>
+            <div className="kpi-value">
+              {backendHealth === 'online' ? 'Healthy' : backendHealth === 'checking' ? 'Checking...' : 'Down'}
+            </div>
+            <div className="kpi-label">FastAPI Backend Status</div>
+          </MotionCard>
+        </motion.div>
       </motion.section>
 
-      {/* ── Stats ── */}
-      <motion.div className="stats-grid" variants={staggerContainer}>
-        <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <FileText size={22} />
-            </div>
-            <div className="stat-content">
-              <span className="stat-value">4</span>
-              <span className="stat-label">Open Tickets</span>
-            </div>
-          </MotionCard>
-        </motion.div>
-        <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <MessageSquare size={22} />
-            </div>
-            <div className="stat-content">
-              <span className="stat-value">12</span>
-              <span className="stat-label">Unread Messages</span>
-            </div>
-          </MotionCard>
-        </motion.div>
-        <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <GitPullRequest size={22} />
-            </div>
-            <div className="stat-content">
-              <span className="stat-value">3</span>
-              <span className="stat-label">Pending Reviews</span>
-            </div>
-          </MotionCard>
-        </motion.div>
-      </motion.div>
-
-      {/* ── Recent Activity ── */}
-      <motion.section className="activity-card" variants={staggerItem}>
-        <h2 className="activity-card-title">Recent Activity</h2>
-        <div className="activity-list">
-          <div className="activity-item">
-            <div className="activity-icon"><GitPullRequest size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">New Pull Request assigned to you</div>
-              <div className="activity-desc">feature/dashboard-redesign</div>
-            </div>
-            <span className="activity-time">12 min ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><MessageSquare size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Mentioned in #engineering</div>
-              <div className="activity-desc">@you please review the API changes</div>
-            </div>
-            <span className="activity-time">35 min ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><FolderOpen size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Requirements document updated</div>
-              <div className="activity-desc">Google Drive / Product Specs</div>
-            </div>
-            <span className="activity-time">1 hr ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><FileText size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Ticket UNI-241 moved to Review</div>
-              <div className="activity-desc">Jira / Sprint Backlog</div>
-            </div>
-            <span className="activity-time">2 hr ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><Calendar size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Sprint Planning starts in 30 minutes</div>
-              <div className="activity-desc">Meeting / Team Calendar</div>
-            </div>
-            <span className="activity-time">Upcoming</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><Workflow size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Invoice Approval completed</div>
-              <div className="activity-desc">Workflow / Finance</div>
-            </div>
-            <span className="activity-time">3 hr ago</span>
-          </div>
+      {/* ── Quick Prompt Launch Bar ── */}
+      <section className="quick-prompt-banner" aria-label="Quick Prompt Assistant">
+        <div className="quick-prompt-header">
+          <MessageSquare size={20} className="text-muted" />
+          <h2>Instant Knowledge Query</h2>
         </div>
-      </motion.section>
+
+        <form onSubmit={handlePromptSubmit} className="quick-prompt-input-group">
+          <input
+            type="text"
+            placeholder="Ask anything about your workspace documents, security compliance, or system APIs..."
+            value={promptQuery}
+            onChange={(e) => setPromptQuery(e.target.value)}
+            aria-label="Ask AI Assistant prompt input"
+          />
+          <Button type="submit" variant="primary">
+            Send Prompt <ArrowRight size={16} className="ml-2" />
+          </Button>
+        </form>
+
+        <div className="quick-prompt-chips">
+          <span className="quick-prompt-label">Suggested Prompts:</span>
+          <button
+            type="button"
+            className="chip-btn"
+            onClick={() => handleChipClick('Summarize active policy documents and security standards')}
+          >
+            <FileText size={14} /> Summarize policy updates
+          </button>
+          <button
+            type="button"
+            className="chip-btn"
+            onClick={() => handleChipClick('How do I trigger a Google Drive folder sync?')}
+          >
+            <HardDrive size={14} /> Drive sync instructions
+          </button>
+          <button
+            type="button"
+            className="chip-btn"
+            onClick={() => handleChipClick('Explain current user roles and permissions in UnifyAI')}
+          >
+            <Users size={14} /> System permissions guide
+          </button>
+        </div>
+      </section>
 
       {/* ── Executive: Pending Approvals & AI Usage Stats ── */}
       <motion.div className="dashboard-executive-grid" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
@@ -280,9 +373,9 @@ export const DashboardPage = () => {
       </motion.div>
 
       {/* ── 2-Column Section: Recent Activity & Integration Overview ── */}
-      <motion.div className="dashboard-grid-main" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
+      <div className="dashboard-grid-main">
         {/* Left Column: Recent Activity Log */}
-        <motion.section className="section-card" aria-label="Recent System Activity" variants={staggerItem}>
+        <section className="section-card" aria-label="Recent System Activity">
           <div className="section-card-header">
             <div className="section-card-title">
               <Activity size={20} className="text-muted" />
@@ -344,10 +437,10 @@ export const DashboardPage = () => {
               <span className="activity-time">3h ago</span>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* Right Column: Quick Navigation & Connected Apps */}
-        <motion.section className="section-card" aria-label="Connected Services & Shortcuts" variants={staggerItem}>
+        <section className="section-card" aria-label="Connected Services & Shortcuts">
           <div className="section-card-header">
             <div className="section-card-title">
               <Plug size={20} className="text-muted" />
@@ -363,23 +456,35 @@ export const DashboardPage = () => {
           </div>
 
           <div className="integrations-list">
-            {isLoadingConnections ? (
-              <div className="integration-loading">Loading integrations...</div>
-            ) : connections.length === 0 ? (
-              <div className="integration-empty">No integrations connected yet.</div>
-            ) : (
-              connections.slice(0, 3).map((conn) => (
-                <div key={conn.provider} className="integration-item">
-                  <div className="integration-meta">
-                    <Plug size={18} className="text-muted" />
-                    <span className="integration-name">{conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1)}</span>
-                  </div>
-                  <Badge variant="green" className="integration-status-badge">
-                    Connected
-                  </Badge>
-                </div>
-              ))
-            )}
+            <div className="integration-item">
+              <div className="integration-meta">
+                <HardDrive size={18} className="text-muted" />
+                <span className="integration-name">Google Drive</span>
+              </div>
+              <Badge variant="green" className="integration-status-badge">
+                Connected
+              </Badge>
+            </div>
+
+            <div className="integration-item">
+              <div className="integration-meta">
+                <MessageSquare size={18} className="text-muted" />
+                <span className="integration-name">Slack Workspace</span>
+              </div>
+              <Badge variant="slate" className="integration-status-badge">
+                Ready
+              </Badge>
+            </div>
+
+            <div className="integration-item">
+              <div className="integration-meta">
+                <FileText size={18} className="text-muted" />
+                <span className="integration-name">Jira / Confluence</span>
+              </div>
+              <Badge variant="slate" className="integration-status-badge">
+                Ready
+              </Badge>
+            </div>
           </div>
 
           <div className="section-card-header" style={{ marginTop: '0.5rem', paddingTop: '1rem' }}>
@@ -425,9 +530,9 @@ export const DashboardPage = () => {
               </div>
             )}
           </div>
-        </motion.section>
-      </motion.div>
-    </motion.div>
+        </section>
+      </div>
+    </div>
   );
 };
 
