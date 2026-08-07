@@ -130,6 +130,37 @@
   max-height: 320px;
 }
 
+.floating-chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  min-height: 160px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-4);
+}
+
+/* Reusing the full ChatMessage component here (same avatar, confidence
+   badge, citations, copy button as the real ChatPage) so the conversation
+   looks and behaves identically wherever it's viewed — just scaled down
+   to fit the narrow panel. */
+.floating-chat-message-wrapper .message-avatar {
+  width: 28px;
+  height: 28px;
+}
+
+.floating-chat-message-wrapper .message-bubble {
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.floating-chat-message-wrapper .sender-name,
+.floating-chat-message-wrapper .message-time {
+  font-size: 11px;
+}
+
 .floating-chat-message {
   display: flex;
   width: 100%;

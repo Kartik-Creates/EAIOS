@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
@@ -13,14 +13,16 @@ import './ChatPage.css';
 
 export const ChatPage = () => {
   const { user } = useAuth();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { messages, isLoading, sendMessage, clearChat } = useChat();
+  // conversation state (messages/isLoading/sendMessage) is shared globally via
+  // ChatContext — the same conversation continues here regardless of whether
+  // it was started on this page or via FloatingChatAssistant elsewhere.
+  const { messages, isLoading, sendMessage } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const promptProcessedRef = useRef(false);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [welcomeMessage, setWelcomeMessage] = useState(() => getRandomWelcomeMessage());
+  const [welcomeMessage] = useState(() => getRandomWelcomeMessage());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,15 +47,6 @@ export const ChatPage = () => {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, sendMessage, setSearchParams]);
-
-  useEffect(() => {
-    if (location.pathname === '/chat') {
-      clearChat();
-      setHasInteracted(false);
-      setWelcomeMessage(getRandomWelcomeMessage());
-      promptProcessedRef.current = false;
-    }
-  }, [location.pathname, clearChat]);
 
   const userName = user?.full_name || user?.email || 'You';
 

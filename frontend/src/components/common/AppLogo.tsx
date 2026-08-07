@@ -7,6 +7,7 @@ import './AppLogo.css';
 
 interface AppLogoProps {
   className?: string;
+  size?: number;
 }
 
 const logoVariants = {
@@ -38,3 +39,5 @@ export const AppLogo = ({ className }: AppLogoProps) => {
     </div>
   );
 };
+
+export default AppLogo;

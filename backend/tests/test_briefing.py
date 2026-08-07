@@ -9,14 +9,9 @@ Tests cover:
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
-
 
 import pytest
-from httpx import HTTPError
-
 from app.core.security import decrypt_token, encrypt_token, get_password_hash
-
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
 from app.schemas.briefing import BriefingItem, BriefingResponse, SourceResult
@@ -27,8 +22,9 @@ from app.services.briefing_service import (
     get_gmail_briefing,
     get_jira_briefing,
 )
-from tests.rag_fixtures import register_and_login
+from httpx import HTTPError
 
+from tests.rag_fixtures import register_and_login
 
 # ── HELPERS ──────────────────────────────────────────────────────────
 

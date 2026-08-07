@@ -6,14 +6,12 @@ plus parallel orchestration.
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
 httpx_timeout_default = 5.0
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.core.config import settings
 from app.core.security import decrypt_token
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
