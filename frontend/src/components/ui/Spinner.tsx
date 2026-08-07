@@ -1,5 +1,5 @@
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
-import './ui.css';
 
 interface SpinnerProps {
   className?: string;
@@ -8,10 +8,12 @@ interface SpinnerProps {
 
 export const Spinner = ({ className, size = 'md' }: SpinnerProps) => {
   return (
-    <div 
+    <motion.div 
       className={cn('spinner', `spinner-${size}`, className)} 
       role="status" 
-      aria-busy="true" 
+      aria-busy="true"
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
     />
   );
 };

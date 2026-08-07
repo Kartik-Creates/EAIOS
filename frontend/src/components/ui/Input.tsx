@@ -1,4 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import './ui.css';
 
@@ -13,11 +14,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className={cn('input-wrapper', className)}>
         {label && (
-          <label className="input-label" htmlFor={id}>
+          <motion.label
+            className="input-label"
+            htmlFor={id}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
             {label}
-          </label>
+          </motion.label>
         )}
-        <div className="input-field-container">
+        <motion.div
+          className="input-field-container"
+          whileFocus={{ scale: 1.01 }}
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        >
           {icon && <div className="input-icon-left">{icon}</div>}
           <input
             ref={ref}
@@ -26,8 +37,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={!!error}
             {...props}
           />
-        </div>
-        {error && <span className="input-error-text" role="alert">{error}</span>}
+        </motion.div>
+        {error && <motion.span className="input-error-text" role="alert" initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>{error}</motion.span>}
       </div>
     );
   }

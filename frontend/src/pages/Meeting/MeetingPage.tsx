@@ -8,13 +8,17 @@ import {
   User,
   Sparkles,
   Trash2,
+  Paperclip,
+  X,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { meetingService } from '@/services/meetingService';
 import type { MeetingSummary, ActionItem, Decision } from '@/types/meeting.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './MeetingPage.css';
 
 export const MeetingPage = () => {
@@ -24,6 +28,32 @@ export const MeetingPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setAttachedFiles((prev) => [...prev, ...files]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
 
   const handleSummarize = async () => {
     if (!transcript.trim()) {
@@ -68,23 +98,20 @@ export const MeetingPage = () => {
   };
 
   return (
-    <div className="meeting-page">
-      {/* ── Hero Header ── */}
-
-
+    <motion.div className="meeting-page" variants={staggerContainer}>
       {/* ── Error Banner ── */}
       {error && !isLoading && (
-        <div className="meeting-error-banner" style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
+        <motion.div className="meeting-error-banner" variants={staggerItem} style={{ border: '1px solid var(--color-error)', background: 'var(--color-error-bg)' }}>
           <AlertCircle size={20} style={{ color: 'var(--color-error)' }} />
           <span style={{ color: '#fca5a5' }}>{error}</span>
           <Button variant="ghost" size="sm" onClick={() => setError(null)}>
             Dismiss
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* ── Input Panel ── */}
-      <section className="meeting-section-card">
+      <motion.section className="meeting-section-card" variants={staggerItem}>
         <div className="meeting-section-header">
           <div className="meeting-section-title">
             <FileText size={20} className="text-muted" />
@@ -103,16 +130,57 @@ export const MeetingPage = () => {
           action items with assignees, and generate a concise executive summary.
         </p>
 
-        <textarea
-          ref={textareaRef}
-          className="meeting-transcript-input"
-          placeholder="Paste meeting transcript here...&#10;&#10;Example:&#10;Alice: We need to decide on the Q4 roadmap priority.&#10;Bob: I recommend focusing on the RAG pipeline improvements.&#10;Carol: Agreed. Let's schedule a follow-up for next Tuesday.&#10;..."
-          value={transcript}
-          onChange={(e) => setTranscript(e.target.value)}
-          disabled={isLoading}
-          rows={10}
-          aria-label="Meeting transcript input"
-        />
+        {attachedFiles.length > 0 && (
+          <div className="meeting-attachments-area">
+            {attachedFiles.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="meeting-attachment-chip">
+                <FileText size={14} className="meeting-attachment-icon" />
+                <div className="meeting-attachment-info">
+                  <span className="meeting-attachment-name">{file.name}</span>
+                  <span className="meeting-attachment-size">{formatFileSize(file.size)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="meeting-attachment-remove"
+                  onClick={() => handleRemoveFile(index)}
+                  aria-label={`Remove ${file.name}`}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="meeting-textarea-wrapper">
+          <button
+            type="button"
+            className="meeting-attach-btn"
+            onClick={handleAttachClick}
+            aria-label="Attach files"
+            title="Attach files"
+          >
+            <Paperclip size={18} />
+          </button>
+          <textarea
+            ref={textareaRef}
+            className="meeting-transcript-input meeting-transcript-input-with-attach"
+            placeholder="Paste meeting transcript here..."
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            disabled={isLoading}
+            rows={10}
+            aria-label="Meeting transcript input"
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+            aria-hidden="true"
+          />
+        </div>
 
         <div className="meeting-input-footer">
           <span className="text-xs text-slate-400">
@@ -129,7 +197,7 @@ export const MeetingPage = () => {
             Generate Summary
           </Button>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── Loading State ── */}
       {isLoading && (
@@ -142,9 +210,9 @@ export const MeetingPage = () => {
 
       {/* ── Results Sections ── */}
       {summary && !isLoading && (
-        <div className="meeting-results-grid">
+        <motion.div className="meeting-results-grid" variants={staggerContainer}>
           {/* Summary Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card" variants={staggerItem}>
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <Sparkles size={20} className="text-muted" />
@@ -169,10 +237,10 @@ export const MeetingPage = () => {
                 </span>
               )}
             </div>
-          </section>
+          </motion.section>
 
           {/* Decisions Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card">
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <CheckCircle2 size={20} className="text-muted" />
@@ -184,9 +252,9 @@ export const MeetingPage = () => {
             {summary.decisions.length === 0 ? (
               <p className="text-xs text-slate-400">No explicit decisions detected in this transcript.</p>
             ) : (
-              <div className="meeting-list">
+              <motion.div className="meeting-list" variants={staggerContainer}>
                 {summary.decisions.map((decision: Decision) => (
-                  <div key={decision.id} className="meeting-decision-item">
+                  <motion.div key={decision.id} className="meeting-decision-item" variants={staggerItem}>
                     <div className="meeting-decision-bullet" />
                     <div className="meeting-decision-content">
                       <div className="meeting-decision-desc">{decision.description}</div>
@@ -194,14 +262,14 @@ export const MeetingPage = () => {
                         <div className="text-xs text-slate-400">{decision.context}</div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+                </motion.div>
             )}
-          </section>
+          </motion.section>
 
           {/* Action Items Card */}
-          <section className="meeting-section-card">
+          <motion.section className="meeting-section-card" variants={staggerItem}>
             <div className="meeting-section-header">
               <div className="meeting-section-title">
                 <Clock size={20} className="text-muted" />
@@ -215,9 +283,9 @@ export const MeetingPage = () => {
             {summary.action_items.length === 0 ? (
               <p className="text-xs text-slate-400">No action items detected in this transcript.</p>
             ) : (
-              <div className="meeting-list">
+              <motion.div className="meeting-list" variants={staggerContainer}>
                 {summary.action_items.map((item: ActionItem) => (
-                  <div
+                  <motion.div
                     key={item.id}
                     className={`meeting-action-item ${item.completed ? 'completed' : ''}`}
                   >
@@ -246,12 +314,12 @@ export const MeetingPage = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                   </motion.div>
                 ))}
-              </div>
+               </motion.div>
             )}
-          </section>
-        </div>
+           </motion.section>
+         </motion.div>
       )}
 
       {/* ── Empty State ── */}
@@ -264,7 +332,7 @@ export const MeetingPage = () => {
           <p>Paste a meeting transcript above and click <strong>Generate Summary</strong> to produce an intelligent meeting report.</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

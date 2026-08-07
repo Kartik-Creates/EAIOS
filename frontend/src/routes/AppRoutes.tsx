@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminRoute } from '@/components/auth/AdminRoute';
 import { Spinner } from '@/components/ui/Spinner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ROUTES } from '@/constants/routes';
 
@@ -37,14 +38,14 @@ export const AppRoutes = () => {
         {/* ── Protected Main Application Routes ── */}
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
-            <Route path={ROUTES.ROOT}         element={<Navigate to={ROUTES.CHAT} replace />} />
+            <Route path={ROUTES.ROOT}         element={<Navigate to={ROUTES.DASHBOARD} replace />} />
             <Route path={ROUTES.DASHBOARD}    element={<DashboardPage />} />
             <Route path={ROUTES.CHAT}         element={<ChatPage />} />
             <Route path={ROUTES.SEARCH}       element={<SearchPage />} />
             <Route path={ROUTES.INTEGRATIONS} element={<IntegrationsPage />} />
             <Route path={ROUTES.PROFILE}      element={<ProfilePage />} />
             <Route path={ROUTES.MEETING}      element={<MeetingPage />} />
-            <Route path={ROUTES.WORKFLOW}     element={<WorkflowPage />} />
+            <Route path={ROUTES.WORKFLOW}     element={<ErrorBoundary><WorkflowPage /></ErrorBoundary>} />
           </Route>
         </Route>
 

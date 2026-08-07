@@ -1,7 +1,9 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import { Spinner } from './Spinner';
-import './ui.css'; // Load UI styles
+import { buttonTapVariants } from '@/lib/motion';
+import './ui.css';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -10,23 +12,30 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, type, onClick }, ref) => {
+    const isDisabled = disabled || isLoading;
+
     return (
-      <button
+      <motion.button
         ref={ref}
-        disabled={disabled || isLoading}
+        disabled={isDisabled}
         className={cn(
           'btn',
           `btn-${variant}`,
           `btn-${size}`,
-          (disabled || isLoading) && 'btn-disabled',
+          isDisabled && 'btn-disabled',
           className
         )}
-        {...props}
+        variants={buttonTapVariants}
+        initial="rest"
+        whileHover={isDisabled ? 'disabled' : 'hover'}
+        whileTap={isDisabled ? 'disabled' : 'tap'}
+        type={type}
+        onClick={onClick}
       >
         {isLoading && <Spinner size="sm" />}
         {children}
-      </button>
+      </motion.button>
     );
   }
 );

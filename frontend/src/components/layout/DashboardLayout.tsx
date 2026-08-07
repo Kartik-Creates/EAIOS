@@ -1,11 +1,14 @@
 import { useState, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { cn } from '@/utils/cn';
+import { FloatingChatAssistant } from '@/components/chat/FloatingChatAssistant';
 import './layout.css';
 
 export const DashboardLayout = () => {
+  const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
@@ -27,15 +30,24 @@ export const DashboardLayout = () => {
         onToggleMobile={handleToggleMobile}
       />
 
-      <main
-        className={cn(
-          'dashboard-content',
-          !isSidebarHovered && 'content-collapsed'
-        )}
-        aria-label="Page content"
-      >
-        <Outlet />
-      </main>
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={location.pathname}
+          className={cn(
+            'dashboard-content',
+            !isSidebarHovered && 'content-collapsed'
+          )}
+          aria-label="Page content"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Outlet />
+        </motion.main>
+      </AnimatePresence>
+
+      {location.pathname !== '/chat' && <FloatingChatAssistant />}
     </div>
   );
 };

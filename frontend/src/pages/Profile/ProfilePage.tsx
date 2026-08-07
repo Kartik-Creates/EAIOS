@@ -8,18 +8,16 @@ import {
   Laptop,
   Palette,
   ChevronRight,
-  Moon,
-  Sun,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
 import { useAvatar } from '@/hooks/useAvatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { EditProfileModal } from './EditProfileModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { cn } from '@/utils/cn';
+import { staggerContainer, staggerItem } from '@/lib/motion';
 import './ProfilePage.css';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -31,7 +29,6 @@ const ROLE_LABELS: Record<string, string> = {
 
 export const ProfilePage = () => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { avatarUrl } = useAvatar(user?.id);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -39,11 +36,11 @@ export const ProfilePage = () => {
   const roleLabel = ROLE_LABELS[user?.role ?? 'employee'] || 'Employee';
 
   return (
-    <div className="profile-page">
-      <div className="profile-container profile-container-wide">
+    <motion.div className="profile-page">
+      <motion.div className="profile-container profile-container-wide" variants={staggerContainer}>
         {/* ── Profile Header ── */}
-        <section className="profile-header-card">
-          <div className="profile-header-avatar" aria-hidden="true">
+        <motion.section className="profile-header-card" variants={staggerItem} whileHover={{ y: -2 }}>
+          <motion.div className="profile-header-avatar" aria-hidden="true" whileHover={{ scale: 1.05 }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt="Profile" className="profile-header-img" />
             ) : (
@@ -51,7 +48,7 @@ export const ProfilePage = () => {
                 <User size={48} strokeWidth={1.5} />
               </div>
             )}
-          </div>
+          </motion.div>
           <div className="profile-header-body">
             <div className="profile-header-top">
               <h1 className="profile-full-name">
@@ -76,10 +73,10 @@ export const ProfilePage = () => {
               Edit Profile
             </Button>
           </div>
-        </section>
+        </motion.section>
 
         {/* ── Personal Information ── */}
-        <section className="profile-section-card">
+        <motion.section className="profile-section-card" variants={staggerItem}>
           <h2 className="profile-section-title">
             <User size={20} className="text-muted" aria-hidden="true" />
             Personal Information
@@ -103,10 +100,10 @@ export const ProfilePage = () => {
             />
             <InfoRow label="Account ID" value={user?.id || 'N/A'} />
           </div>
-        </section>
+        </motion.section>
 
         {/* ── Security ── */}
-        <section className="profile-section-card">
+        <motion.section className="profile-section-card" variants={staggerItem}>
           <h2 className="profile-section-title">
             <Lock size={20} className="text-muted" aria-hidden="true" />
             Security
@@ -137,34 +134,18 @@ export const ProfilePage = () => {
               <span className="profile-security-tag">Current Session</span>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ── Preferences ── */}
-        <section className="profile-section-card">
+        <motion.section className="profile-section-card" variants={staggerItem}>
           <h2 className="profile-section-title">
             <Palette size={20} className="text-muted" aria-hidden="true" />
             Preferences
           </h2>
-          <div className="profile-preferences-list">
-            <div className="profile-theme-row">
-              <div className="profile-theme-left">
-                <div className="profile-theme-icon">
-                  {theme === 'dark' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
-                </div>
-                <div>
-                  <span className="profile-preference-title">Theme</span>
-                  <span className="profile-preference-desc">
-                    {theme === 'dark' ? 'Dark mode is active' : 'Corporate White mode is active'}
-                  </span>
-                </div>
-              </div>
-              <ToggleSwitch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
-            </div>
-          </div>
-        </section>
+        </motion.section>
 
         {/* ── Account Actions ── */}
-        <section className="profile-section-card profile-danger-card">
+        <motion.section className="profile-section-card profile-danger-card" variants={staggerItem}>
           <h2 className="profile-section-title">
             <Shield size={20} className="text-error" aria-hidden="true" />
             <span className="profile-danger-title">Account Actions</span>
@@ -176,8 +157,8 @@ export const ProfilePage = () => {
             <LogOut size={16} aria-hidden="true" />
             Sign Out
           </Button>
-        </section>
-      </div>
+        </motion.section>
+      </motion.div>
 
       <EditProfileModal
         isOpen={isEditProfileOpen}
@@ -187,7 +168,7 @@ export const ProfilePage = () => {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
-    </div>
+    </motion.div>
   );
 };
 

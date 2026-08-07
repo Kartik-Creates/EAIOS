@@ -1,4 +1,6 @@
 import { cn } from '@/utils/cn';
+import { motion } from 'framer-motion';
+import { TRANSITION } from '@/lib/motion';
 
 export interface ToggleSwitchProps {
   checked: boolean;
@@ -25,16 +27,23 @@ export const ToggleSwitch = ({
           {description && <span className="toggle-description">{description}</span>}
         </div>
       )}
-      <button
+      <motion.button
         type="button"
         role="switch"
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onCheckedChange(!checked)}
         className={cn('toggle-switch', checked && 'toggle-switch-checked')}
+        animate={checked ? { backgroundColor: 'var(--accent-primary)' } : { backgroundColor: 'var(--border-color)' }}
+        transition={TRANSITION.base}
       >
-        <span className="toggle-thumb" aria-hidden="true" />
-      </button>
+        <motion.span
+          className="toggle-thumb"
+          aria-hidden="true"
+          animate={{ x: checked ? 16 : 0 }}
+          transition={TRANSITION.spring}
+        />
+      </motion.button>
     </div>
   );
 };
