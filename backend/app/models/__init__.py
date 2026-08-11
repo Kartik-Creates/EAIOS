@@ -7,6 +7,16 @@ from app.models.meeting_summary import MeetingSummary
 from app.models.oauth_token import OAuthToken
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
+from app.models.workflow import (
+    Workflow,
+    WorkflowApproval,
+    WorkflowApprovalStatus,
+    WorkflowRunV2,
+    WorkflowRunStatus,
+    WorkflowStatus,
+    WorkflowStepRun,
+    WorkflowTriggerType,
+)
 from app.models.workflow_run import WorkflowRun
 
 __all__ = [
@@ -20,4 +30,12 @@ __all__ = [
     "UnansweredQuery",
     "User",
     "WorkflowRun",
+    "Workflow",
+    "WorkflowRunV2",
+    "WorkflowStepRun",
+    "WorkflowApproval",
+    "WorkflowTriggerType",
+    "WorkflowStatus",
+    "WorkflowRunStatus",
+    "WorkflowApprovalStatus",
 ]
