@@ -7,13 +7,33 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { UnifyLogo } from '@/components/common/UnifyLogo';
 import { LogoLoop, type LogoItem } from '@/components/ui/LogoLoop';
 import Ferrofluid from '@/components/ui/Ferrofluid';
 import { RotatingText } from '@/components/ui/RotatingText';
+import {
+  SlackIcon,
+  GitHubIcon,
+  JiraIcon,
+  NotionIcon,
+  ConfluenceIcon,
+  GmailIcon,
+  GitLabIcon,
+  DiscordIcon,
+} from '@/components/integrations/IntegrationIcon';
 import './LoginPage.css';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
+
+const integrationLogos: LogoItem[] = [
+  { node: <SlackIcon size={22} />, title: 'Slack' },
+  { node: <GitHubIcon size={22} />, title: 'GitHub' },
+  { node: <JiraIcon size={22} />, title: 'Jira' },
+  { node: <NotionIcon size={22} />, title: 'Notion' },
+  { node: <ConfluenceIcon size={22} />, title: 'Confluence' },
+  { node: <GmailIcon size={22} />, title: 'Gmail' },
+  { node: <GitLabIcon size={22} />, title: 'GitLab' },
+  { node: <DiscordIcon size={22} />, title: 'Discord' },
+];
 
 interface LoginFormState {
   email: string;
@@ -114,55 +134,54 @@ export default function LoginPage() {
           <RotatingText />
         </div>
 
+        <div className="auth-form-card">
+          <form className="auth-form" onSubmit={handleSubmit} noValidate>
+            <Input
+              id="login-email"
+              name="email"
+              type="email"
+              label="Email address"
+              placeholder="you@company.com"
+              autoComplete="email"
+              value={formValues.email}
+              onChange={handleChange}
+              error={formErrors.email}
+              icon={<Mail size={18} />}
+              disabled={isLoading}
+              required
+            />
 
-            <form className="auth-form" onSubmit={handleSubmit} noValidate>
-              <Input
-                id="login-email"
-                name="email"
-                type="email"
-                label="Email address"
-                placeholder="you@company.com"
-                autoComplete="email"
-                value={formValues.email}
-                onChange={handleChange}
-                error={formErrors.email}
-                icon={<Mail size={18} />}
-                disabled={isLoading}
-                required
-              />
+            <Input
+              id="login-password"
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="••••••••"
+              autoComplete="current-password"
+              value={formValues.password}
+              onChange={handleChange}
+              error={formErrors.password}
+              icon={<Lock size={18} />}
+              disabled={isLoading}
+              required
+            />
 
-              <Input
-                id="login-password"
-                name="password"
-                type="password"
-                label="Password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                value={formValues.password}
-                onChange={handleChange}
-                error={formErrors.password}
-                icon={<Lock size={18} />}
-                disabled={isLoading}
-                required
-              />
+            <Button
+              id="login-submit"
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              className="auth-btn-full"
+            >
+              {isLoading ? 'Signing in…' : 'Sign In'}
+            </Button>
+          </form>
 
-              <Button
-                id="login-submit"
-                type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={isLoading}
-                className="auth-btn-full"
-              >
-                {isLoading ? 'Signing in…' : 'Sign In'}
-              </Button>
-            </form>
-
-            <p className="auth-form-footer">
-              Don't have an account?{' '}
-              <Link to={ROUTES.REGISTER}>Create one</Link>
-            </p>
-          </div>
+          <p className="auth-form-footer">
+            Don't have an account?{' '}
+            <Link to={ROUTES.REGISTER}>Create one</Link>
+          </p>
         </div>
       </div>
 
