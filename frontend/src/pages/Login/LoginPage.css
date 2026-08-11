@@ -10,7 +10,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-dark, #03010a);
+  background-color: #03010a !important;
+  color: #ffffff !important;
+  color-scheme: dark !important;
   padding: clamp(var(--space-4, 1rem), 5vw, var(--space-8, 2rem));
   position: relative;
   overflow: hidden;

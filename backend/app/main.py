@@ -10,6 +10,7 @@ from app.routers import (
     auth,
     briefing,
     chat,
+    dashboard,
     documents,
     health,
     integrations,
@@ -47,6 +48,8 @@ app.include_router(briefing.router, prefix=settings.API_V1_STR, tags=["briefing"
 app.include_router(meeting.router, prefix=settings.API_V1_STR, tags=["meeting"])
 app.include_router(documents.router, prefix=f"{settings.API_V1_STR}/documents", tags=["documents"])
 app.include_router(workflow.router, prefix=f"{settings.API_V1_STR}/workflows", tags=["workflows"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+
 
 
 import logging
