@@ -4,6 +4,7 @@ from app.models.document import Document
 from app.models.integration import Integration
 from app.models.meeting import Meeting
 from app.models.meeting_summary import MeetingSummary
+from app.models.notification import UserNotification
 from app.models.oauth_token import OAuthToken
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
@@ -26,6 +27,7 @@ __all__ = [
     "Integration",
     "Meeting",
     "MeetingSummary",
+    "UserNotification",
     "OAuthToken",
     "UnansweredQuery",
     "User",

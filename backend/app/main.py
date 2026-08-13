@@ -15,6 +15,7 @@ from app.routers import (
     health,
     integrations,
     meeting,
+    notifications,
     search,
     workflow,
 )
@@ -46,9 +47,10 @@ app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
 app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
 app.include_router(briefing.router, prefix=settings.API_V1_STR, tags=["briefing"])
 app.include_router(meeting.router, prefix=settings.API_V1_STR, tags=["meeting"])
-app.include_router(documents.router, prefix=f"{settings.API_V1_STR}/documents", tags=["documents"])
+app.include_router(documents.router, prefix=settings.API_V1_STR, tags=["documents"])
 app.include_router(workflow.router, prefix=f"{settings.API_V1_STR}/workflows", tags=["workflows"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(notifications.router, prefix=settings.API_V1_STR, tags=["notifications"])
 
 
 

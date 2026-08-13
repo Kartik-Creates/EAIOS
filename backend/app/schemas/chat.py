@@ -18,3 +18,4 @@ class ChatResponse(BaseModel):
     citations: list[Citation]
     conversation_id: str
     flagged_for_review: bool
+    source: str = "documents"  # "documents" | "gmail" | "jira" | "github" | "calendar" | "none"
