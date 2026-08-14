@@ -18,7 +18,7 @@ from app.core.rate_limit import limiter
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, Citation
-from app.services.chat_tools import TOOL_SCHEMAS, TOOL_SOURCE_MAP, dispatch_tool_call
+from app.services.chat_tools import TOOL_SCHEMAS, dispatch_tool_call
 from app.services.llm_service import (
     generate_answer,
     generate_greeting,
@@ -116,6 +116,7 @@ async def chat(
     # If model requested tool calls, execute them
     if isinstance(tool_decision, list) and tool_decision:
         all_results = []
+        all_chunks = []  # only ever populated by search_company_documents
         source = "none"
 
         for call in tool_decision:
@@ -123,10 +124,11 @@ async def chat(
             tool_args = call.get("args", {})
             query_for_tool = tool_args.get("query", body.query)
 
-            result_text, tool_source = await dispatch_tool_call(
+            result_text, tool_source, chunks = await dispatch_tool_call(
                 tool_name, db, current_user, query_for_tool,
             )
             all_results.append(result_text)
+            all_chunks.extend(chunks)
             # Use the first tool's source as the primary source label
             if source == "none":
                 source = tool_source
@@ -144,10 +146,24 @@ async def chat(
             current_user.id, source, len(tool_decision),
         )
 
+        # search_company_documents is the only tool that returns retrieval
+        # chunks — when it does, build real citations/confidence from them
+        # the same way the RAG fallback path below does, instead of losing
+        # that data once it's flattened into prompt text for the LLM.
+        citations = [
+            Citation(
+                document_title=chunk.document_title,
+                document_id=chunk.document_id,
+                excerpt=excerpt(chunk.content),
+            )
+            for chunk in all_chunks
+        ]
+        confidence = confidence_from_distance(all_chunks[0].distance) if all_chunks else 0.0
+
         return ChatResponse(
             answer=answer,
-            confidence=0.0,
-            citations=[],
+            confidence=confidence,
+            citations=citations,
             conversation_id=conversation_id,
             flagged_for_review=False,
             source=source,

@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy.future import select
+
 from app.core.security import encrypt_token
 from app.models.integration import Integration
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
-from sqlalchemy.future import select
 
 
 @pytest.mark.asyncio
@@ -134,6 +135,57 @@ async def test_drive_sync_success(client, db_session, monkeypatch):
     assert integration is not None
     assert integration.status == "active"
     assert integration.last_sync_at is not None
+
+
+@pytest.mark.asyncio
+async def test_drive_sync_works_with_canonical_google_drive_provider_name(client, db_session, monkeypatch):
+    """Regression test: the OAuth callback stores the connection under the canonical
+    provider name "google_drive" (see oauth_config.PROVIDER_ALIASES), not "google".
+    sync_drive_documents() must look the token up under the name that's actually
+    stored, or a real, successfully-connected Drive integration can never sync."""
+    client.post("/api/v1/auth/register", json={
+        "email": "canonicaldrive@example.com", "password": "securepassword", "full_name": "Canonical Drive User"
+    })
+    login_resp = client.post("/api/v1/auth/login", data={
+        "username": "canonicaldrive@example.com", "password": "securepassword"
+    })
+    access_token = login_resp.json()["access_token"]
+
+    res = await db_session.execute(select(User).where(User.email == "canonicaldrive@example.com"))
+    user = res.scalars().first()
+
+    token_row = OAuthToken(
+        user_id=user.id,
+        provider="google_drive",
+        access_token_encrypted=encrypt_token("fake-google-access-token"),
+        refresh_token_encrypted=encrypt_token("fake-google-refresh-token"),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    db_session.add(token_row)
+    await db_session.commit()
+
+    class MockResponse:
+        def __init__(self, json_data, status_code=200):
+            self._json = json_data
+            self.status_code = status_code
+
+        def json(self):
+            return self._json
+
+        def raise_for_status(self):
+            pass
+
+    async def mock_get(self, url, *args, **kwargs):
+        return MockResponse({"files": []})
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    sync_resp = client.post("/api/v1/integrations/drive/sync", headers=headers)
+
+    assert sync_resp.status_code == 200
+    assert "not configured" not in sync_resp.text
+
 
 @pytest.mark.asyncio
 async def test_drive_sync_routes_meet_transcripts_to_meeting_pipeline(client, db_session, monkeypatch):

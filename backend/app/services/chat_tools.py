@@ -13,17 +13,17 @@ from app.models.user import User
 from app.schemas.briefing import SourceResult
 from app.services.briefing_service import (
     get_calendar_briefing,
+    get_drive_briefing,
     get_github_briefing,
     get_gmail_briefing,
     get_jira_briefing,
+    get_slack_briefing,
 )
 from app.services.retrieval_service import (
     RetrievedChunk,
-    confidence_from_distance,
     excerpt,
     semantic_search,
 )
-from app.services.llm_service import generate_answer
 
 logger = logging.getLogger("eaios.chat_tools")
 
@@ -92,7 +92,7 @@ TOOL_SCHEMAS = [
             "tool when the user asks about company policies, procedures, employee "
             "handbooks, internal documentation, or any factual question that would "
             "be answered by company documents. Do NOT use this for personal data "
-            "like emails, tickets, or calendar events."
+            "like emails, tickets, calendar events, Drive files, or Slack messages."
         ),
         "parameters": {
             "type": "object",
@@ -105,6 +105,34 @@ TOOL_SCHEMAS = [
             "required": ["query"],
         },
     },
+    {
+        "name": "get_drive_briefing",
+        "description": (
+            "List the user's most recently modified files in their own Google "
+            "Drive. Use this tool when the user asks what files they have in "
+            "Drive, their recent Drive documents, or anything about files stored "
+            "in their personal Google Drive. Do NOT use this for company policy "
+            "or knowledge-base questions — use search_company_documents for those."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "get_slack_briefing",
+        "description": (
+            "Retrieve recent messages from the user's Slack channels. Use this "
+            "tool when the user asks about their Slack messages, channels, "
+            "threads, or anything related to their Slack workspace."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
 ]
 
 # Map tool names to their source labels for the ChatResponse.source field
@@ -114,6 +142,8 @@ TOOL_SOURCE_MAP = {
     "get_github_briefing": "github",
     "get_calendar_briefing": "calendar",
     "search_company_documents": "documents",
+    "get_drive_briefing": "drive",
+    "get_slack_briefing": "slack",
 }
 
 # Map tool names to their actual functions
@@ -175,8 +205,15 @@ async def dispatch_tool_call(
     db: AsyncSession,
     user: User,
     query: str,
-) -> tuple[str, str]:
-    """Execute a tool call and return (formatted_result_text, source_label).
+) -> tuple[str, str, list[RetrievedChunk]]:
+    """Execute a tool call and return (formatted_result_text, source_label, chunks).
+
+    `chunks` is only ever non-empty for search_company_documents — it's the raw
+    retrieval result, kept alongside the formatted text so the router can build
+    real Citation objects and a real confidence score for document answers
+    instead of losing that data once it's flattened into prompt text. Every
+    other tool returns an empty list; there's no equivalent "excerpt" concept
+    for a Gmail/Jira/GitHub/Calendar item.
 
     Uses the EXISTING briefing_service.py functions with the same (db, user)
     signature, reusing per-user OAuth token isolation already tested.
@@ -191,7 +228,7 @@ async def dispatch_tool_call(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
             tool_name, user.id, result.connected, len(result.items),
         )
-        return formatted, source
+        return formatted, source, []
 
     if tool_name == "get_jira_briefing":
         result: SourceResult = await get_jira_briefing(db, user)
@@ -200,7 +237,7 @@ async def dispatch_tool_call(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
             tool_name, user.id, result.connected, len(result.items),
         )
-        return formatted, source
+        return formatted, source, []
 
     if tool_name == "get_github_briefing":
         result: SourceResult = await get_github_briefing(db, user)
@@ -209,7 +246,7 @@ async def dispatch_tool_call(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
             tool_name, user.id, result.connected, len(result.items),
         )
-        return formatted, source
+        return formatted, source, []
 
     if tool_name == "get_calendar_briefing":
         result: SourceResult = await get_calendar_briefing(db, user)
@@ -218,7 +255,7 @@ async def dispatch_tool_call(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
             tool_name, user.id, result.connected, len(result.items),
         )
-        return formatted, source
+        return formatted, source, []
 
     if tool_name == "search_company_documents":
         chunks = await semantic_search(db, query, allowed_roles=[user.role])
@@ -227,7 +264,25 @@ async def dispatch_tool_call(
             "tool_dispatch tool=search_company_documents user_id=%s chunks=%d",
             user.id, len(chunks),
         )
-        return formatted, source
+        return formatted, source, chunks
+
+    if tool_name == "get_drive_briefing":
+        result: SourceResult = await get_drive_briefing(db, user)
+        formatted = _format_source_result(result)
+        logger.info(
+            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
+            tool_name, user.id, result.connected, len(result.items),
+        )
+        return formatted, source, []
+
+    if tool_name == "get_slack_briefing":
+        result: SourceResult = await get_slack_briefing(db, user)
+        formatted = _format_source_result(result)
+        logger.info(
+            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
+            tool_name, user.id, result.connected, len(result.items),
+        )
+        return formatted, source, []
 
     logger.warning("Unknown tool requested: %s", tool_name)
-    return "[ERROR] Unknown tool requested.", "none"
+    return "[ERROR] Unknown tool requested.", "none", []

@@ -4,14 +4,15 @@ See tests/rag_fixtures.py for why retrieval is faked instead of hitting a
 real pgvector query in this test suite.
 """
 import uuid
+
 import pytest
+from sqlalchemy import select
+
 from app.core.security import encrypt_token, get_password_hash
 from app.models.oauth_token import OAuthToken
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.briefing import BriefingItem, SourceResult
-from sqlalchemy import select
-
 from tests.rag_fixtures import (
     captured_search_calls,
     fake_generate_answer,
@@ -38,6 +39,10 @@ async def fake_generate_with_tools(query: str, tool_schemas: list[dict]):
         return [{"name": "get_jira_briefing", "args": {"query": query}}]
     if any(k in q_lower for k in ["calendar", "schedule"]):
         return [{"name": "get_calendar_briefing", "args": {"query": query}}]
+    if any(k in q_lower for k in ["drive", "my files"]):
+        return [{"name": "get_drive_briefing", "args": {"query": query}}]
+    if any(k in q_lower for k in ["slack", "channel"]):
+        return [{"name": "get_slack_briefing", "args": {"query": query}}]
     # For documents / policies / general questions, return None so it falls through to RAG
     return None
 
@@ -416,3 +421,165 @@ async def test_chat_rate_limit_returns_429(client):
     assert statuses.count(200) == limit
     assert statuses.count(429) == 3
     assert statuses[-1] == 429
+
+
+# ── 5. search_company_documents TOOL ROUTING (citations/confidence) ────
+
+
+@pytest.mark.asyncio
+async def test_chat_document_tool_call_returns_real_citations_and_confidence(client, monkeypatch):
+    """Regression test: when the LLM routes a document question through the
+    search_company_documents *tool* (not the Step-3 RAG fallback), the response
+    must still carry real Citation objects and a real confidence score derived
+    from the retrieved chunks — not the empty/zeroed-out defaults every other
+    tool (gmail/jira/github/calendar) correctly returns."""
+
+    async def fake_generate_with_tools_docs(query: str, tool_schemas: list[dict]):
+        return [{"name": "search_company_documents", "args": {"query": query}}]
+
+    monkeypatch.setattr("app.routers.chat.generate_with_tools", fake_generate_with_tools_docs)
+    monkeypatch.setattr("app.services.chat_tools.semantic_search", fake_semantic_search)
+
+    token = register_and_login(client, "toolroutedocs@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What's our leave policy?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "documents"
+    assert data["confidence"] > 0
+    assert len(data["citations"]) == 1
+    assert data["citations"][0]["document_title"] == "Employee_Handbook.pdf"
+    assert data["citations"][0]["document_id"] == "doc-public-1"
+
+
+@pytest.mark.asyncio
+async def test_chat_gmail_tool_call_still_has_no_citations(client, monkeypatch):
+    """Non-document tools (gmail/jira/github/calendar) have no excerpt/chunk
+    concept — they must keep returning empty citations and 0.0 confidence,
+    not be accidentally swept up by the documents citation-building path."""
+
+    async def mock_get_gmail_briefing(db, user):
+        return SourceResult(
+            source="gmail",
+            connected=True,
+            items=[
+                BriefingItem(
+                    source="gmail",
+                    title="Q3 Update",
+                    detail="From: ceo@company.com",
+                    priority_hint="today",
+                )
+            ],
+        )
+
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_briefing", mock_get_gmail_briefing)
+
+    token = register_and_login(client, "toolroutegmail@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What's my latest email?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "gmail"
+    assert data["citations"] == []
+    assert data["confidence"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_chat_routes_drive_question_to_drive_briefing(client, monkeypatch):
+    async def mock_get_drive_briefing(db, user):
+        return SourceResult(
+            source="drive",
+            connected=True,
+            items=[
+                BriefingItem(
+                    source="drive",
+                    title="Q3 Roadmap.gdoc",
+                    detail="Type: application/vnd.google-apps.document",
+                    priority_hint="info",
+                    url="https://docs.google.com/document/d/file-1",
+                )
+            ],
+        )
+
+    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_get_drive_briefing)
+
+    token = register_and_login(client, "toolroutedrive@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What files do I have in my drive?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "drive"
+    assert data["citations"] == []
+    assert data["confidence"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_chat_routes_slack_question_to_slack_briefing(client, monkeypatch):
+    async def mock_get_slack_briefing(db, user):
+        return SourceResult(
+            source="slack",
+            connected=True,
+            items=[
+                BriefingItem(
+                    source="slack",
+                    title="#general",
+                    detail="Deploy went out at 3pm",
+                    priority_hint="today",
+                )
+            ],
+        )
+
+    monkeypatch.setattr("app.services.chat_tools.get_slack_briefing", mock_get_slack_briefing)
+
+    token = register_and_login(client, "toolrouteslack@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What's happening in my slack channels?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "slack"
+
+
+@pytest.mark.asyncio
+async def test_chat_drive_not_connected_gives_clear_message(client, monkeypatch):
+    async def mock_get_drive_briefing_disconnected(db, user):
+        return SourceResult(source="drive", connected=False, items=[])
+
+    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_get_drive_briefing_disconnected)
+
+    token = register_and_login(client, "drivedisconnected@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What files do I have in my drive?"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "drive"
+    assert data["flagged_for_review"] is False
