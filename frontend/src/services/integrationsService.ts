@@ -22,6 +22,6 @@ export const integrationsService = {
   },
 
   disconnectConnection: async (provider: string): Promise<void> => {
-    await apiClient.delete(`/auth/connections/${provider}`);
+    await apiClient.delete(`/integrations/${provider}`);
   },
 };

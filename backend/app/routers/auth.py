@@ -457,3 +457,33 @@ async def list_connections(
     res = await db.execute(stmt)
     connections = res.scalars().all()
     return connections
+
+
+@router.delete("/connections/{provider}")
+async def disconnect_connection_auth(
+    provider: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Disconnect an integration connection by provider name for current user."""
+    stmt_token = select(OAuthToken).where(
+        OAuthToken.user_id == current_user.id,
+        OAuthToken.provider.in_([provider.lower()]),
+    )
+    res_token = await db.execute(stmt_token)
+    tokens = res_token.scalars().all()
+    for token in tokens:
+        await db.delete(token)
+
+    stmt_int = select(Integration).where(
+        Integration.user_id == current_user.id,
+        Integration.provider.in_([provider.lower()]),
+    )
+    res_int = await db.execute(stmt_int)
+    integrations = res_int.scalars().all()
+    for integ in integrations:
+        integ.status = "disconnected"
+
+    await db.commit()
+    return {"status": "success", "message": f"Successfully disconnected {provider}"}
+

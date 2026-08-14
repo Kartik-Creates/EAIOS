@@ -11,6 +11,8 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from httpx import HTTPError
+
 from app.core.security import decrypt_token, encrypt_token, get_password_hash
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
@@ -18,12 +20,12 @@ from app.schemas.briefing import BriefingItem, BriefingResponse, SourceResult
 from app.services.briefing_service import (
     generate_daily_briefing,
     get_calendar_briefing,
+    get_drive_briefing,
     get_github_briefing,
     get_gmail_briefing,
     get_jira_briefing,
+    get_slack_briefing,
 )
-from httpx import HTTPError
-
 from tests.rag_fixtures import register_and_login
 
 # ── HELPERS ──────────────────────────────────────────────────────────
@@ -253,6 +255,135 @@ async def test_github_briefing_success(db_session, monkeypatch):
     assert len(res.items) == 1
     assert "[repo] Add OAuth2 integration tests" in res.items[0].title
     assert res.items[0].priority_hint == "overdue"
+
+
+@pytest.mark.asyncio
+async def test_drive_briefing_not_connected(db_session):
+    user = await _create_test_user(db_session, "drive_no_conn@example.com")
+    res = await get_drive_briefing(db_session, user)
+    assert res.source == "drive"
+    assert res.connected is False
+    assert res.items == []
+
+
+@pytest.mark.asyncio
+async def test_drive_briefing_success(db_session, monkeypatch):
+    """Uses the canonical provider name "google_drive" — the same name the
+    real OAuth callback stores connections under (see the drive_sync_service
+    regression test for why this matters)."""
+    user = await _create_test_user(db_session, "drive_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "google_drive")
+
+    class MockDriveResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "files": [
+                    {
+                        "id": "file-1",
+                        "name": "Q3 Roadmap.gdoc",
+                        "mimeType": "application/vnd.google-apps.document",
+                        "webViewLink": "https://docs.google.com/document/d/file-1",
+                        "modifiedTime": "2026-08-05T10:00:00Z",
+                    }
+                ]
+            }
+
+    async def mock_get(self_or_client, *args, **kwargs):
+        return MockDriveResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_drive_briefing(db_session, user)
+    assert res.source == "drive"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "Q3 Roadmap.gdoc"
+    assert res.items[0].url == "https://docs.google.com/document/d/file-1"
+
+
+@pytest.mark.asyncio
+async def test_drive_briefing_does_not_use_gmail_scoped_token(db_session):
+    """A gmail-only token has no drive.readonly scope and would 403 if used —
+    get_drive_briefing must treat a gmail-only connection as NOT connected for
+    Drive purposes (unlike get_calendar_briefing/get_gmail_briefing, which
+    correctly share scope with each other and so may fall back to either)."""
+    user = await _create_test_user(db_session, "gmail_only_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "gmail")
+
+    res = await get_drive_briefing(db_session, user)
+    assert res.connected is False
+
+
+@pytest.mark.asyncio
+async def test_slack_briefing_not_connected(db_session):
+    user = await _create_test_user(db_session, "slack_no_conn@example.com")
+    res = await get_slack_briefing(db_session, user)
+    assert res.source == "slack"
+    assert res.connected is False
+    assert res.items == []
+
+
+@pytest.mark.asyncio
+async def test_slack_briefing_success(db_session, monkeypatch):
+    user = await _create_test_user(db_session, "slack_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "slack")
+
+    class MockSlackResponse:
+        def __init__(self, url):
+            self.url = str(url)
+            self.status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            if "conversations.list" in self.url:
+                return {"ok": True, "channels": [{"id": "C1", "name": "general"}]}
+            return {"ok": True, "messages": [{"text": "Deploy went out at 3pm", "ts": "1722883900.0001"}]}
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        return MockSlackResponse(url)
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_slack_briefing(db_session, user)
+    assert res.source == "slack"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "#general"
+    assert "Deploy went out at 3pm" in res.items[0].detail
+
+
+@pytest.mark.asyncio
+async def test_slack_briefing_api_error_returns_error_not_raised(db_session, monkeypatch):
+    """Slack returns HTTP 200 with ok: false on failure — must be treated as
+    a real error (e.g. missing_scope), not silently swallowed as success."""
+    user = await _create_test_user(db_session, "slack_error_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "slack")
+
+    class MockSlackErrorResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"ok": False, "error": "missing_scope"}
+
+    async def mock_get(self_or_client, *args, **kwargs):
+        return MockSlackErrorResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_slack_briefing(db_session, user)
+    assert res.source == "slack"
+    assert res.connected is True
+    assert res.items == []
+    assert res.error is not None
+    assert "missing_scope" in res.error
 
 
 # ── ORCHESTRATION PIPELINE TESTS ─────────────────────────────────────

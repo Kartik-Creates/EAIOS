@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, type KeyboardEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, ChevronUp, X } from 'lucide-react';
+import { Sparkles, Send, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { modalContentVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,7 +17,6 @@ import './FloatingChatAssistant.css';
  * against the real backend, not a separate fake one.
  */
 export const FloatingChatAssistant = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { messages, isLoading, sendMessage } = useChat();
@@ -59,15 +58,6 @@ export const FloatingChatAssistant = () => {
     }
   };
 
-  const handleHeaderButtonClick = () => {
-    if (location.pathname === '/chat') {
-      setIsOpen(false);
-    } else {
-      navigate('/chat');
-      setIsOpen(false);
-    }
-  };
-
   return (
     <>
       {/* Floating Toggle Button */}
@@ -99,20 +89,19 @@ export const FloatingChatAssistant = () => {
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <h3 className="floating-chat-title">UnifyAI</h3>
+                  <h3 className="floating-chat-title">AI Assistant</h3>
                   <span className="floating-chat-subtitle">Online</span>
                 </div>
               </div>
               <motion.button
                 type="button"
                 className="floating-chat-close"
-                onClick={handleHeaderButtonClick}
-                whileHover={{ scale: 1.05 }}
+                onClick={() => setIsOpen(false)}
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label="Open Chat Page"
-                title="Open Chat"
+                aria-label="Close chat"
               >
-                <ChevronUp size={18} />
+                <X size={18} />
               </motion.button>
             </div>
 

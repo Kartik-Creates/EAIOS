@@ -1,55 +1,57 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Menu,
   Bell,
   Moon,
   Sun,
+  GitPullRequest,
+  Calendar,
+  FolderOpen,
+  Workflow,
+  CheckCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import { useTheme } from '@/hooks/useTheme';
 import { DropdownWrapper, iconHoverVariants } from '@/lib/motion';
+import { notificationService, type NotificationItem } from '@/services/notificationService';
 import './layout.css';
 
-interface NotificationItem {
-  id: string;
-  source: string;
-  sourceIcon: React.ReactNode;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-}
+const formatRelativeTime = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'Just now';
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return isoString;
+  }
+};
 
-const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: '1',
-    source: 'Slack',
-    sourceIcon: <span className="text-[#E01E5A]">S</span>,
-    title: 'John mentioned you in #engineering',
-    description: '@you Can you review the latest PR when you get a chance?',
-    timestamp: '2 min ago',
-    read: false,
-  },
-  {
-    id: '2',
-    source: 'Jira',
-    sourceIcon: <span className="text-[#0052CC]">J</span>,
-    title: 'TASK-142 moved to "In Review"',
-    description: 'Status changed from In Progress to In Review by Sarah',
-    timestamp: '15 min ago',
-    read: false,
-  },
-  {
-    id: '3',
-    source: 'Slack',
-    sourceIcon: <span className="text-[#E01E5A]">S</span>,
-    title: 'Daily standup starts in 10 minutes',
-    description: 'Reminder: Engineering standup in #engineering channel',
-    timestamp: 'Today',
-    read: true,
-  },
-];
+const getSourceIcon = (source: string) => {
+  switch (source.toLowerCase()) {
+    case 'github':
+      return <GitPullRequest size={16} className="text-[#58A6FF]" />;
+    case 'jira':
+      return <span className="text-[#0052CC] font-bold text-xs">J</span>;
+    case 'drive':
+      return <FolderOpen size={16} className="text-[#34A853]" />;
+    case 'meeting':
+      return <Calendar size={16} className="text-[#FBBC05]" />;
+    case 'workflow':
+      return <Workflow size={16} className="text-[#A78BFA]" />;
+    default:
+      return <CheckCircle size={16} className="text-muted" />;
+  }
+};
 
 interface TopbarProps {
   isCollapsed: boolean;
@@ -59,10 +61,62 @@ interface TopbarProps {
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
   const { theme, toggleTheme } = useTheme();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await notificationService.getNotifications();
+      setNotifications(data);
+    } catch {
+      // Fallback silently if unauthenticated or network error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Visibility-aware polling (every 2 minutes while tab is active, pauses when hidden)
+  useEffect(() => {
+    fetchNotifications();
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (!intervalId) {
+        intervalId = setInterval(fetchNotifications, 120000); // 2 minutes
+      }
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,8 +137,26 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
     };
   }, []);
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleMarkAllAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      await notificationService.markAllAsRead();
+    } catch (err) {
+      console.warn('Failed to mark all as read:', err);
+    }
+  };
+
+  const handleNotificationItemClick = async (notification: NotificationItem) => {
+    if (!notification.is_read) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n))
+      );
+      try {
+        await notificationService.markAsRead([notification.id]);
+      } catch (err) {
+        console.warn('Failed to mark notification as read:', err);
+      }
+    }
   };
 
   const handleNotificationClick = () => {
@@ -176,7 +248,7 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                     <div className="topbar-notification-empty">
                       <span className="topbar-notification-empty-icon">📭</span>
                       <p>No notifications yet</p>
-                      <span>You're all caught up!</span>
+                      <span>{isLoading ? 'Loading...' : "You're all caught up!"}</span>
                     </div>
                   ) : (
                     notifications.map((notification) => (
@@ -184,26 +256,34 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
                         key={notification.id}
                         className={cn(
                           'topbar-notification-item',
-                          !notification.read && 'topbar-notification-item-unread'
+                          !notification.is_read && 'topbar-notification-item-unread'
                         )}
                         role="menuitem"
+                        onClick={() => handleNotificationItemClick(notification)}
+                        style={{ cursor: 'pointer' }}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.2, delay: 0.05 }}
                       >
                         <div className="topbar-notification-item-icon">
-                          {notification.sourceIcon}
+                          {getSourceIcon(notification.source)}
                         </div>
                         <div className="topbar-notification-item-content">
                           <div className="topbar-notification-item-header">
-                            <span className="topbar-notification-item-source">{notification.source}</span>
-                            <span className="topbar-notification-item-time">{notification.timestamp}</span>
+                            <span className="topbar-notification-item-source">
+                              {notification.source.charAt(0).toUpperCase() + notification.source.slice(1)}
+                            </span>
+                            <span className="topbar-notification-item-time">
+                              {formatRelativeTime(notification.created_at)}
+                            </span>
                           </div>
                           <p className="topbar-notification-item-title">{notification.title}</p>
-                          <p className="topbar-notification-item-desc">{notification.description}</p>
+                          {notification.description && (
+                            <p className="topbar-notification-item-desc">{notification.description}</p>
+                          )}
                         </div>
                         <div className="topbar-notification-item-indicator">
-                          {notification.read ? (
+                          {notification.is_read ? (
                             <span className="text-muted">✓</span>
                           ) : (
                             <span className="text-accent">●</span>

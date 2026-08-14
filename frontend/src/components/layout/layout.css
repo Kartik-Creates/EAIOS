@@ -431,13 +431,12 @@
 
 /* ── Topbar ── */
 .topbar {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   height: var(--topbar-height);
   z-index: var(--z-topbar);
   background-color: var(--bg-sidebar);
-  border-bottom: 3px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;

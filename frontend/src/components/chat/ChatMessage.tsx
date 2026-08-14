@@ -46,10 +46,28 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
     }
   };
 
+  const renderHeaderBadge = () => {
+    if (isUser) return null;
+    const src = message.source?.toLowerCase();
+    if (src === 'gmail') return <Badge variant="red">Gmail</Badge>;
+    if (src === 'jira') return <Badge variant="blue">Jira</Badge>;
+    if (src === 'github') return <Badge variant="slate">GitHub</Badge>;
+    if (src === 'calendar') return <Badge variant="green">Calendar</Badge>;
+    if (src === 'none') return null;
+
+    // Default to document confidence badge if available
+    if (message.confidence !== undefined && message.confidence > 0) {
+      return getConfidenceBadge(message.confidence);
+    }
+    return null;
+  };
+
   const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  const isDocSource = !message.source || message.source === 'documents';
 
   return (
     <motion.div
@@ -75,14 +93,14 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
         <div className="message-header">
           <span className="sender-name">{isUser ? userName : 'UnifyAI Assistant'}</span>
           <span className="message-time">{formattedTime}</span>
-          {!isUser && getConfidenceBadge(message.confidence)}
+          {!isUser && renderHeaderBadge()}
         </div>
 
         <div className={`message-bubble ${message.isError ? 'error-bubble' : ''}`}>
           <p className="message-text">{message.content}</p>
 
           {/* Flagged for Review Warning Banner */}
-          {message.flagged_for_review && (
+          {message.flagged_for_review && isDocSource && (
             <div className="flagged-banner">
               <AlertTriangle size={16} className="flagged-icon" />
               <span>
@@ -93,7 +111,7 @@ export const ChatMessage = ({ message, userName = 'You' }: ChatMessageProps) => 
         </div>
 
         {/* AI Citations Drawer */}
-        {!isUser && message.citations && message.citations.length > 0 && (
+        {!isUser && isDocSource && message.citations && message.citations.length > 0 && (
           <div className="citations-container">
             <button
               type="button"

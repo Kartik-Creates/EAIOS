@@ -136,6 +136,7 @@ async def test_drive_sync_success(client, db_session, monkeypatch):
     assert integration.status == "active"
     assert integration.last_sync_at is not None
 
+
 @pytest.mark.asyncio
 async def test_drive_sync_works_with_canonical_google_drive_provider_name(client, db_session, monkeypatch):
     """Regression test: the OAuth callback stores the connection under the canonical

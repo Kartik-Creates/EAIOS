@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { RecentChatsPanel } from '@/components/chat/RecentChatsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { getRandomWelcomeMessage } from '@/utils/welcomeMessages';
@@ -104,6 +105,8 @@ export const ChatPage = () => {
           isLoading={isLoading}
         />
       </div>
+
+      <RecentChatsPanel messages={messages} />
     </div>
   );
 };

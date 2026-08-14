@@ -8,6 +8,7 @@ from app.models.meeting import Meeting
 from app.models.meeting_summary import MeetingSummary
 from app.services.embedding_service import embed_text
 from app.services.llm_service import generate_completion
+from app.services.notification_service import create_notification
 
 logger = logging.getLogger("eaios.meeting")
 
@@ -116,6 +117,15 @@ async def summarize_meeting(
         embedding=embedding,
     )
     db.add(summary_row)
+
+    # Create notification at event time (before commit, same transaction)
+    await create_notification(
+        db,
+        user_id=organizer_user_id,
+        source="meeting",
+        title=f"Meeting Summarized: {extracted['title']}",
+        description=f"{len(extracted['decisions'])} decisions, {len(extracted['action_items'])} action items",
+    )
 
     await db.commit()
     await db.refresh(meeting)

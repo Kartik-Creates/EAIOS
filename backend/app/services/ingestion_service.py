@@ -4,6 +4,7 @@ from app.models.chunk import Chunk
 from app.models.document import Document
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import embed_texts
+from app.services.notification_service import create_notification
 
 
 async def ingest_document(
@@ -40,6 +41,16 @@ async def ingest_document(
                     embedding=vector,
                 )
             )
+
+    # Create notification at event time (before commit, same transaction)
+    if owner_id:
+        await create_notification(
+            db,
+            user_id=owner_id,
+            source="drive",
+            title=f"Document Indexed: {title}",
+            description=f"Source: {source}",
+        )
 
     await db.commit()
     await db.refresh(document)

@@ -1,4 +1,11 @@
+"""Chat endpoint with greeting heuristic and tool-calling support.
+
+Flow: query → greeting check → tool-calling via LLM → RAG fallback.
+Tool-calling reuses existing briefing_service.py functions with per-user
+OAuth token isolation.  Tool results are framed as data, never instructions.
+"""
 import logging
+import re
 import uuid
 from typing import Annotated
 
@@ -11,11 +18,13 @@ from app.core.rate_limit import limiter
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, Citation
-from app.services.live_data_service import (
-    answer_live_data_query,
-    classify_live_data_intent,
+from app.services.chat_tools import TOOL_SCHEMAS, dispatch_tool_call
+from app.services.llm_service import (
+    generate_answer,
+    generate_greeting,
+    generate_tool_response,
+    generate_with_tools,
 )
-from app.services.llm_service import generate_answer
 from app.services.retrieval_service import (
     confidence_from_distance,
     excerpt,
@@ -26,6 +35,48 @@ router = APIRouter()
 logger = logging.getLogger("eaios.chat")
 
 FALLBACK_MESSAGE = "I couldn't find this in company documents — I've flagged it for review."
+
+# ── GREETING HEURISTIC ──────────────────────────────────────────────
+
+_GREETING_WORDS = frozenset({
+    "hi", "hello", "hey", "hiya", "howdy",
+    "good morning", "good afternoon", "good evening", "good night",
+    "morning", "afternoon", "evening",
+    "thanks", "thank you", "thankyou", "thx",
+    "bye", "goodbye", "see you", "later", "cheers",
+    "how are you", "what's up", "whats up", "sup",
+    "nice to meet you", "yo",
+})
+
+# Pre-compile single-word set for O(1) lookup
+_GREETING_SINGLE = frozenset({
+    "hi", "hello", "hey", "hiya", "howdy", "morning", "afternoon",
+    "evening", "thanks", "thx", "bye", "goodbye", "later", "cheers",
+    "sup", "yo",
+})
+
+
+def _is_greeting(query: str) -> bool:
+    """Check if query is a short greeting/small-talk message (≤6 words)."""
+    cleaned = re.sub(r"[^\w\s]", "", query.lower()).strip()
+    words = cleaned.split()
+    if not words or len(words) > 6:
+        return False
+    # Check full phrase first
+    if cleaned in _GREETING_WORDS:
+        return True
+    # Check single word
+    if len(words) == 1 and words[0] in _GREETING_SINGLE:
+        return True
+    # Check 2-3 word phrases
+    if len(words) <= 3:
+        phrase = " ".join(words)
+        if phrase in _GREETING_WORDS:
+            return True
+    return False
+
+
+# ── MAIN CHAT ENDPOINT ──────────────────────────────────────────────
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -38,30 +89,76 @@ async def chat(
 ) -> ChatResponse:
     conversation_id = body.conversation_id or str(uuid.uuid4())
 
-    # Route queries about the user's own live connected-app data (meetings,
-    # mail, tickets, PRs) to the Briefing Agent tools instead of the static
-    # document knowledge base.
-    live_source = classify_live_data_intent(body.query)
-    if live_source:
-        answer, source_result = await answer_live_data_query(db, current_user, body.query, live_source)
+    # ── Step 1: Greeting heuristic (fast path, no RAG or tools) ─────
+    if _is_greeting(body.query):
+        try:
+            greeting_reply = await generate_greeting(body.query)
+        except Exception:
+            greeting_reply = "Hello! How can I help you today?"
 
-        citations = [
-            Citation(document_title=item.title, document_id=live_source, excerpt=item.detail)
-            for item in source_result.items
-        ]
-        # Live-data answers aren't a "match confidence" the way document
-        # retrieval is — 1.0 once we've successfully queried the connected
-        # source (even with zero items), 0.0 if we couldn't (not connected /
-        # API error), so the frontend's confidence badge stays meaningful.
-        confidence = 1.0 if source_result.connected and not source_result.error else 0.0
+        logger.info("chat_greeting user_id=%s", current_user.id)
+        return ChatResponse(
+            answer=greeting_reply,
+            confidence=0.0,
+            citations=[],
+            conversation_id=conversation_id,
+            flagged_for_review=False,
+            source="none",
+        )
+
+    # ── Step 2: Tool-calling via LLM ────────────────────────────────
+    try:
+        tool_decision = await generate_with_tools(body.query, TOOL_SCHEMAS)
+    except Exception as exc:
+        logger.warning("Tool-calling LLM failed, falling through to RAG: %s", exc)
+        tool_decision = None
+
+    # If model requested tool calls, execute them
+    if isinstance(tool_decision, list) and tool_decision:
+        all_results = []
+        all_chunks = []  # only ever populated by search_company_documents
+        source = "none"
+
+        for call in tool_decision:
+            tool_name = call.get("name", "")
+            tool_args = call.get("args", {})
+            query_for_tool = tool_args.get("query", body.query)
+
+            result_text, tool_source, chunks = await dispatch_tool_call(
+                tool_name, db, current_user, query_for_tool,
+            )
+            all_results.append(result_text)
+            all_chunks.extend(chunks)
+            # Use the first tool's source as the primary source label
+            if source == "none":
+                source = tool_source
+
+        combined_results = "\n\n".join(all_results)
+
+        try:
+            answer = await generate_tool_response(body.query, combined_results)
+        except Exception as exc:
+            logger.error("Tool response generation failed: %s", exc)
+            answer = combined_results  # Fallback: return raw tool data
 
         logger.info(
-            "chat_live_data user_id=%s source=%s connected=%s items=%d",
-            current_user.id,
-            live_source,
-            source_result.connected,
-            len(source_result.items),
+            "chat_tool_answered user_id=%s source=%s tools=%d",
+            current_user.id, source, len(tool_decision),
         )
+
+        # search_company_documents is the only tool that returns retrieval
+        # chunks — when it does, build real citations/confidence from them
+        # the same way the RAG fallback path below does, instead of losing
+        # that data once it's flattened into prompt text for the LLM.
+        citations = [
+            Citation(
+                document_title=chunk.document_title,
+                document_id=chunk.document_id,
+                excerpt=excerpt(chunk.content),
+            )
+            for chunk in all_chunks
+        ]
+        confidence = confidence_from_distance(all_chunks[0].distance) if all_chunks else 0.0
 
         return ChatResponse(
             answer=answer,
@@ -69,8 +166,22 @@ async def chat(
             citations=citations,
             conversation_id=conversation_id,
             flagged_for_review=False,
+            source=source,
         )
 
+    # If the model returned a direct text answer (no tool call), use it
+    if isinstance(tool_decision, str) and tool_decision.strip():
+        logger.info("chat_direct_answer user_id=%s", current_user.id)
+        return ChatResponse(
+            answer=tool_decision,
+            confidence=0.0,
+            citations=[],
+            conversation_id=conversation_id,
+            flagged_for_review=False,
+            source="none",
+        )
+
+    # ── Step 3: RAG fallback (existing behavior, unchanged) ─────────
     # allowed_roles is derived from the authenticated user — never omitted/None,
     # which would fall back to unrestricted access inside semantic_search().
     results = await semantic_search(db, body.query, allowed_roles=[current_user.role])
@@ -96,6 +207,7 @@ async def chat(
             citations=[],
             conversation_id=conversation_id,
             flagged_for_review=True,
+            source="documents",
         )
 
     answer = await generate_answer(body.query, results)
@@ -123,4 +235,5 @@ async def chat(
         citations=citations,
         conversation_id=conversation_id,
         flagged_for_review=False,
+        source="documents",
     )

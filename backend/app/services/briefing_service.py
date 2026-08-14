@@ -384,7 +384,155 @@ async def get_github_briefing(db: AsyncSession, user: User) -> SourceResult:
             )
 
 
-# ── 5. ORCHESTRATION PIPELINE ───────────────────────────────────────
+# ── 5. GOOGLE DRIVE BRIEFING TOOL ────────────────────────────────────
+#
+# NOTE: this is a separate, read-only "list my recent files" tool for chat —
+# it does NOT touch drive_sync_service.py's sync_drive_documents() (which
+# ingests file content into the document knowledge base) in any way, so that
+# existing feature is unaffected by this addition. Provider lookup uses the
+# same canonical/legacy fallback list ("google_drive", "google") for the same
+# reason documented there: the OAuth callback stores the connection under the
+# canonical name "google_drive". "gmail" is deliberately NOT included here —
+# a gmail-scoped token has no drive.readonly scope and would 403.
+
+
+async def get_drive_briefing(db: AsyncSession, user: User) -> SourceResult:
+    """List the user's most recently modified Google Drive files."""
+    token = await get_decrypted_token(db, user.id, ["google_drive", "google"])
+    if not token:
+        logger.info("Drive integration not connected for user_id: %s", user.id)
+        return SourceResult(source="drive", connected=False, items=[])
+
+    items: list[BriefingItem] = []
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
+        try:
+            resp = await client.get(
+                "https://www.googleapis.com/drive/v3/files",
+                headers=headers,
+                params={
+                    "fields": "files(id, name, mimeType, webViewLink, modifiedTime)",
+                    "orderBy": "modifiedTime desc",
+                    "pageSize": 10,
+                },
+            )
+            resp.raise_for_status()
+            files = resp.json().get("files", [])
+
+            for file_meta in files:
+                name = file_meta.get("name", "Untitled File")
+                mime_type = file_meta.get("mimeType", "unknown")
+                modified = file_meta.get("modifiedTime", "")
+                web_link = file_meta.get("webViewLink")
+
+                detail_str = f"Type: {mime_type}"
+                if modified:
+                    detail_str += f" | Modified: {modified}"
+
+                items.append(
+                    BriefingItem(
+                        source="drive",
+                        title=name,
+                        detail=detail_str,
+                        priority_hint="info",
+                        url=web_link,
+                    )
+                )
+
+            logger.info("Drive briefing for user_id %s: %d items retrieved", user.id, len(items))
+            return SourceResult(source="drive", connected=True, items=items, error=None)
+
+        except Exception as exc:
+            logger.warning("Drive briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="drive",
+                connected=True,
+                items=[],
+                error=f"Drive API call failed: {type(exc).__name__}",
+            )
+
+
+# ── 6. SLACK BRIEFING TOOL ───────────────────────────────────────────
+
+
+async def get_slack_briefing(db: AsyncSession, user: User) -> SourceResult:
+    """Fetch recent messages from the user's most active Slack channels.
+
+    Slack's Web API returns HTTP 200 even on failure, signaling errors via a
+    JSON `ok: false` + `error` field instead — checked explicitly below rather
+    than relying on raise_for_status().
+    """
+    token = await get_decrypted_token(db, user.id, ["slack"])
+    if not token:
+        logger.info("Slack integration not connected for user_id: %s", user.id)
+        return SourceResult(source="slack", connected=False, items=[])
+
+    items: list[BriefingItem] = []
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
+        try:
+            channels_resp = await client.get(
+                "https://slack.com/api/conversations.list",
+                headers=headers,
+                params={"types": "public_channel,private_channel", "limit": 5},
+            )
+            channels_resp.raise_for_status()
+            channels_data = channels_resp.json()
+            if not channels_data.get("ok"):
+                return SourceResult(
+                    source="slack",
+                    connected=True,
+                    items=[],
+                    error=f"Slack API error: {channels_data.get('error', 'unknown_error')}",
+                )
+
+            for channel in channels_data.get("channels", [])[:5]:
+                channel_id = channel.get("id")
+                channel_name = channel.get("name", "unknown-channel")
+                if not channel_id:
+                    continue
+
+                history_resp = await client.get(
+                    "https://slack.com/api/conversations.history",
+                    headers=headers,
+                    params={"channel": channel_id, "limit": 3},
+                )
+                if history_resp.status_code != 200:
+                    continue
+                history_data = history_resp.json()
+                if not history_data.get("ok"):
+                    continue
+
+                for msg in history_data.get("messages", []):
+                    text = msg.get("text", "").strip()
+                    if not text:
+                        continue
+                    items.append(
+                        BriefingItem(
+                            source="slack",
+                            title=f"#{channel_name}",
+                            detail=text[:200],
+                            priority_hint="today",
+                            url=None,
+                        )
+                    )
+
+            logger.info("Slack briefing for user_id %s: %d items retrieved", user.id, len(items))
+            return SourceResult(source="slack", connected=True, items=items[:10], error=None)
+
+        except Exception as exc:
+            logger.warning("Slack briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="slack",
+                connected=True,
+                items=[],
+                error=f"Slack API call failed: {type(exc).__name__}",
+            )
+
+
+# ── 7. ORCHESTRATION PIPELINE ───────────────────────────────────────
 
 
 async def generate_daily_briefing(db: AsyncSession, user: User) -> BriefingResponse:

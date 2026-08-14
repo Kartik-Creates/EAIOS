@@ -61,6 +61,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           confidence: response.confidence,
           citations: response.citations,
           flagged_for_review: response.flagged_for_review,
+          source: response.source,
         };
 
         setState((prev) => ({
