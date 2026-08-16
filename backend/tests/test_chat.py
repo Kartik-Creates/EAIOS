@@ -101,7 +101,7 @@ async def test_chat_routes_to_gmail_briefing(client, monkeypatch, db_session):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_briefing", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
 
     token = register_and_login(client, "gmailuser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -174,7 +174,7 @@ async def test_chat_routes_to_jira_briefing(client, monkeypatch, db_session):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_jira_briefing", mock_get_jira_briefing)
+    monkeypatch.setattr("app.services.chat_tools.get_jira_recent", mock_get_jira_briefing)
 
     token = register_and_login(client, "jirauser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -197,7 +197,7 @@ async def test_chat_disconnected_integration_guidance(client, monkeypatch, db_se
     async def mock_get_gmail_disconnected(db, user):
         return SourceResult(source="gmail", connected=False, items=[])
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_briefing", mock_get_gmail_disconnected)
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_disconnected)
 
     token = register_and_login(client, "disconnecteduser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -478,7 +478,7 @@ async def test_chat_gmail_tool_call_still_has_no_citations(client, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_briefing", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
 
     token = register_and_login(client, "toolroutegmail@example.com")
     headers = {"Authorization": f"Bearer {token}"}

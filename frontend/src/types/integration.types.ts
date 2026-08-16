@@ -11,12 +11,16 @@
 // ─────────────────────────────────────────────
 // OAuth Provider
 // Mirrors: OAuthToken.provider column
-// OAuth redirect: "google" | "github"
+// "google_drive" is the canonical name the backend actually stores
+// connections under (see oauth_config.PROVIDER_ALIASES: "google" is only
+// an alias resolved server-side) — using it here, not "google", is what
+// keeps getConnection()/isConnected() able to find the row at all.
+// OAuth redirect: "google_drive" | "gmail" | "github"
 // Manual token:  "slack"  | "jira"
 // ─────────────────────────────────────────────
-export type OAuthProvider = 
-  | 'google' 
-  | 'github' 
+export type OAuthProvider =
+  | 'google_drive'
+  | 'github'
   | 'slack' 
   | 'jira' 
   | 'notion'

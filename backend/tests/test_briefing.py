@@ -20,10 +20,13 @@ from app.schemas.briefing import BriefingItem, BriefingResponse, SourceResult
 from app.services.briefing_service import (
     generate_daily_briefing,
     get_calendar_briefing,
+    get_calendar_recent,
     get_drive_briefing,
     get_github_briefing,
     get_gmail_briefing,
+    get_gmail_recent,
     get_jira_briefing,
+    get_jira_recent,
     get_slack_briefing,
 )
 from tests.rag_fixtures import register_and_login
@@ -137,6 +140,55 @@ async def test_jira_briefing_api_error_returns_error_not_raised(db_session, monk
 
 
 @pytest.mark.asyncio
+async def test_jira_recent_includes_done_tickets(db_session, monkeypatch):
+    """Regression: get_jira_recent() (chat tool) must NOT filter out Done
+    tickets the way get_jira_briefing() (dashboard) deliberately does —
+    otherwise "what are my Jira tickets" comes back empty whenever
+    everything assigned to the user happens to be finished."""
+    user = await _create_test_user(db_session, "jira_recent_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "jira")
+
+    captured_jql = {}
+
+    class MockHttpxResponse:
+        def __init__(self, url, params=None):
+            self.url = url
+            self.params = params or {}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            if "accessible-resources" in self.url:
+                return [{"id": "cloud-123", "name": "Test Site"}]
+            captured_jql["jql"] = self.params.get("jql", "")
+            return {
+                "issues": [
+                    {
+                        "key": "PROJ-200",
+                        "fields": {
+                            "summary": "Already shipped feature",
+                            "duedate": None,
+                            "status": {"name": "Done"},
+                        },
+                    }
+                ]
+            }
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        return MockHttpxResponse(str(url), kwargs.get("params"))
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_jira_recent(db_session, user)
+    assert res.source == "jira"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "[PROJ-200] Already shipped feature"
+    assert "statusCategory" not in captured_jql["jql"]
+
+
+@pytest.mark.asyncio
 async def test_calendar_briefing_not_connected(db_session):
     user = await _create_test_user(db_session, "cal_no_conn@example.com")
     res = await get_calendar_briefing(db_session, user)
@@ -180,6 +232,51 @@ async def test_calendar_briefing_success(db_session, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_calendar_recent_widens_time_window(db_session, monkeypatch):
+    """Regression: get_calendar_recent() (chat tool) must query a window wider
+    than "today only" — otherwise "what's my next meeting" / "what did I have
+    yesterday" come back empty whenever the event falls outside the current
+    UTC calendar day."""
+    user = await _create_test_user(db_session, "cal_recent_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "google")
+
+    captured_params = {}
+
+    class MockCalResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "items": [
+                    {
+                        "summary": "Next Week Planning",
+                        "start": {"dateTime": "2026-08-25T10:00:00Z"},
+                        "attendees": [],
+                        "htmlLink": "https://calendar.google.com/event?id=456",
+                    }
+                ]
+            }
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        captured_params.update(kwargs.get("params", {}))
+        return MockCalResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_calendar_recent(db_session, user)
+    assert res.source == "calendar"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "Next Week Planning"
+
+    time_min = datetime.fromisoformat(captured_params["timeMin"])
+    time_max = datetime.fromisoformat(captured_params["timeMax"])
+    span_days = (time_max - time_min).days
+    assert span_days > 1, "calendar recent tool must query more than a single day"
+
+
+@pytest.mark.asyncio
 async def test_gmail_briefing_success(db_session, monkeypatch):
     user = await _create_test_user(db_session, "gmail_user@example.com")
     await _add_mock_oauth_token(db_session, user.id, "gmail")
@@ -220,6 +317,57 @@ async def test_gmail_briefing_success(db_session, monkeypatch):
     assert res.connected is True
     assert len(res.items) == 1
     assert res.items[0].title == "Action Required: Security Audit"
+
+
+@pytest.mark.asyncio
+async def test_gmail_recent_does_not_filter_to_unread_only(db_session, monkeypatch):
+    """Regression: get_gmail_recent() (chat tool) must NOT restrict to
+    is:unread the way get_gmail_briefing() (dashboard) deliberately does —
+    otherwise "what are my latest emails" comes back empty whenever
+    everything in Primary happens to already be read."""
+    user = await _create_test_user(db_session, "gmail_recent_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "gmail")
+
+    captured_params = {}
+
+    class MockGmailResponse:
+        def __init__(self, url):
+            self.url = str(url)
+
+        def raise_for_status(self):
+            pass
+
+        @property
+        def status_code(self):
+            return 200
+
+        def json(self):
+            if "msg-1" not in self.url:
+                return {"messages": [{"id": "msg-1"}]}
+
+            return {
+                "snippet": "Already-read message from earlier today.",
+                "payload": {
+                    "headers": [
+                        {"name": "Subject", "value": "Weekly Digest"},
+                        {"name": "From", "value": "team@company.com"},
+                    ]
+                },
+            }
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        if "params" in kwargs and "q" in kwargs["params"]:
+            captured_params.update(kwargs["params"])
+        return MockGmailResponse(url)
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_gmail_recent(db_session, user)
+    assert res.source == "gmail"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "Weekly Digest"
+    assert "is:unread" not in captured_params.get("q", "")
 
 
 @pytest.mark.asyncio

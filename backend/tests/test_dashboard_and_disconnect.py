@@ -8,8 +8,8 @@ Tests cover:
   - GET /api/v1/dashboard/activity: User-scoped activity feed.
 """
 import uuid
+
 import pytest
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -99,6 +99,95 @@ async def test_disconnect_integration_cross_user_isolation(db_session: AsyncSess
         select(OAuthToken).where(OAuthToken.user_id == user_b.id, OAuthToken.provider == "jira")
     )
     assert res_token_b_jira.scalars().first() is not None
+
+
+@pytest.mark.asyncio
+async def test_disconnect_integration_endpoint_success(client, db_session: AsyncSession):
+    """Real HTTP-level test: DELETE /api/v1/integrations/{provider} must actually
+    remove the OAuth token and mark the Integration disconnected — the existing
+    cross-user-isolation test above only replicates the logic inline and never
+    calls the real route, so it would not have caught a routing/auth bug here."""
+    from app.core.security import create_access_token
+
+    user = await _create_user(db_session, "disconnect_endpoint@example.com")
+    await _connect_provider(db_session, user.id, "jira")
+    token = create_access_token(user.id)
+
+    response = client.delete(
+        "/api/v1/integrations/jira",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+    res_token = await db_session.execute(
+        select(OAuthToken).where(OAuthToken.user_id == user.id, OAuthToken.provider == "jira")
+    )
+    assert res_token.scalars().first() is None
+
+    res_int = await db_session.execute(
+        select(Integration).where(Integration.user_id == user.id, Integration.provider == "jira")
+    )
+    integration = res_int.scalars().first()
+    assert integration is not None
+    assert integration.status == "disconnected"
+
+
+@pytest.mark.asyncio
+async def test_disconnect_integration_resolves_canonical_provider_alias(client, db_session: AsyncSession):
+    """The connection is stored under the canonical name "google_drive" (see
+    oauth_config.PROVIDER_ALIASES), but the frontend may call this with the
+    "google" alias — the endpoint must resolve it, or the token can never be
+    removed (the same class of bug fixed in drive_sync_service.py)."""
+    from app.core.security import create_access_token
+
+    user = await _create_user(db_session, "disconnect_alias@example.com")
+    await _connect_provider(db_session, user.id, "google_drive")
+    token = create_access_token(user.id)
+
+    response = client.delete(
+        "/api/v1/integrations/google",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+
+    res_token = await db_session.execute(
+        select(OAuthToken).where(OAuthToken.user_id == user.id, OAuthToken.provider == "google_drive")
+    )
+    assert res_token.scalars().first() is None
+
+
+@pytest.mark.asyncio
+async def test_disconnect_integration_unauthenticated_401(client):
+    response = client.delete("/api/v1/integrations/jira")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_disconnect_integration_endpoint_cross_user_isolation(client, db_session: AsyncSession):
+    """Real HTTP-level version of the cross-user isolation guarantee: User A's
+    JWT must never be able to disconnect User B's integration, even if User A
+    somehow knew User B connected the same provider — the endpoint only ever
+    acts on current_user.id, never a caller-supplied user id."""
+    from app.core.security import create_access_token
+
+    user_a = await _create_user(db_session, "disconnect_iso_a@example.com")
+    user_b = await _create_user(db_session, "disconnect_iso_b@example.com")
+    await _connect_provider(db_session, user_a.id, "jira")
+    await _connect_provider(db_session, user_b.id, "jira")
+    token_a = create_access_token(user_a.id)
+
+    response = client.delete(
+        "/api/v1/integrations/jira",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert response.status_code == 200
+
+    # User B's Jira connection must be untouched
+    res_token_b = await db_session.execute(
+        select(OAuthToken).where(OAuthToken.user_id == user_b.id, OAuthToken.provider == "jira")
+    )
+    assert res_token_b.scalars().first() is not None
 
 
 @pytest.mark.asyncio
