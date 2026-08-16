@@ -15,7 +15,7 @@ export const PROVIDERS: ProviderMeta[] = [
     authMethod: 'oauth',
   },
   {
-    id: 'google' as OAuthProvider,
+    id: 'google_drive' as OAuthProvider,
     label: 'Google Drive',
     description: 'Connect Google Drive to index documents and sheets for RAG search.',
     authMethod: 'oauth',

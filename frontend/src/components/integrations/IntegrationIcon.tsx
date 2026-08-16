@@ -102,6 +102,7 @@ export const CustomIntegrationIcon = DefaultPlugIcon;
 export const ICON_MAP: Record<string, React.FC<BrandIconProps>> = {
   gmail: GmailIcon,
   google: GoogleDriveIcon,
+  google_drive: GoogleDriveIcon,
   github: GitHubIcon,
   slack: SlackIcon,
   jira: JiraIcon,

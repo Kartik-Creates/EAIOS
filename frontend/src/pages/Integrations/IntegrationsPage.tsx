@@ -47,12 +47,18 @@ export const IntegrationsPage = () => {
     try {
       const stored = localStorage.getItem('eaios_active_integrations');
       if (stored) {
-        return JSON.parse(stored);
+        // Migrate any pre-existing cached "google" id (the old, incorrect
+        // card id) to "google_drive" — the actual canonical name the
+        // backend stores connections under. Without this, a returning
+        // user with the old id cached would silently lose the Drive card
+        // entirely (PROVIDERS.find(p => p.id === 'google') no longer matches).
+        const parsed: string[] = JSON.parse(stored);
+        return parsed.map((id) => (id === 'google' ? 'google_drive' : id));
       }
     } catch {
       // ignore parse errors
     }
-    return ['gmail', 'google', 'github', 'slack', 'jira'];
+    return ['gmail', 'google_drive', 'github', 'slack', 'jira'];
   });
   const [isServicePickerOpen, setIsServicePickerOpen] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState<{ providerId: string; label: string } | null>(null);

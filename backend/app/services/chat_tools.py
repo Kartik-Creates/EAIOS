@@ -1,9 +1,14 @@
 """Chat Tool-Calling Service — tool schemas and dispatch for Gemini function-calling.
 
-Registers the 4 existing briefing_service.py functions + search_company_documents
-as callable tools for the chat LLM.  dispatch_tool_call() executes the requested
-tool using the current authenticated user's own OAuth tokens (reuses per-user
-isolation from briefing_service.py, no new token-retrieval logic).
+Registers briefing_service.py functions + search_company_documents as callable
+tools for the chat LLM.  dispatch_tool_call() executes the requested tool using
+the current authenticated user's own OAuth tokens (reuses per-user isolation
+from briefing_service.py, no new token-retrieval logic).
+
+gmail/jira/calendar are backed by dedicated "_recent" functions in
+briefing_service.py — broader-scoped variants built for chat, separate from
+the narrow "_briefing" functions the dashboard's daily briefing still uses
+unchanged (e.g. gmail briefing = unread-only; gmail recent = read+unread).
 """
 import logging
 
@@ -12,11 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.schemas.briefing import SourceResult
 from app.services.briefing_service import (
-    get_calendar_briefing,
+    get_calendar_recent,
     get_drive_briefing,
     get_github_briefing,
-    get_gmail_briefing,
-    get_jira_briefing,
+    get_gmail_recent,
+    get_jira_recent,
     get_slack_briefing,
 )
 from app.services.retrieval_service import (
@@ -74,9 +79,10 @@ TOOL_SCHEMAS = [
     {
         "name": "get_calendar_briefing",
         "description": (
-            "Retrieve the user's Google Calendar events and schedule for today. "
-            "Use this tool when the user asks about their meetings, schedule, "
-            "calendar events, upcoming meetings, or anything related to their "
+            "Retrieve the user's Google Calendar events and schedule, covering "
+            "recent past days plus the next two weeks. Use this tool when the "
+            "user asks about their meetings, schedule, calendar events, "
+            "upcoming or recent meetings, or anything related to their "
             "Google Calendar."
         ),
         "parameters": {
@@ -146,12 +152,17 @@ TOOL_SOURCE_MAP = {
     "get_slack_briefing": "slack",
 }
 
-# Map tool names to their actual functions
+# Map tool names (LLM-facing) to their actual implementation functions.
+# gmail/jira/calendar deliberately point at the "_recent" chat-only variants
+# (broader scope — see briefing_service.py) rather than the dashboard's
+# narrow daily-briefing versions, which stay wired unchanged into
+# generate_daily_briefing(). github/drive/slack are already general enough
+# for chat, so they reuse their single existing implementation as-is.
 _BRIEFING_DISPATCH = {
-    "get_gmail_briefing": get_gmail_briefing,
-    "get_jira_briefing": get_jira_briefing,
+    "get_gmail_briefing": get_gmail_recent,
+    "get_jira_briefing": get_jira_recent,
     "get_github_briefing": get_github_briefing,
-    "get_calendar_briefing": get_calendar_briefing,
+    "get_calendar_briefing": get_calendar_recent,
 }
 
 
@@ -222,7 +233,7 @@ async def dispatch_tool_call(
     source = TOOL_SOURCE_MAP.get(tool_name, "none")
 
     if tool_name == "get_gmail_briefing":
-        result: SourceResult = await get_gmail_briefing(db, user)
+        result: SourceResult = await get_gmail_recent(db, user)
         formatted = _format_source_result(result)
         logger.info(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
@@ -231,7 +242,7 @@ async def dispatch_tool_call(
         return formatted, source, []
 
     if tool_name == "get_jira_briefing":
-        result: SourceResult = await get_jira_briefing(db, user)
+        result: SourceResult = await get_jira_recent(db, user)
         formatted = _format_source_result(result)
         logger.info(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
@@ -249,7 +260,7 @@ async def dispatch_tool_call(
         return formatted, source, []
 
     if tool_name == "get_calendar_briefing":
-        result: SourceResult = await get_calendar_briefing(db, user)
+        result: SourceResult = await get_calendar_recent(db, user)
         formatted = _format_source_result(result)
         logger.info(
             "tool_dispatch tool=%s user_id=%s connected=%s items=%d",

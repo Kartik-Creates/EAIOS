@@ -152,6 +152,93 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
             )
 
 
+# ── 1b. JIRA "RECENT" TOOL (chat-only, broader scope) ─────────────────
+#
+# NOTE: separate from get_jira_briefing() above, which stays scoped to
+# not-Done tickets for the dashboard's daily briefing — untouched. This one
+# drops the statusCategory filter so chat questions like "what are my Jira
+# tickets" don't come back empty just because everything currently assigned
+# happens to be marked Done.
+
+
+async def get_jira_recent(db: AsyncSession, user: User) -> SourceResult:
+    """Fetch the user's most recently updated Jira tickets, any status."""
+    token = await get_decrypted_token(db, user.id, ["jira"])
+    if not token:
+        logger.info("Jira integration not connected for user_id: %s", user.id)
+        return SourceResult(source="jira", connected=False, items=[])
+
+    items: list[BriefingItem] = []
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
+        try:
+            res_resources = await client.get(
+                "https://api.atlassian.com/oauth/token/accessible-resources",
+                headers=headers,
+            )
+            res_resources.raise_for_status()
+            resources = res_resources.json()
+            if not resources or not isinstance(resources, list):
+                logger.info("Jira recent for user_id %s: 0 items (no accessible cloud resources)", user.id)
+                return SourceResult(source="jira", connected=True, items=[], error=None)
+
+            cloud_id = resources[0].get("id")
+
+            # No statusCategory filter — includes Done tickets too.
+            jql = "assignee = currentUser() ORDER BY updated DESC"
+            search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
+            res_search = await client.get(
+                search_url,
+                headers=headers,
+                params={"jql": jql, "maxResults": 15, "fields": "summary,duedate,status"},
+            )
+            res_search.raise_for_status()
+            search_data = res_search.json()
+            issues = search_data.get("issues", [])
+
+            now_date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+            for issue in issues:
+                key = issue.get("key", "")
+                fields = issue.get("fields", {})
+                summary = fields.get("summary", "Untitled Issue")
+                due_date = fields.get("duedate")
+                status_name = fields.get("status", {}).get("name", "Unknown")
+
+                priority_hint = "today"
+                if due_date and due_date < now_date_str:
+                    priority_hint = "overdue"
+
+                detail_str = f"Status: {status_name}"
+                if due_date:
+                    detail_str += f" | Due: {due_date}"
+
+                url = f"https://api.atlassian.com/ex/jira/{cloud_id}/browse/{key}"
+
+                items.append(
+                    BriefingItem(
+                        source="jira",
+                        title=f"[{key}] {summary}",
+                        detail=detail_str,
+                        priority_hint=priority_hint,
+                        url=url,
+                    )
+                )
+
+            logger.info("Jira recent for user_id %s: %d items retrieved", user.id, len(items))
+            return SourceResult(source="jira", connected=True, items=items, error=None)
+
+        except Exception as exc:
+            logger.warning("Jira recent fetch failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="jira",
+                connected=True,
+                items=[],
+                error=f"Jira API call failed: {type(exc).__name__}",
+            )
+
+
 # ── 2. CALENDAR BRIEFING TOOL ────────────────────────────────────────
 
 
@@ -309,6 +396,97 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
             )
 
 
+# ── 3b. GMAIL "RECENT" TOOL (chat-only, broader scope) ────────────────
+#
+# NOTE: separate from get_gmail_briefing() above, which stays scoped to
+# unread Primary mail for the dashboard's daily briefing — untouched. This
+# one drops the is:unread restriction so chat questions like "what are my
+# latest emails" don't come back empty just because everything happens to
+# already be read.
+
+
+async def get_gmail_recent(db: AsyncSession, user: User) -> SourceResult:
+    """Fetch the user's most recent Gmail messages, read or unread."""
+    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"])
+    if not token:
+        logger.info("Gmail integration not connected for user_id: %s", user.id)
+        return SourceResult(source="gmail", connected=False, items=[])
+
+    items: list[BriefingItem] = []
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    ignored_patterns = ("no-reply", "noreply", "mailer-daemon", "newsletter", "notifications", "donotreply")
+
+    async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
+        try:
+            # Primary category only (keeps promo/social noise out), but no
+            # is:unread filter — this reflects the actual recent inbox, not
+            # just what hasn't been read yet.
+            res_list = await client.get(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+                headers=headers,
+                params={"q": "category:primary", "maxResults": 10},
+            )
+            res_list.raise_for_status()
+            messages_meta = res_list.json().get("messages", [])
+
+            for msg_ref in messages_meta[:8]:
+                msg_id = msg_ref.get("id")
+                if not msg_id:
+                    continue
+
+                res_msg = await client.get(
+                    f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg_id}",
+                    headers=headers,
+                    params={"format": "metadata", "metadataHeaders": ["Subject", "From"]},
+                )
+                if res_msg.status_code != 200:
+                    continue
+
+                msg_data = res_msg.json()
+                snippet = msg_data.get("snippet", "")
+                payload_headers = msg_data.get("payload", {}).get("headers", [])
+
+                subject = "(No Subject)"
+                sender = "Unknown Sender"
+
+                for h in payload_headers:
+                    h_name = h.get("name", "").lower()
+                    if h_name == "subject":
+                        subject = h.get("value", subject)
+                    elif h_name == "from":
+                        sender = h.get("value", sender)
+
+                sender_lower = sender.lower()
+                if any(p in sender_lower for p in ignored_patterns):
+                    continue
+
+                detail_str = f"From: {sender} | {snippet[:100]}"
+                url = f"https://mail.google.com/mail/u/0/#inbox/{msg_id}"
+
+                items.append(
+                    BriefingItem(
+                        source="gmail",
+                        title=subject,
+                        detail=detail_str,
+                        priority_hint="today",
+                        url=url,
+                    )
+                )
+
+            logger.info("Gmail recent for user_id %s: %d items retrieved", user.id, len(items))
+            return SourceResult(source="gmail", connected=True, items=items, error=None)
+
+        except Exception as exc:
+            logger.warning("Gmail recent fetch failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="gmail",
+                connected=True,
+                items=[],
+                error=f"Gmail API call failed: {type(exc).__name__}",
+            )
+
+
 # ── 4. GITHUB BRIEFING TOOL ──────────────────────────────────────────
 
 
@@ -381,6 +559,82 @@ async def get_github_briefing(db: AsyncSession, user: User) -> SourceResult:
                 connected=True,
                 items=[],
                 error=f"GitHub API call failed: {type(exc).__name__}",
+            )
+
+
+# ── 2b. CALENDAR "RECENT" TOOL (chat-only, broader scope) ────────────
+#
+# NOTE: separate from get_calendar_briefing() above, which stays hard-bounded
+# to "today" for the dashboard's daily briefing — untouched. This one widens
+# the window to the recent past + upcoming days so chat questions like
+# "what's my next meeting" or "what did I have yesterday" don't come back
+# empty just because they fall outside a single calendar day.
+
+
+async def get_calendar_recent(db: AsyncSession, user: User) -> SourceResult:
+    """Fetch the user's Google Calendar events across a -3d to +14d window."""
+    token = await get_decrypted_token(db, user.id, ["google", "google_drive", "gmail"])
+    if not token:
+        logger.info("Calendar integration not connected for user_id: %s", user.id)
+        return SourceResult(source="calendar", connected=False, items=[])
+
+    items: list[BriefingItem] = []
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+    now_utc = datetime.now(timezone.utc)
+    time_min = (now_utc - timedelta(days=3)).isoformat()
+    time_max = (now_utc + timedelta(days=14)).isoformat()
+
+    async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
+        try:
+            resp = await client.get(
+                "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+                headers=headers,
+                params={
+                    "timeMin": time_min,
+                    "timeMax": time_max,
+                    "singleEvents": "true",
+                    "orderBy": "startTime",
+                    "maxResults": 20,
+                },
+            )
+            resp.raise_for_status()
+            events = resp.json().get("items", [])
+
+            for event in events:
+                title = event.get("summary", "Untitled Meeting")
+                start = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date", "")
+                attendees = event.get("attendees", [])
+                attendees_count = len(attendees)
+                html_link = event.get("htmlLink")
+
+                if "T" in start:
+                    when_str = f"{start.split('T')[0]} {start.split('T')[1][:5]}"
+                else:
+                    when_str = f"{start} (All Day)"
+
+                detail_str = f"When: {when_str} | Attendees: {attendees_count}"
+
+                items.append(
+                    BriefingItem(
+                        source="calendar",
+                        title=title,
+                        detail=detail_str,
+                        priority_hint="today",
+                        url=html_link,
+                    )
+                )
+
+            logger.info("Calendar recent for user_id %s: %d items retrieved", user.id, len(items))
+            return SourceResult(source="calendar", connected=True, items=items, error=None)
+
+        except Exception as exc:
+            logger.warning("Calendar recent fetch failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="calendar",
+                connected=True,
+                items=[],
+                error=f"Calendar API call failed: {type(exc).__name__}",
             )
 
 
