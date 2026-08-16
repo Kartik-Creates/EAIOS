@@ -361,9 +361,13 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
                 for h in payload_headers:
                     h_name = h.get("name", "").lower()
                     if h_name == "subject":
-                        subject = h.get("value", subject)
+                        # Gmail can send a Subject header with an empty string
+                        # value (not just omit it) — .get()'s default only
+                        # covers a missing key, so an explicit blank value
+                        # would otherwise silently overwrite "(No Subject)".
+                        subject = h.get("value") or subject
                     elif h_name == "from":
-                        sender = h.get("value", sender)
+                        sender = h.get("value") or sender
 
                 # Apply urgency heuristic: skip automated senders
                 sender_lower = sender.lower()
@@ -453,9 +457,13 @@ async def get_gmail_recent(db: AsyncSession, user: User) -> SourceResult:
                 for h in payload_headers:
                     h_name = h.get("name", "").lower()
                     if h_name == "subject":
-                        subject = h.get("value", subject)
+                        # Gmail can send a Subject header with an empty string
+                        # value (not just omit it) — .get()'s default only
+                        # covers a missing key, so an explicit blank value
+                        # would otherwise silently overwrite "(No Subject)".
+                        subject = h.get("value") or subject
                     elif h_name == "from":
-                        sender = h.get("value", sender)
+                        sender = h.get("value") or sender
 
                 sender_lower = sender.lower()
                 if any(p in sender_lower for p in ignored_patterns):

@@ -35,6 +35,10 @@ router = APIRouter()
 logger = logging.getLogger("eaios.chat")
 
 FALLBACK_MESSAGE = "I couldn't find this in company documents — I've flagged it for review."
+TOOL_RESPONSE_FAILURE_MESSAGE = (
+    "I found the relevant data but hit a temporary error putting together a response. "
+    "Please try asking again in a moment."
+)
 
 # ── GREETING HEURISTIC ──────────────────────────────────────────────
 
@@ -135,15 +139,26 @@ async def chat(
 
         combined_results = "\n\n".join(all_results)
 
+        tool_response_failed = False
         try:
             answer = await generate_tool_response(body.query, combined_results)
         except Exception as exc:
-            logger.error("Tool response generation failed: %s", exc)
-            answer = combined_results  # Fallback: return raw tool data
+            # NEVER fall back to the raw combined_results string here — it's an
+            # internal prompt-formatted data block (e.g. "[GMAIL DATA — 1
+            # item(s)] - <subject> | From: ... | Link: ..."), not something
+            # meant for a user to read. Leaking it looks like a broken/raw
+            # response and can include unredacted personal data (email
+            # addresses, message links, etc.) straight from the tool result.
+            logger.error(
+                "Tool response generation failed, user_id=%s source=%s: %s",
+                current_user.id, source, exc,
+            )
+            answer = TOOL_RESPONSE_FAILURE_MESSAGE
+            tool_response_failed = True
 
         logger.info(
-            "chat_tool_answered user_id=%s source=%s tools=%d",
-            current_user.id, source, len(tool_decision),
+            "chat_tool_answered user_id=%s source=%s tools=%d degraded=%s",
+            current_user.id, source, len(tool_decision), tool_response_failed,
         )
 
         # search_company_documents is the only tool that returns retrieval
@@ -165,7 +180,7 @@ async def chat(
             confidence=confidence,
             citations=citations,
             conversation_id=conversation_id,
-            flagged_for_review=False,
+            flagged_for_review=tool_response_failed,
             source=source,
         )
 

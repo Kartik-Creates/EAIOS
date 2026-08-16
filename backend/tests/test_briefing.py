@@ -320,6 +320,49 @@ async def test_gmail_briefing_success(db_session, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_gmail_briefing_blank_subject_header_falls_back_to_no_subject(db_session, monkeypatch):
+    """Regression: Gmail can return a Subject header with an explicit empty
+    string value (not just omit the header). dict.get(key, default) only
+    applies the default when the key is missing, so an empty value used to
+    silently overwrite "(No Subject)" with "", producing a blank title."""
+    user = await _create_test_user(db_session, "gmail_blank_subject@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "gmail")
+
+    class MockGmailResponse:
+        def __init__(self, url):
+            self.url = str(url)
+
+        def raise_for_status(self):
+            pass
+
+        @property
+        def status_code(self):
+            return 200
+
+        def json(self):
+            if "msg-1" not in self.url:
+                return {"messages": [{"id": "msg-1"}]}
+
+            return {
+                "snippet": "hello",
+                "payload": {
+                    "headers": [
+                        {"name": "Subject", "value": ""},
+                        {"name": "From", "value": "someone@example.com"},
+                    ]
+                },
+            }
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        return MockGmailResponse(url)
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_gmail_briefing(db_session, user)
+    assert res.items[0].title == "(No Subject)"
+
+
+@pytest.mark.asyncio
 async def test_gmail_recent_does_not_filter_to_unread_only(db_session, monkeypatch):
     """Regression: get_gmail_recent() (chat tool) must NOT restrict to
     is:unread the way get_gmail_briefing() (dashboard) deliberately does —
