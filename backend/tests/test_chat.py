@@ -124,6 +124,50 @@ async def test_chat_routes_to_gmail_briefing(client, monkeypatch, db_session):
 
 
 @pytest.mark.asyncio
+async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monkeypatch, db_session):
+    """Regression: if generate_tool_response() (the LLM call that turns tool
+    data into a natural-language sentence) fails, the user must get a clean
+    error message — never the raw internal data block (which can contain
+    unredacted emails, links, etc. straight from the tool result)."""
+    async def mock_get_gmail_briefing(db, user):
+        return SourceResult(
+            source="gmail",
+            connected=True,
+            items=[
+                BriefingItem(
+                    source="gmail",
+                    title="",
+                    detail="From: Someone <someone@example.com> | hello",
+                    priority_hint="today",
+                    url="https://mail.google.com/mail/u/0/#inbox/msg999",
+                )
+            ],
+        )
+
+    async def failing_generate_tool_response(query: str, tool_data: str) -> str:
+        raise RuntimeError("simulated LLM failure")
+
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.routers.chat.generate_tool_response", failing_generate_tool_response)
+
+    token = register_and_login(client, "toolfailureuser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "What's my latest email?"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "gmail"
+    assert data["flagged_for_review"] is True
+    assert "[GMAIL DATA" not in data["answer"]
+    assert "someone@example.com" not in data["answer"]
+    assert "msg999" not in data["answer"]
+
+
+@pytest.mark.asyncio
 async def test_chat_routes_to_github_briefing(client, monkeypatch, db_session):
     async def mock_get_github_briefing(db, user):
         return SourceResult(
