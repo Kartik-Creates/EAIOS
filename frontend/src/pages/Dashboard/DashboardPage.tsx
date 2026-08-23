@@ -220,10 +220,21 @@ export const DashboardPage = () => {
   const userName = user?.full_name || user?.email || 'Enterprise User';
   const hasNoIntegrations = !isLoadingConnections && connections.length === 0;
 
-  // Derive stat cards from Briefing response items
-  const openTicketsCount = briefing?.items?.filter(i => i.source === 'jira').length ?? 0;
-  const unreadMessagesCount = briefing?.items?.filter(i => i.source === 'gmail' || i.source === 'slack').length ?? 0;
-  const pendingReviewsCount = briefing?.items?.filter(i => i.source === 'github').length ?? 0;
+  // Stat Card Derived Counts
+  const openTicketsCount =
+    briefing?.sources?.find((s) => s.source === 'jira')?.item_count ??
+    briefing?.items?.filter((i) => i.source === 'jira').length ??
+    0;
+
+  const unreadMessagesCount =
+    (briefing?.sources?.find((s) => s.source === 'gmail')?.item_count ?? 0) +
+      (briefing?.sources?.find((s) => s.source === 'slack')?.item_count ?? 0) ||
+    (briefing?.items?.filter((i) => i.source === 'gmail' || i.source === 'slack').length ?? 0);
+
+  const pendingReviewsCount =
+    briefing?.sources?.find((s) => s.source === 'github')?.item_count ??
+    briefing?.items?.filter((i) => i.source === 'github').length ??
+    0;
 
   // Identify sources that are connected but experienced errors
   const erroredSources = briefing?.sources?.filter(s => s.connected && s.error) ?? [];

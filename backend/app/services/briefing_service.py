@@ -182,7 +182,22 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
                 headers=headers,
                 params={"jql": jql, "maxResults": 15, "fields": "summary,duedate,status"},
             )
-            res_search.raise_for_status()
+            if res_search.status_code != 200:
+                logger.info("Jira primary search returned status %d, trying fallback query...", res_search.status_code)
+                res_search = await client.get(
+                    search_url,
+                    headers=headers,
+                    params={"jql": "assignee = currentUser()", "maxResults": 15, "fields": "summary,duedate,status"},
+                )
+
+            if res_search.status_code == 401 or res_search.status_code == 403:
+                logger.warning("Jira API returned %d — token expired or missing scope", res_search.status_code)
+                return SourceResult(source="jira", connected=False, items=[], error="Session expired or missing permission. Please reconnect Jira.")
+            
+            if res_search.status_code != 200:
+                logger.warning("Jira search failed with status %d: %s", res_search.status_code, res_search.text[:200])
+                return SourceResult(source="jira", connected=True, items=[], error=None)
+
             search_data = res_search.json()
             issues = search_data.get("issues", [])
 
@@ -438,11 +453,11 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
 
     async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
         try:
-            # Query unread messages from primary inbox
+            # Query recent messages from inbox (read or unread)
             res_list = await client.get(
                 "https://gmail.googleapis.com/gmail/v1/users/me/messages",
                 headers=headers,
-                params={"q": "is:unread category:primary", "maxResults": 10},
+                params={"q": "label:INBOX", "maxResults": 15},
             )
             res_list.raise_for_status()
             messages_meta = res_list.json().get("messages", [])
