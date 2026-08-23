@@ -16,6 +16,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://127.0.0.1:8000",
         "https://unifyai-zeta.vercel.app",
+        "https://eaios-ijy2.onrender.com",
     ]
 
     # Host URLs for OAuth redirects
