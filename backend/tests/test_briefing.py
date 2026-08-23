@@ -111,7 +111,11 @@ async def test_jira_briefing_success(db_session, monkeypatch):
     async def mock_get(self_or_client, url, *args, **kwargs):
         return MockHttpxResponse(str(url))
 
+    async def mock_post(self_or_client, url, *args, **kwargs):
+        return MockHttpxResponse(str(url))
+
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_post)
 
     res = await get_jira_briefing(db_session, user)
     assert res.source == "jira"
@@ -130,6 +134,7 @@ async def test_jira_briefing_api_error_returns_error_not_raised(db_session, monk
         raise HTTPError("Timeout connecting to Jira API")
 
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get_error)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_get_error)
 
     res = await get_jira_briefing(db_session, user)
     assert res.source == "jira"
@@ -151,9 +156,9 @@ async def test_jira_recent_includes_done_tickets(db_session, monkeypatch):
     captured_jql = {}
 
     class MockHttpxResponse:
-        def __init__(self, url, params=None):
+        def __init__(self, url, json_body=None):
             self.url = url
-            self.params = params or {}
+            self.json_body = json_body or {}
 
         def raise_for_status(self):
             pass
@@ -161,7 +166,7 @@ async def test_jira_recent_includes_done_tickets(db_session, monkeypatch):
         def json(self):
             if "accessible-resources" in self.url:
                 return [{"id": "cloud-123", "name": "Test Site"}]
-            captured_jql["jql"] = self.params.get("jql", "")
+            captured_jql["jql"] = self.json_body.get("jql", "")
             return {
                 "issues": [
                     {
@@ -176,9 +181,13 @@ async def test_jira_recent_includes_done_tickets(db_session, monkeypatch):
             }
 
     async def mock_get(self_or_client, url, *args, **kwargs):
-        return MockHttpxResponse(str(url), kwargs.get("params"))
+        return MockHttpxResponse(str(url))
+
+    async def mock_post(self_or_client, url, *args, **kwargs):
+        return MockHttpxResponse(str(url), kwargs.get("json"))
 
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_post)
 
     res = await get_jira_recent(db_session, user)
     assert res.source == "jira"
@@ -787,6 +796,7 @@ async def test_cross_user_briefing_data_isolation(db_session, monkeypatch):
     class MockJiraResponse:
         def __init__(self, token_header):
             self.token_header = token_header
+            self.status_code = 200
 
         def raise_for_status(self):
             pass
@@ -826,6 +836,7 @@ async def test_cross_user_briefing_data_isolation(db_session, monkeypatch):
         return MockJiraResponse(token_str + " " + str(url))
 
     monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_get)
 
     res_a = await get_jira_briefing(db_session, user_a)
     res_b = await get_jira_briefing(db_session, user_b)

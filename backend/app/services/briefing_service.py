@@ -174,41 +174,44 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
 
             cloud_id = resources[0].get("id")
 
-            # 2. Search issues assigned to user or recently updated in workspace
-            jql = "assignee = currentUser() ORDER BY updated DESC"
-            search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
-            res_search = await client.get(
+            # 2. Search issues assigned to user or recently updated in workspace via POST /rest/api/3/search/jql
+            search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql"
+            payload_primary = {
+                "jql": "assignee = currentUser() ORDER BY updated DESC",
+                "maxResults": 15,
+                "fields": ["summary", "duedate", "status"],
+            }
+            res_search = await client.post(
                 search_url,
                 headers=headers,
-                params={"jql": jql, "maxResults": 15, "fields": "summary,duedate,status"},
+                json=payload_primary,
             )
-            if res_search.status_code != 200:
-                logger.info("Jira primary search returned status %d, trying fallback query...", res_search.status_code)
-                res_search = await client.get(
-                    search_url,
-                    headers=headers,
-                    params={"jql": "ORDER BY updated DESC", "maxResults": 15, "fields": "summary,duedate,status"},
-                )
 
             if res_search.status_code in (401, 403):
                 logger.warning("Jira API returned %d — token expired or missing scope", res_search.status_code)
                 return SourceResult(source="jira", connected=False, items=[], error="Session expired or missing permission. Please reconnect Jira.")
             
-            if res_search.status_code != 200:
+            issues = []
+            if res_search.status_code == 200:
+                search_data = res_search.json()
+                issues = search_data.get("issues", [])
+                if not issues:
+                    # If no tickets explicitly assigned to currentUser(), fallback to recent workspace tickets
+                    payload_fallback = {
+                        "jql": "ORDER BY updated DESC",
+                        "maxResults": 15,
+                        "fields": ["summary", "duedate", "status"],
+                    }
+                    res_fallback = await client.post(
+                        search_url,
+                        headers=headers,
+                        json=payload_fallback,
+                    )
+                    if res_fallback.status_code == 200:
+                        issues = res_fallback.json().get("issues", [])
+            else:
                 logger.warning("Jira search failed with status %d: %s", res_search.status_code, res_search.text[:200])
-                return SourceResult(source="jira", connected=True, items=[], error=None)
-
-            search_data = res_search.json()
-            issues = search_data.get("issues", [])
-            if not issues:
-                # If no tickets explicitly assigned to currentUser(), fallback to recent workspace tickets
-                res_fallback = await client.get(
-                    search_url,
-                    headers=headers,
-                    params={"jql": "ORDER BY updated DESC", "maxResults": 15, "fields": "summary,duedate,status"},
-                )
-                if res_fallback.status_code == 200:
-                    issues = res_fallback.json().get("issues", [])
+                return SourceResult(source="jira", connected=True, items=[], error=f"Jira API call failed with status {res_search.status_code}")
 
             now_date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -298,13 +301,16 @@ async def get_jira_recent(db: AsyncSession, user: User) -> SourceResult:
 
             cloud_id = resources[0].get("id")
 
-            # No statusCategory filter — includes Done tickets too.
-            jql = "assignee = currentUser() ORDER BY updated DESC"
-            search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
-            res_search = await client.get(
+            # Search recent issues via POST /rest/api/3/search/jql
+            search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql"
+            res_search = await client.post(
                 search_url,
                 headers=headers,
-                params={"jql": jql, "maxResults": 15, "fields": "summary,duedate,status"},
+                json={
+                    "jql": "assignee = currentUser() ORDER BY updated DESC",
+                    "maxResults": 15,
+                    "fields": ["summary", "duedate", "status"],
+                },
             )
             res_search.raise_for_status()
             search_data = res_search.json()
@@ -1149,13 +1155,13 @@ async def get_jira_item_detail(
                 return None
             cloud_id = resources[0].get("id")
 
-            res = await client.get(
-                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search",
+            res = await client.post(
+                f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search/jql",
                 headers=headers,
-                params={
+                json={
                     "jql": f"key = {item_id}",
                     "maxResults": 1,
-                    "fields": "summary,description,status,duedate,assignee,priority,created",
+                    "fields": ["summary", "description", "status", "duedate", "assignee", "priority", "created"],
                 },
             )
             if res.status_code != 200:
