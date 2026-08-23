@@ -675,17 +675,31 @@ async def get_github_briefing(db: AsyncSession, user: User) -> SourceResult:
 
     async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
         try:
-            # Query open PRs where user is reviewer + open issues assigned to user
-            q = "is:open (review-requested:@me OR assignee:@me)"
-            resp = await client.get(
-                "https://api.github.com/search/issues",
-                headers=headers,
-                params={"q": q, "per_page": 15},
-            )
-            resp.raise_for_status()
-            raw_items = resp.json().get("items", [])
+            # Query assigned issues, review-requested PRs, and authored open items using valid GitHub search syntax
+            queries = [
+                "is:open assignee:@me",
+                "is:open review-requested:@me",
+                "is:open author:@me",
+            ]
+            raw_items_map: dict[str, dict] = {}
 
-            for raw in raw_items:
+            for q in queries:
+                resp = await client.get(
+                    "https://api.github.com/search/issues",
+                    headers=headers,
+                    params={"q": q, "per_page": 10},
+                )
+                if resp.status_code in (401, 403):
+                    logger.warning("GitHub API returned %d for user_id %s — token expired or missing scope", resp.status_code, user.id)
+                    return SourceResult(source="github", connected=False, items=[], error="Session expired or missing permission. Please reconnect GitHub.")
+                
+                if resp.status_code == 200:
+                    for raw in resp.json().get("items", []):
+                        item_id = str(raw.get("id") or raw.get("number") or raw.get("title") or "")
+                        if item_id and item_id not in raw_items_map:
+                            raw_items_map[item_id] = raw
+
+            for raw in raw_items_map.values():
                 title = raw.get("title", "Untitled GitHub Item")
                 html_url = raw.get("html_url")
                 repository_url = raw.get("repository_url", "")
@@ -722,6 +736,17 @@ async def get_github_briefing(db: AsyncSession, user: User) -> SourceResult:
             logger.info("GitHub briefing for user_id %s: %d items retrieved", user.id, len(items))
             return SourceResult(source="github", connected=True, items=items, error=None)
 
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (401, 403):
+                logger.warning("GitHub API returned %s for user_id %s — token expired or missing scope", exc.response.status_code, user.id)
+                return SourceResult(source="github", connected=False, items=[], error="Session expired or missing permission. Please reconnect GitHub.")
+            logger.warning("GitHub briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="github",
+                connected=True,
+                items=[],
+                error=f"GitHub API call failed: {type(exc).__name__}",
+            )
         except Exception as exc:
             logger.warning("GitHub briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(

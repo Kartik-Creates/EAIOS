@@ -431,6 +431,10 @@ async def test_github_briefing_success(db_session, monkeypatch):
         def raise_for_status(self):
             pass
 
+        @property
+        def status_code(self):
+            return 200
+
         def json(self):
             return {
                 "items": [
