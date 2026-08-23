@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.deps import get_current_user, get_db
+from app.models.chat_message import ChatMessage
 from app.models.document import Document
 from app.models.meeting import Meeting
 from app.models.user import User
@@ -23,7 +24,7 @@ router = APIRouter()
 
 class ActivityItem(BaseModel):
     id: str
-    type: str  # "github" | "slack" | "drive" | "jira" | "meeting" | "workflow"
+    type: str  # "github" | "slack" | "drive" | "jira" | "meeting" | "workflow" | "chat"
     title: str
     description: str
     timestamp: str  # ISO string or relative label
@@ -121,6 +122,33 @@ async def get_recent_user_activity(
                 "description": f"Source: {mtg.source}",
                 "timestamp": created_iso,
                 "sort_dt": mtg.created_at or datetime.now(timezone.utc),
+            }
+        )
+
+    # 4. Fetch user's recent chat messages
+    stmt_chat = (
+        select(ChatMessage)
+        .where(ChatMessage.user_id == current_user.id)
+        .order_by(ChatMessage.created_at.desc())
+        .limit(10)
+    )
+    res_chat = await db.execute(stmt_chat)
+    chat_msgs = res_chat.scalars().all()
+    for msg in chat_msgs:
+        created_iso = (
+            msg.created_at.isoformat()
+            if msg.created_at
+            else datetime.now(timezone.utc).isoformat()
+        )
+        query_preview = msg.query_text[:60] + "..." if len(msg.query_text) > 60 else msg.query_text
+        items.append(
+            {
+                "id": f"chat-{msg.id}",
+                "type": "chat",
+                "title": f'Asked AI: "{query_preview}"',
+                "description": f"Conversation: {msg.conversation_id or 'N/A'}",
+                "timestamp": created_iso,
+                "sort_dt": msg.created_at or datetime.now(timezone.utc),
             }
         )
 

@@ -219,54 +219,10 @@ async def dispatch_tool_call(
 ) -> tuple[str, str, list[RetrievedChunk]]:
     """Execute a tool call and return (formatted_result_text, source_label, chunks).
 
-    `chunks` is only ever non-empty for search_company_documents — it's the raw
-    retrieval result, kept alongside the formatted text so the router can build
-    real Citation objects and a real confidence score for document answers
-    instead of losing that data once it's flattened into prompt text. Every
-    other tool returns an empty list; there's no equivalent "excerpt" concept
-    for a Gmail/Jira/GitHub/Calendar item.
-
-    Uses the EXISTING briefing_service.py functions with the same (db, user)
-    signature, reusing per-user OAuth token isolation already tested.
-    Tool results are formatted as data blocks, never as instructions.
+    Uses the connector registry to dynamically dispatch tool calls to the
+    corresponding connector's chat function.
     """
-    source = TOOL_SOURCE_MAP.get(tool_name, "none")
-
-    if tool_name == "get_gmail_briefing":
-        result: SourceResult = await get_gmail_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_jira_briefing":
-        result: SourceResult = await get_jira_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_github_briefing":
-        result: SourceResult = await get_github_briefing(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_calendar_briefing":
-        result: SourceResult = await get_calendar_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
+    from app.connectors.registry import connector_registry
 
     if tool_name == "search_company_documents":
         chunks = await semantic_search(db, query, allowed_roles=[user.role])
@@ -275,23 +231,17 @@ async def dispatch_tool_call(
             "tool_dispatch tool=search_company_documents user_id=%s chunks=%d",
             user.id, len(chunks),
         )
-        return formatted, source, chunks
+        return formatted, "documents", chunks
 
-    if tool_name == "get_drive_briefing":
-        result: SourceResult = await get_drive_briefing(db, user)
+    source = TOOL_SOURCE_MAP.get(tool_name, "none")
+    connector = connector_registry.get_connector(source)
+
+    if connector and connector.chat_fn:
+        result: SourceResult = await connector.chat_fn(db, user)
         formatted = _format_source_result(result)
         logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_slack_briefing":
-        result: SourceResult = await get_slack_briefing(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
+            "tool_dispatch tool=%s provider=%s user_id=%s connected=%s items=%d",
+            tool_name, connector.name, user.id, result.connected, len(result.items),
         )
         return formatted, source, []
 
