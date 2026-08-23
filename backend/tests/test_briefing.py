@@ -1227,9 +1227,9 @@ async def test_briefing_item_detail_rate_limiting(client, db_session):
     # Reset limiter baseline
     limiter.reset()
 
-    # The rate limit is set to CHAT_RATE_LIMIT (10/minute)
+    # The rate limit is set to CHAT_RATE_LIMIT (60/minute)
     responses = []
-    for _ in range(12):
+    for _ in range(65):
         resp = client.get("/api/v1/briefing/gmail/test-msg", headers=headers)
         responses.append(resp.status_code)
 

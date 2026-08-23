@@ -120,9 +120,10 @@ async def get_decrypted_token(
     if not access_token:
         return None
 
-    # Handle Google OAuth token refresh if token is expired
-    if db_token.expires_at and any(p in db_token.provider.lower() for p in ("google", "gmail")):
-        if datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60):
+    # Handle Google OAuth token refresh if token is expired or expires_at missing
+    if db_token.refresh_token_encrypted and any(p in db_token.provider.lower() for p in ("google", "gmail")):
+        is_expired = (not db_token.expires_at) or (datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60))
+        if is_expired:
             try:
                 access_token = await _refresh_google_token(db, db_token)
             except Exception as exc:
@@ -130,8 +131,9 @@ async def get_decrypted_token(
                 return None
 
     # Handle Jira/Atlassian token refresh (tokens expire after ~1 hour)
-    if db_token.expires_at and db_token.provider.lower() == "jira":
-        if datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60):
+    if db_token.refresh_token_encrypted and db_token.provider.lower() == "jira":
+        is_expired = (not db_token.expires_at) or (datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60))
+        if is_expired:
             access_token = await _refresh_jira_token(db, db_token)
             if not access_token:
                 return None
@@ -218,6 +220,17 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
             logger.info("Jira briefing for user_id %s: %d items retrieved", user.id, len(items))
             return SourceResult(source="jira", connected=True, items=items, error=None)
 
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                logger.warning("Jira API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
+                return SourceResult(source="jira", connected=False, items=[], error="Session expired. Please reconnect Jira.")
+            logger.warning("Jira briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="jira",
+                connected=True,
+                items=[],
+                error=f"Jira API call failed: {type(exc).__name__}",
+            )
         except Exception as exc:
             logger.warning("Jira briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
@@ -377,6 +390,17 @@ async def get_calendar_briefing(db: AsyncSession, user: User) -> SourceResult:
             logger.info("Calendar briefing for user_id %s: %d items retrieved", user.id, len(items))
             return SourceResult(source="calendar", connected=True, items=items, error=None)
 
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                logger.warning("Calendar API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
+                return SourceResult(source="calendar", connected=False, items=[], error="Session expired. Please reconnect Calendar.")
+            logger.warning("Calendar briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="calendar",
+                connected=True,
+                items=[],
+                error=f"Calendar API call failed: {type(exc).__name__}",
+            )
         except Exception as exc:
             logger.warning("Calendar briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
@@ -484,6 +508,17 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
             logger.info("Gmail briefing for user_id %s: %d items retrieved", user.id, len(items))
             return SourceResult(source="gmail", connected=True, items=items, error=None)
 
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                logger.warning("Gmail API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
+                return SourceResult(source="gmail", connected=False, items=[], error="Session expired. Please reconnect Gmail.")
+            logger.warning("Gmail briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="gmail",
+                connected=True,
+                items=[],
+                error=f"Gmail API call failed: {type(exc).__name__}",
+            )
         except Exception as exc:
             logger.warning("Gmail briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
@@ -802,6 +837,17 @@ async def get_drive_briefing(db: AsyncSession, user: User) -> SourceResult:
             logger.info("Drive briefing for user_id %s: %d items retrieved", user.id, len(items))
             return SourceResult(source="drive", connected=True, items=items, error=None)
 
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                logger.warning("Drive API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
+                return SourceResult(source="drive", connected=False, items=[], error="Session expired. Please reconnect Google Drive.")
+            logger.warning("Drive briefing failed for user_id %s: %s", user.id, exc)
+            return SourceResult(
+                source="drive",
+                connected=True,
+                items=[],
+                error=f"Drive API call failed: {type(exc).__name__}",
+            )
         except Exception as exc:
             logger.warning("Drive briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
