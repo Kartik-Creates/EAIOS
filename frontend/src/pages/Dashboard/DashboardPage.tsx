@@ -132,6 +132,11 @@ export const DashboardPage = () => {
   const [itemDetail, setItemDetail] = useState<BriefingItemDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
+  // Full Briefing Modal state
+  const [isFullBriefingOpen, setIsFullBriefingOpen] = useState(false);
+  const [fullBriefingSourceFilter, setFullBriefingSourceFilter] = useState<string>('all');
+  const [fullBriefingSearch, setFullBriefingSearch] = useState<string>('');
+
   // Disconnect Modal state
   const [selectedDisconnectProvider, setSelectedDisconnectProvider] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -265,8 +270,8 @@ export const DashboardPage = () => {
           </div>
           <button
             type="button"
-            className="priorities-link text-xs"
-            onClick={() => navigate(ROUTES.CHAT)}
+            className="priorities-link text-xs cursor-pointer hover:underline text-accent"
+            onClick={() => setIsFullBriefingOpen(true)}
           >
             View Full Briefing →
           </button>
@@ -551,6 +556,107 @@ export const DashboardPage = () => {
               )}
             </div>
           ) : null}
+        </div>
+      </Modal>
+
+      {/* ── Full Briefing Scrollable Modal ── */}
+      <Modal
+        isOpen={isFullBriefingOpen}
+        onClose={() => setIsFullBriefingOpen(false)}
+        title="Full Enterprise Daily Briefing"
+      >
+        <div className="space-y-4">
+          {/* Executive Summary */}
+          {briefing?.summary && (
+            <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg">
+              <span className="text-3xs uppercase tracking-wider font-semibold text-accent block mb-1">
+                Executive Synthesis
+              </span>
+              <p className="text-xs text-slate-200 leading-relaxed">{briefing.summary}</p>
+            </div>
+          )}
+
+          {/* Search + Source Tabs */}
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Search briefing items..."
+              value={fullBriefingSearch}
+              onChange={(e) => setFullBriefingSearch(e.target.value)}
+              className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-accent"
+            />
+
+            <div className="full-briefing-tabs">
+              {['all', 'gmail', 'jira', 'github', 'calendar', 'drive', 'slack'].map((source) => {
+                const count =
+                  source === 'all'
+                    ? briefing?.items?.length ?? 0
+                    : briefing?.items?.filter((i) => i.source === source).length ?? 0;
+
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    className={`full-briefing-tab-btn ${fullBriefingSourceFilter === source ? 'active' : ''}`}
+                    onClick={() => setFullBriefingSourceFilter(source)}
+                  >
+                    {source === 'all' ? 'All' : source.toUpperCase()} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable Item List */}
+          <div className="full-briefing-scroll-container">
+            {briefing?.items
+              ?.filter((item) => fullBriefingSourceFilter === 'all' || item.source === fullBriefingSourceFilter)
+              ?.filter(
+                (item) =>
+                  !fullBriefingSearch ||
+                  item.title.toLowerCase().includes(fullBriefingSearch.toLowerCase()) ||
+                  item.detail.toLowerCase().includes(fullBriefingSearch.toLowerCase())
+              ).length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-6">No briefing items match the selected filter.</p>
+            ) : (
+              briefing?.items
+                ?.filter((item) => fullBriefingSourceFilter === 'all' || item.source === fullBriefingSourceFilter)
+                ?.filter(
+                  (item) =>
+                    !fullBriefingSearch ||
+                    item.title.toLowerCase().includes(fullBriefingSearch.toLowerCase()) ||
+                    item.detail.toLowerCase().includes(fullBriefingSearch.toLowerCase())
+                )
+                .map((item, idx) => {
+                  return (
+                    <div
+                      key={item.id || idx}
+                      className="priority-item-redesigned"
+                      onClick={() => {
+                        setIsFullBriefingOpen(false);
+                        handleItemClick(item);
+                      }}
+                    >
+                      <div className="priority-source-icon">{getSourceIcon(item.source)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="priority-title-line font-medium text-xs text-slate-200 truncate">
+                          {item.title}
+                        </div>
+                        <div className="priority-meta-line text-2xs text-slate-400 truncate">
+                          {decodeEntities(item.detail)}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={item.priority_hint === 'overdue' ? 'red' : 'blue'}
+                        className="text-3xs uppercase shrink-0 px-1.5 py-0.5"
+                      >
+                        {item.priority_hint}
+                      </Badge>
+                    </div>
+                  );
+                })
+            )}
+          </div>
         </div>
       </Modal>
 

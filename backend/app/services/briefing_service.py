@@ -174,8 +174,8 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
 
             cloud_id = resources[0].get("id")
 
-            # 2. Search issues assigned to user that are not completed
-            jql = "assignee = currentUser() AND statusCategory != Done ORDER BY dueDate ASC"
+            # 2. Search issues assigned to user or recently updated in workspace
+            jql = "assignee = currentUser() ORDER BY updated DESC"
             search_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
             res_search = await client.get(
                 search_url,
@@ -187,10 +187,10 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
                 res_search = await client.get(
                     search_url,
                     headers=headers,
-                    params={"jql": "assignee = currentUser()", "maxResults": 15, "fields": "summary,duedate,status"},
+                    params={"jql": "ORDER BY updated DESC", "maxResults": 15, "fields": "summary,duedate,status"},
                 )
 
-            if res_search.status_code == 401 or res_search.status_code == 403:
+            if res_search.status_code in (401, 403):
                 logger.warning("Jira API returned %d — token expired or missing scope", res_search.status_code)
                 return SourceResult(source="jira", connected=False, items=[], error="Session expired or missing permission. Please reconnect Jira.")
             
@@ -200,6 +200,15 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
 
             search_data = res_search.json()
             issues = search_data.get("issues", [])
+            if not issues:
+                # If no tickets explicitly assigned to currentUser(), fallback to recent workspace tickets
+                res_fallback = await client.get(
+                    search_url,
+                    headers=headers,
+                    params={"jql": "ORDER BY updated DESC", "maxResults": 15, "fields": "summary,duedate,status"},
+                )
+                if res_fallback.status_code == 200:
+                    issues = res_fallback.json().get("issues", [])
 
             now_date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
