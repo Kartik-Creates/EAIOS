@@ -13,7 +13,6 @@ import {
   Mail,
   CheckSquare,
   ExternalLink,
-  Info,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
