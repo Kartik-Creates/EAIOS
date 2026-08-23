@@ -221,9 +221,9 @@ async def get_jira_briefing(db: AsyncSession, user: User) -> SourceResult:
             return SourceResult(source="jira", connected=True, items=items, error=None)
 
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                logger.warning("Jira API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
-                return SourceResult(source="jira", connected=False, items=[], error="Session expired. Please reconnect Jira.")
+            if exc.response.status_code in (401, 403):
+                logger.warning("Jira API returned %s for user_id %s — token expired or missing scope", exc.response.status_code, user.id)
+                return SourceResult(source="jira", connected=False, items=[], error="Session expired or missing permission. Please reconnect Jira.")
             logger.warning("Jira briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
                 source="jira",
@@ -391,9 +391,9 @@ async def get_calendar_briefing(db: AsyncSession, user: User) -> SourceResult:
             return SourceResult(source="calendar", connected=True, items=items, error=None)
 
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                logger.warning("Calendar API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
-                return SourceResult(source="calendar", connected=False, items=[], error="Session expired. Please reconnect Calendar.")
+            if exc.response.status_code in (401, 403):
+                logger.warning("Calendar API returned %s for user_id %s — token expired or missing scope", exc.response.status_code, user.id)
+                return SourceResult(source="calendar", connected=False, items=[], error="Session expired or missing permission. Please reconnect Calendar.")
             logger.warning("Calendar briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
                 source="calendar",
@@ -509,9 +509,9 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
             return SourceResult(source="gmail", connected=True, items=items, error=None)
 
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                logger.warning("Gmail API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
-                return SourceResult(source="gmail", connected=False, items=[], error="Session expired. Please reconnect Gmail.")
+            if exc.response.status_code in (401, 403):
+                logger.warning("Gmail API returned %s for user_id %s — token expired or missing scope", exc.response.status_code, user.id)
+                return SourceResult(source="gmail", connected=False, items=[], error="Session expired or missing permission. Please reconnect Gmail.")
             logger.warning("Gmail briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
                 source="gmail",
@@ -838,9 +838,9 @@ async def get_drive_briefing(db: AsyncSession, user: User) -> SourceResult:
             return SourceResult(source="drive", connected=True, items=items, error=None)
 
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 401:
-                logger.warning("Drive API returned 401 Unauthorized for user_id %s — token expired or invalid", user.id)
-                return SourceResult(source="drive", connected=False, items=[], error="Session expired. Please reconnect Google Drive.")
+            if exc.response.status_code in (401, 403):
+                logger.warning("Drive API returned %s for user_id %s — token expired or missing scope", exc.response.status_code, user.id)
+                return SourceResult(source="drive", connected=False, items=[], error="Session expired or missing permission. Please reconnect Google Drive.")
             logger.warning("Drive briefing failed for user_id %s: %s", user.id, exc)
             return SourceResult(
                 source="drive",

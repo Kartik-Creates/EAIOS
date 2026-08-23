@@ -261,7 +261,7 @@ async def oauth_login(
     if provider == "google":
         client_id = settings.GOOGLE_CLIENT_ID
         redirect_uri = "http://localhost:8000/api/v1/auth/oauth/google/callback"
-        scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly openid email profile"
+        scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly openid email profile"
         url = (
             f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code"
             f"&client_id={client_id}&redirect_uri={redirect_uri}&scope={scopes}"
