@@ -68,10 +68,11 @@ logger = logging.getLogger("eaios.security")
 async def startup_security_checks():
     # 1. Run database auto-migrations to guarantee production DB tables exist
     try:
+        import asyncio
         from alembic.config import Config
         from alembic import command
         alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
+        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
         logger.info("Database auto-migrations (alembic upgrade head) applied successfully at startup.")
     except Exception as exc:
         logger.warning("Database auto-migration check skipped/failed: %s", exc)
