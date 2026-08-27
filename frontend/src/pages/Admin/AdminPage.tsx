@@ -141,10 +141,7 @@ export const AdminPage = () => {
             <ShieldCheck size={24} className="text-muted" />
             Platform Administration Console
           </h1>
-          <p>
-            Manage system user accounts, RBAC role assignments, and monitor platform-wide
-            operational statistics. All mutations are audit-logged.
-          </p>
+
         </motion.div>
 
         <motion.div className="admin-stats-row" variants={staggerContainer}>
@@ -258,9 +255,9 @@ export const AdminPage = () => {
                         {u.id.slice(0, 12)}...
                       </code>
                     </td>
-              </motion.tr>
-            ))}
-          </motion.tbody>
+                  </motion.tr>
+                ))}
+              </motion.tbody>
             </table>
           </motion.div>
         )}
@@ -275,11 +272,6 @@ export const AdminPage = () => {
           </div>
           <Badge variant="yellow">{unansweredQuestions.length} Pending</Badge>
         </div>
-
-        <p className="text-xs text-slate-400" style={{ margin: '0 0 1rem 0' }}>
-          Users submitted questions the RAG agent could not answer confidently. Review and provide
-          authoritative answers to improve the knowledge base.
-        </p>
 
         <motion.div className="admin-queue-list" variants={staggerContainer}>
           {unansweredQuestions.map((item) => (
@@ -378,48 +370,7 @@ export const AdminPage = () => {
         </motion.div>
       </motion.section>
 
-      {/* ── Platform Security Overview Card ── */}
-      <motion.section className="admin-section-card" variants={staggerItem}>
-        <div className="admin-section-header">
-          <h2>
-            <ShieldCheck size={20} className="text-green-400" />
-            Platform Security Overview
-          </h2>
-          <Badge variant="green">All Systems Operational</Badge>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
-          <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-            <UserCheck size={20} className="text-green-400" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-            <div>
-              <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-main)' }}>JWT Token Validation</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                HMAC-SHA256 signed tokens with 15-min access lifespan. Redis-backed JTI replay protection active.
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-            <ShieldCheck size={20} className="text-muted" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-            <div>
-              <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-main)' }}>RBAC Document Filtering</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Vector search results are automatically scoped by user role via <code>allowed_roles</code> parameter.
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-            <UserX size={20} className="text-amber-400" style={{ flexShrink: 0, marginTop: '0.15rem' }} />
-            <div>
-              <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-main)' }}>Rate Limiting & Throttle</div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Chat: 10 req/min, Search: 30 req/min per user. SlowAPI middleware enforced at router level.
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
     </motion.div>
   );
 };

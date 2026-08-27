@@ -220,6 +220,13 @@
   flex-wrap: wrap;
 }
 
+.meeting-input-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* ── Loading State ── */
 .meeting-loading-state {
   display: flex;
