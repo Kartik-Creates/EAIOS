@@ -10,6 +10,7 @@ import {
   Trash2,
   Paperclip,
   X,
+  Download,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -85,6 +86,76 @@ export const MeetingPage = () => {
     setTranscript('');
     setSummary(null);
     setError(null);
+  };
+
+  const handleDownload = () => {
+    if (!summary) {
+      return;
+    }
+
+    try {
+      const lines: string[] = [];
+      lines.push('='.repeat(60));
+      lines.push('MEETING SUMMARY');
+      lines.push('='.repeat(60));
+      lines.push('');
+      lines.push('EXECUTIVE SUMMARY');
+      lines.push('-'.repeat(60));
+      lines.push(summary.summary);
+      lines.push('');
+
+      if (summary.decisions.length > 0) {
+        lines.push('KEY DECISIONS');
+        lines.push('-'.repeat(60));
+        summary.decisions.forEach((decision, index) => {
+          lines.push(`${index + 1}. ${decision.description}`);
+          if (decision.context) {
+            lines.push(`   Context: ${decision.context}`);
+          }
+          lines.push('');
+        });
+      }
+
+      if (summary.action_items.length > 0) {
+        lines.push('ACTION ITEMS');
+        lines.push('-'.repeat(60));
+        summary.action_items.forEach((item, index) => {
+          const status = item.completed ? '[Done]' : '[Pending]';
+          lines.push(`${index + 1}. ${status} ${item.description}`);
+          if (item.assignee) {
+            lines.push(`   Assignee: ${item.assignee}`);
+          }
+          if (item.due_date) {
+            lines.push(`   Due: ${item.due_date}`);
+          }
+          lines.push('');
+        });
+      }
+
+      lines.push('='.repeat(60));
+      lines.push(`Confidence: ${(summary.confidence * 100).toFixed(0)}%`);
+      if (summary.participants_count) {
+        lines.push(`Participants: ${summary.participants_count}`);
+      }
+      if (summary.duration_seconds) {
+        lines.push(`Duration: ${Math.floor(summary.duration_seconds / 60)} min`);
+      }
+      lines.push('='.repeat(60));
+
+      const content = lines.join('\n');
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'meeting-summary.txt';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Summary downloaded successfully.');
+    } catch {
+      toast.error('Failed to download summary. Please try again.');
+    }
   };
 
   const toggleActionItem = (itemId: string) => {
@@ -186,16 +257,27 @@ export const MeetingPage = () => {
           <span className="text-xs text-slate-400">
             {transcript.length > 0 ? `${transcript.length} characters` : 'No transcript provided'}
           </span>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleSummarize}
-            disabled={isLoading || !transcript.trim()}
-            isLoading={isLoading}
-          >
-            <Sparkles size={18} className="mr-2" />
-            Generate Summary
-          </Button>
+          <div className="meeting-input-actions">
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={handleDownload}
+              disabled={isLoading || !summary}
+            >
+              <Download size={18} className="mr-2" />
+              Download Summary
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handleSummarize}
+              disabled={isLoading || !transcript.trim()}
+              isLoading={isLoading}
+            >
+              <Sparkles size={18} className="mr-2" />
+              Generate Summary
+            </Button>
+          </div>
         </div>
       </motion.section>
 
