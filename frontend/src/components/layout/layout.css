@@ -436,7 +436,6 @@
   right: 0;
   height: var(--topbar-height);
   z-index: var(--z-topbar);
-  background-color: var(--bg-sidebar);
   display: flex;
   align-items: center;
   justify-content: space-between;
