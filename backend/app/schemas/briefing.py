@@ -3,11 +3,28 @@ from pydantic import BaseModel, Field
 
 
 class BriefingItem(BaseModel):
-    source: str  # "jira" | "calendar" | "gmail" | "github"
+    source: str  # "jira" | "calendar" | "gmail" | "github" | "slack" | "drive"
     title: str
     detail: str  # e.g. due date, meeting time, sender
     priority_hint: str  # "overdue" | "today" | "upcoming" | "info"
     url: str | None = None  # deep link back to item, if available
+    id: str | None = None  # stable item identifier for detail fetch
+    sender_or_author: str | None = None  # sender name, assignee, or author
+
+
+class BriefingItemDetail(BaseModel):
+    """Full item detail returned by the item-detail endpoint for in-app modal display."""
+    id: str
+    source: str
+    title: str
+    detail: str
+    body: str  # full email body, ticket description, PR body, event description
+    priority_hint: str
+    url: str | None = None
+    sender_or_author: str | None = None
+    created_or_due_date: str | None = None
+    status: str | None = None
+    metadata: dict | None = None
 
 
 class SourceResult(BaseModel):

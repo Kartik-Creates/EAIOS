@@ -258,3 +258,43 @@ async def trigger_drive_sync(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during sync: {exc}",
         )
+
+
+@router.delete("/{provider}")
+async def disconnect_integration(
+    provider: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Disconnect an integration for the requesting user.
+
+    Revokes/deletes stored OAuth tokens for the given provider and sets integration status
+    to disconnected. Strictly scoped to current_user.id.
+    """
+    resolved = resolve_provider(provider)
+    canonical_provider = resolved[0] if resolved else provider.lower()
+
+    # 1. Delete OAuth token for current user and provider
+    stmt_token = select(OAuthToken).where(
+        OAuthToken.user_id == current_user.id,
+        OAuthToken.provider.in_([canonical_provider, provider.lower()]),
+    )
+    res_token = await db.execute(stmt_token)
+    db_tokens = res_token.scalars().all()
+    for token in db_tokens:
+        await db.delete(token)
+
+    # 2. Update Integration record status to 'disconnected'
+    stmt_int = select(Integration).where(
+        Integration.user_id == current_user.id,
+        Integration.provider.in_([canonical_provider, provider.lower()]),
+    )
+    res_int = await db.execute(stmt_int)
+    db_ints = res_int.scalars().all()
+    for integ in db_ints:
+        integ.status = "disconnected"
+
+    await db.commit()
+    logger.info("Disconnected provider '%s' for user_id: %s", canonical_provider, current_user.id)
+    return {"status": "success", "message": f"Successfully disconnected {canonical_provider} integration."}
+

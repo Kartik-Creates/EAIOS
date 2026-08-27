@@ -1,33 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
-  Search,
   Plug,
-  ShieldCheck,
-  Activity,
-  ArrowRight,
   FileText,
-  CheckCircle2,
   Clock,
-  TrendingUp,
-  BarChart3,
-  ArrowUpRight,
-  GitBranch,
-  MessageCircle,
-  SearchCheck,
-  RefreshCw,
   GitPullRequest,
   Calendar,
   FolderOpen,
-  Workflow,
+  RefreshCw,
+  AlertTriangle,
+  Mail,
+  CheckSquare,
+  ExternalLink,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+
 import { useAuth } from '@/hooks/useAuth';
 import { integrationsService } from '@/services/integrationsService';
+import {
+  dashboardService,
+  type BriefingResponse,
+  type BriefingItem,
+  type BriefingItemDetail,
+  type ActivityItem,
+} from '@/services/dashboardService';
 import type { OAuthConnection } from '@/types/integration.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { MotionCard } from '@/lib/motion';
 import { ROUTES } from '@/constants/routes';
 import { staggerContainer, staggerItem, fadeInUpVariants } from '@/lib/motion';
@@ -44,389 +46,652 @@ const getCurrentDate = (): string => {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
+const decodeEntities = (text: string): string => {
+  if (!text) return '';
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+};
+
+const formatRelativeTime = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return 'Just now';
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return isoString;
+  }
+};
+
+const getSourceIcon = (source: string) => {
+  switch (source.toLowerCase()) {
+    case 'gmail':
+      return <Mail size={16} className="text-red-400" />;
+    case 'jira':
+      return <CheckSquare size={16} className="text-blue-400" />;
+    case 'github':
+      return <GitPullRequest size={16} className="text-purple-400" />;
+    case 'calendar':
+      return <Calendar size={16} className="text-emerald-400" />;
+    case 'slack':
+      return <MessageSquare size={16} className="text-amber-400" />;
+    case 'drive':
+      return <FolderOpen size={16} className="text-sky-400" />;
+    default:
+      return <FileText size={16} className="text-slate-400" />;
+  }
+};
+
+const getActivityIconComponent = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'github':
+      return GitPullRequest;
+    case 'slack':
+    case 'chat':
+      return MessageSquare;
+    case 'drive':
+      return FolderOpen;
+    case 'jira':
+      return FileText;
+    case 'meeting':
+      return Calendar;
+    case 'workflow':
+    default:
+      return FileText;
+  }
+};
+
 export const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Integrations state
   const [connections, setConnections] = useState<OAuthConnection[]>([]);
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // Briefing state
+  const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
+  const [isLoadingBriefing, setIsLoadingBriefing] = useState(true);
+  const [briefingError, setBriefingError] = useState(false);
 
-    const fetchDashboardData = async () => {
+  // Activity state
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
 
-      try {
-        const list = await integrationsService.listConnections();
-        if (isMounted) setConnections(list);
-      } catch (err) {
-        if (isMounted) setConnections([]);
-      } finally {
-        if (isMounted) setIsLoadingConnections(false);
-      }
-    };
+  // Detail Modal state
+  const [selectedItem, setSelectedItem] = useState<BriefingItem | null>(null);
+  const [itemDetail, setItemDetail] = useState<BriefingItemDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
-    fetchDashboardData();
+  // Full Briefing Modal state
+  const [isFullBriefingOpen, setIsFullBriefingOpen] = useState(false);
+  const [fullBriefingSourceFilter, setFullBriefingSourceFilter] = useState<string>('all');
+  const [fullBriefingSearch, setFullBriefingSearch] = useState<string>('');
 
-    return () => {
-      isMounted = false;
-    };
+  // Disconnect Modal state
+  const [selectedDisconnectProvider, setSelectedDisconnectProvider] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  // Fetch connections
+  const fetchConnections = useCallback(async () => {
+    try {
+      setIsLoadingConnections(true);
+      const list = await integrationsService.listConnections();
+      setConnections(list);
+    } catch {
+      setConnections([]);
+    } finally {
+      setIsLoadingConnections(false);
+    }
   }, []);
 
+  // Fetch Briefing (Priorities & Stats source)
+  const fetchBriefingData = useCallback(async () => {
+    try {
+      setIsLoadingBriefing(true);
+      setBriefingError(false);
+      const res = await dashboardService.fetchBriefing();
+      setBriefing(res);
+    } catch {
+      setBriefingError(true);
+    } finally {
+      setIsLoadingBriefing(false);
+    }
+  }, []);
+
+  // Fetch Recent Activity
+  const fetchActivityData = useCallback(async () => {
+    try {
+      setIsLoadingActivity(true);
+      const data = await dashboardService.fetchActivity();
+      setActivity(data);
+    } catch {
+      setActivity([]);
+    } finally {
+      setIsLoadingActivity(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchConnections();
+    fetchBriefingData();
+    fetchActivityData();
+  }, [fetchConnections, fetchBriefingData, fetchActivityData]);
+
+  // Handle item click for detail modal
+  const handleItemClick = async (item: BriefingItem) => {
+    setSelectedItem(item);
+    setItemDetail(null);
+
+    if (item.id && item.source) {
+      try {
+        setIsLoadingDetail(true);
+        const detail = await dashboardService.fetchItemDetail(item.source, item.id);
+        setItemDetail(detail);
+      } catch {
+        toast.error('Failed to load item details.');
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    }
+  };
+
+  // Handle Disconnect action
+  const handleConfirmDisconnect = async () => {
+    if (!selectedDisconnectProvider) return;
+    try {
+      setIsDisconnecting(true);
+      await integrationsService.disconnectConnection(selectedDisconnectProvider);
+      toast.success(`Disconnected ${selectedDisconnectProvider}`);
+      setSelectedDisconnectProvider(null);
+      fetchConnections();
+      fetchBriefingData();
+    } catch {
+      toast.error(`Failed to disconnect ${selectedDisconnectProvider}`);
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   const userName = user?.full_name || user?.email || 'Enterprise User';
+  const hasNoIntegrations = !isLoadingConnections && connections.length === 0;
 
-  const pendingApprovals = [
-    { id: 'apr-1', title: 'PTO Request — Alice Johnson', requester: 'alice@eaios.enterprise', type: 'leave', submittedAt: '2h ago' },
-    { id: 'apr-2', title: 'HR-Only Document Access — Bob Smith', requester: 'bob@eaios.enterprise', type: 'access', submittedAt: '4h ago' },
-    { id: 'apr-3', title: 'Workflow: Bulk Drive Sync Approval', requester: 'system', type: 'workflow', submittedAt: '6h ago' },
-  ];
+  // Stat Card Derived Counts
+  const openTicketsCount =
+    briefing?.sources?.find((s) => s.source === 'jira')?.item_count ??
+    briefing?.items?.filter((i) => i.source === 'jira').length ??
+    0;
 
-  const usageStats = [
-    { label: 'AI Chat Queries', value: '1,284', change: '+12%', trend: 'up' as const, icon: <MessageCircle size={18} className="text-muted" /> },
-    { label: 'Semantic Searches', value: '862', change: '+8%', trend: 'up' as const, icon: <SearchCheck size={18} className="text-muted" /> },
-    { label: 'Workflow Triggers', value: '142', change: '+24%', trend: 'up' as const, icon: <GitBranch size={18} className="text-muted" /> },
-    { label: 'Avg Response Time', value: '1.8s', change: '-0.3s', trend: 'up' as const, icon: <TrendingUp size={18} className="text-muted" /> },
-  ];
+  const unreadMessagesCount =
+    (briefing?.sources?.find((s) => s.source === 'gmail')?.item_count ?? 0) +
+      (briefing?.sources?.find((s) => s.source === 'slack')?.item_count ?? 0) ||
+    (briefing?.items?.filter((i) => i.source === 'gmail' || i.source === 'slack').length ?? 0);
+
+  const pendingReviewsCount =
+    briefing?.sources?.find((s) => s.source === 'github')?.item_count ??
+    briefing?.items?.filter((i) => i.source === 'github').length ??
+    0;
+
+  // Identify sources that are connected but experienced errors
+  const erroredSources = briefing?.sources?.filter(s => s.connected && s.error) ?? [];
 
   return (
-    <motion.div className="dashboard-page" variants={fadeInUpVariants} initial="hidden" animate="visible">
+    <motion.div className="dashboard-page flex-fit-screen" variants={fadeInUpVariants} initial="hidden" animate="visible">
       {/* ── Header: Greeting + Date ── */}
-      <motion.header className="dashboard-header" variants={staggerItem}>
+      <motion.header className="dashboard-header-compact" variants={staggerItem}>
         <div className="header-top">
           <div>
             <h1 className="dashboard-greeting">{getGreeting()}, {userName}</h1>
             <p className="dashboard-date">{getCurrentDate()}</p>
           </div>
-
         </div>
       </motion.header>
 
       {/* ── Today's Priorities ── */}
-      <motion.section className="priorities-card" variants={staggerItem}>
+      <motion.section className="priorities-card-compact" variants={staggerItem}>
         <div className="priorities-header">
-          <h2>Today's Priorities</h2>
-          <button type="button" className="priorities-link">View Full Briefing →</button>
+          <div className="flex items-center gap-2">
+            <h2>Today's Priorities</h2>
+            {erroredSources.length > 0 && (
+              <Badge variant="yellow" className="text-xs flex items-center gap-1">
+                <AlertTriangle size={12} />
+                {erroredSources.length} integration(s) degraded
+              </Badge>
+            )}
+          </div>
+          <button
+            type="button"
+            className="priorities-link text-xs cursor-pointer hover:underline text-accent"
+            onClick={() => setIsFullBriefingOpen(true)}
+          >
+            View Full Briefing →
+          </button>
         </div>
-        <ul className="priorities-list">
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>2 Jira tickets due today</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>Slack messages requiring attention</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>GitHub PR waiting for review</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>Meeting at 2:30 PM</span>
-          </li>
-          <li className="priorities-item">
-            <span className="priorities-dot" />
-            <span>One workflow pending approval</span>
-          </li>
-        </ul>
+
+        {isLoadingBriefing ? (
+          <div className="dashboard-skeleton-container" style={{ padding: '0.5rem 0' }}>
+            <div className="dashboard-skeleton-line" style={{ width: '70%', height: '16px' }} />
+            <div className="dashboard-skeleton-line" style={{ width: '85%', height: '16px', marginTop: '8px' }} />
+          </div>
+        ) : briefingError ? (
+          <div className="dashboard-state-box py-2">
+            <AlertTriangle size={20} className="text-amber-400 mb-1" />
+            <p className="text-xs">Failed to load priorities payload.</p>
+            <Button variant="ghost" size="sm" onClick={fetchBriefingData} className="mt-1 text-xs">
+              <RefreshCw size={12} className="mr-1" /> Retry
+            </Button>
+          </div>
+        ) : hasNoIntegrations ? (
+          <div className="dashboard-state-box py-3">
+            <Plug size={24} className="text-muted mb-1" />
+            <p className="font-medium text-slate-200 text-xs">Connect an app to see your priorities here</p>
+            <Button variant="primary" size="sm" onClick={() => navigate(ROUTES.INTEGRATIONS)} className="mt-2 text-xs">
+              Connect Integrations
+            </Button>
+          </div>
+        ) : briefing?.items?.length === 0 ? (
+          <div className="dashboard-state-box py-3">
+            <p className="text-xs text-slate-400">All clear! No urgent priority items right now.</p>
+            {erroredSources.length > 0 && (
+              <p className="text-xs text-amber-400/90 mt-1">
+                Note: {erroredSources.map(s => s.source.toUpperCase()).join(', ')} failed to sync.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="priorities-container">
+            {erroredSources.length > 0 && (
+              <div className="degraded-source-warning">
+                <AlertTriangle size={13} className="shrink-0" />
+                <span>
+                  <strong>Temporary Sync Issue:</strong> {erroredSources.map(s => s.source.toUpperCase()).join(', ')} API returned errors. Other sources loaded normally.
+                </span>
+              </div>
+            )}
+            <ul className="priorities-list-compact">
+              {briefing?.items?.slice(0, 4).map((item, idx) => (
+                <li
+                  key={item.id || idx}
+                  className="priority-item-redesigned"
+                  onClick={() => handleItemClick(item)}
+                >
+                  <div className="priority-source-icon">
+                    {getSourceIcon(item.source)}
+                  </div>
+                  <div className="priority-content flex-1 min-w-0">
+                    <div className="priority-title-line font-medium text-slate-100 text-xs truncate">
+                      {decodeEntities(item.title)}
+                    </div>
+                    <div className="priority-meta-line text-slate-400 text-2xs truncate">
+                      {item.sender_or_author && <span className="font-medium text-slate-300 mr-2">{item.sender_or_author}</span>}
+                      {decodeEntities(item.detail)}
+                    </div>
+                  </div>
+                  <Badge
+                    variant={item.priority_hint === 'overdue' ? 'red' : 'blue'}
+                    className="text-3xs uppercase shrink-0 px-1.5 py-0.5"
+                  >
+                    {item.priority_hint}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </motion.section>
 
-      {/* ── Stats ── */}
-      <motion.div className="stats-grid" variants={staggerContainer}>
+      {/* ── 3 Stat Cards Row ── */}
+      <motion.div className="stats-grid-compact" variants={staggerContainer}>
         <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <FileText size={22} />
+          <MotionCard className="stat-card-compact">
+            <div className="stat-icon-wrapper text-blue-400">
+              <FileText size={18} />
             </div>
             <div className="stat-content">
-              <span className="stat-value">4</span>
+              <span className="stat-value">{isLoadingBriefing ? '…' : openTicketsCount}</span>
               <span className="stat-label">Open Tickets</span>
             </div>
           </MotionCard>
         </motion.div>
         <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <MessageSquare size={22} />
+          <MotionCard className="stat-card-compact">
+            <div className="stat-icon-wrapper text-amber-400">
+              <MessageSquare size={18} />
             </div>
             <div className="stat-content">
-              <span className="stat-value">12</span>
+              <span className="stat-value">{isLoadingBriefing ? '…' : unreadMessagesCount}</span>
               <span className="stat-label">Unread Messages</span>
             </div>
           </MotionCard>
         </motion.div>
         <motion.div variants={staggerItem}>
-          <MotionCard className="stat-card">
-            <div className="stat-icon-wrapper">
-              <GitPullRequest size={22} />
+          <MotionCard className="stat-card-compact">
+            <div className="stat-icon-wrapper text-purple-400">
+              <GitPullRequest size={18} />
             </div>
             <div className="stat-content">
-              <span className="stat-value">3</span>
+              <span className="stat-value">{isLoadingBriefing ? '…' : pendingReviewsCount}</span>
               <span className="stat-label">Pending Reviews</span>
             </div>
           </MotionCard>
         </motion.div>
       </motion.div>
 
-      {/* ── Recent Activity ── */}
-      <motion.section className="activity-card" variants={staggerItem}>
-        <h2 className="activity-card-title">Recent Activity</h2>
-        <div className="activity-list">
-          <div className="activity-item">
-            <div className="activity-icon"><GitPullRequest size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">New Pull Request assigned to you</div>
-              <div className="activity-desc">feature/dashboard-redesign</div>
-            </div>
-            <span className="activity-time">12 min ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><MessageSquare size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Mentioned in #engineering</div>
-              <div className="activity-desc">@you please review the API changes</div>
-            </div>
-            <span className="activity-time">35 min ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><FolderOpen size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Requirements document updated</div>
-              <div className="activity-desc">Google Drive / Product Specs</div>
-            </div>
-            <span className="activity-time">1 hr ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><FileText size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Ticket UNI-241 moved to Review</div>
-              <div className="activity-desc">Jira / Sprint Backlog</div>
-            </div>
-            <span className="activity-time">2 hr ago</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><Calendar size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Sprint Planning starts in 30 minutes</div>
-              <div className="activity-desc">Meeting / Team Calendar</div>
-            </div>
-            <span className="activity-time">Upcoming</span>
-          </div>
-          <div className="activity-item">
-            <div className="activity-icon"><Workflow size={18} /></div>
-            <div className="activity-details">
-              <div className="activity-title">Invoice Approval completed</div>
-              <div className="activity-desc">Workflow / Finance</div>
-            </div>
-            <span className="activity-time">3 hr ago</span>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* ── Executive: Pending Approvals & AI Usage Stats ── */}
-      <motion.div className="dashboard-executive-grid" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
-        <motion.section className="section-card" aria-label="Pending Approvals" variants={staggerItem}>
-          <div className="section-card-header">
-            <div className="section-card-title">
-              <Clock size={20} className="text-amber-400" />
-              <h3>Pending Approvals</h3>
-            </div>
-            <Badge variant="yellow">{pendingApprovals.length} Open</Badge>
-          </div>
-
-          <motion.div className="approvals-list" variants={staggerContainer}>
-            {pendingApprovals.map((apr) => (
-              <motion.div key={apr.id} className="approval-item" variants={staggerItem}>
-                <div className="approval-meta">
-                  <div className="approval-title">{apr.title}</div>
-                  <div className="text-xs text-slate-400">
-                    {apr.requester} · {apr.submittedAt}
-                  </div>
-                </div>
-                <div className="approval-actions">
-                  <Button variant="primary" size="sm">Approve</Button>
-                  <Button variant="ghost" size="sm">Review</Button>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.section>
-
-        <motion.section className="section-card" aria-label="AI Usage Statistics" variants={staggerItem}>
-          <div className="section-card-header">
-            <div className="section-card-title">
-              <BarChart3 size={20} className="text-green-400" />
-              <h3>AI Usage Statistics</h3>
-            </div>
-            <Badge variant="green">This Month</Badge>
-          </div>
-
-          <motion.div className="usage-stats-grid" variants={staggerContainer}>
-            {usageStats.map((stat, idx) => (
-              <motion.div key={idx} className="usage-stat-card" variants={staggerItem}>
-                <div className="usage-stat-icon">{stat.icon}</div>
-                <div className="usage-stat-content">
-                  <div className="usage-stat-value">{stat.value}</div>
-                  <div className="usage-stat-label">{stat.label}</div>
-                  <div className={`usage-stat-change ${stat.trend === 'up' ? 'positive' : 'neutral'}`}>
-                    {stat.trend === 'up' && <ArrowUpRight size={12} />}
-                    {stat.change}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.section>
-      </motion.div>
-
-      {/* ── 2-Column Section: Recent Activity & Integration Overview ── */}
-      <motion.div className="dashboard-grid-main" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-20px' }}>
+      {/* ── 2-Column Main Section: Recent Activity & Integration Overview ── */}
+      <motion.div className="dashboard-grid-main-compact" variants={staggerContainer}>
         {/* Left Column: Recent Activity Log */}
-        <motion.section className="section-card" aria-label="Recent System Activity" variants={staggerItem}>
+        <motion.section className="section-card-compact" aria-label="Recent System Activity" variants={staggerItem}>
           <div className="section-card-header">
             <div className="section-card-title">
-              <Activity size={20} className="text-muted" />
-              <h3>System Activity & Index Audit</h3>
+              <Clock size={16} className="text-muted" />
+              <h3>Recent Activity</h3>
             </div>
-            <Badge variant="slate">Live Feed</Badge>
+            <Badge variant="slate" className="text-3xs">Activity Feed</Badge>
           </div>
 
-          <div className="activity-list">
-            <div className="activity-item">
-              <div className="activity-icon bg-secondary text-muted">
-                <CheckCircle2 size={18} />
-              </div>
-              <div className="activity-details">
-                <div className="activity-title">Google Drive Ingestion Sync</div>
-                <div className="activity-desc">
-                  Successfully chunked & indexed 42 PDF files into vector embeddings.
-                </div>
-              </div>
-              <span className="activity-time">10m ago</span>
+          {isLoadingActivity ? (
+            <div className="dashboard-skeleton-container" style={{ padding: '0.5rem 0' }}>
+              <div className="dashboard-skeleton-line" style={{ width: '90%', height: '20px' }} />
+              <div className="dashboard-skeleton-line" style={{ width: '80%', height: '20px', marginTop: '8px' }} />
             </div>
-
-            <div className="activity-item">
-              <div className="activity-icon bg-secondary text-muted">
-                <MessageSquare size={18} />
-              </div>
-              <div className="activity-details">
-                <div className="activity-title">RAG Chat Query Executed</div>
-                <div className="activity-desc">
-                  Answer generated with 3 cited source chunks from internal knowledge base.
-                </div>
-              </div>
-              <span className="activity-time">25m ago</span>
+          ) : activity.length === 0 ? (
+            <div className="dashboard-state-box py-3">
+              <p className="text-xs text-slate-400">No recent activity records for your account.</p>
             </div>
-
-            <div className="activity-item">
-              <div className="activity-icon bg-secondary text-muted">
-                <ShieldCheck size={18} />
-              </div>
-              <div className="activity-details">
-                <div className="activity-title">JWT Session Verified</div>
-                <div className="activity-desc">
-                  Authenticated user session revalidated with secure token refresh.
-                </div>
-              </div>
-              <span className="activity-time">1h ago</span>
+          ) : (
+            <div className="activity-list-compact">
+              {activity.slice(0, 4).map((item) => {
+                const IconComp = getActivityIconComponent(item.type);
+                return (
+                  <div key={item.id} className="activity-item-compact">
+                    <div className="activity-icon-compact">
+                      <IconComp size={14} />
+                    </div>
+                    <div className="activity-details flex-1 min-w-0">
+                      <div className="activity-title text-xs text-slate-200 truncate">{item.title}</div>
+                      <div className="activity-desc text-2xs text-slate-400 truncate">{item.description}</div>
+                    </div>
+                    <span className="activity-time text-3xs text-slate-500 shrink-0">{formatRelativeTime(item.timestamp)}</span>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="activity-item">
-              <div className="activity-icon bg-secondary text-muted">
-                <RefreshCw size={18} />
-              </div>
-              <div className="activity-details">
-                <div className="activity-title">Embeddings Cache Warming</div>
-                <div className="activity-desc">
-                  Pre-computed pgvector index for fast semantic lookup responses.
-                </div>
-              </div>
-              <span className="activity-time">3h ago</span>
-            </div>
-          </div>
+          )}
         </motion.section>
 
-        {/* Right Column: Quick Navigation & Connected Apps */}
-        <motion.section className="section-card" aria-label="Connected Services & Shortcuts" variants={staggerItem}>
+        {/* Right Column: Connected Services */}
+        <motion.section className="section-card-compact" aria-label="Connected Services" variants={staggerItem}>
           <div className="section-card-header">
             <div className="section-card-title">
-              <Plug size={20} className="text-muted" />
+              <Plug size={16} className="text-muted" />
               <h3>Integrations</h3>
             </div>
             <Button
               variant="ghost"
               size="sm"
+              className="text-xs px-2 py-1"
               onClick={() => navigate(ROUTES.INTEGRATIONS)}
             >
               Manage
             </Button>
           </div>
 
-          <div className="integrations-list">
+          <div className="integrations-list-compact">
             {isLoadingConnections ? (
-              <div className="integration-loading">Loading integrations...</div>
+              <div className="integration-loading text-xs py-2">Loading integrations...</div>
             ) : connections.length === 0 ? (
-              <div className="integration-empty">No integrations connected yet.</div>
+              <div className="integration-empty text-xs py-2 text-slate-400">No integrations connected yet.</div>
             ) : (
-              connections.slice(0, 3).map((conn) => (
-                <div key={conn.provider} className="integration-item">
-                  <div className="integration-meta">
-                    <Plug size={18} className="text-muted" />
-                    <span className="integration-name">{conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1)}</span>
+              connections.map((conn) => {
+                const sourceError = briefing?.sources?.find(s => s.source.toLowerCase() === conn.provider.toLowerCase())?.error;
+                return (
+                  <div key={conn.provider} className="integration-item-compact">
+                    <div className="integration-meta flex items-center gap-2 min-w-0">
+                      {getSourceIcon(conn.provider)}
+                      <span className="integration-name text-xs font-medium text-slate-200 truncate">
+                        {conn.provider.charAt(0).toUpperCase() + conn.provider.slice(1)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {sourceError ? (
+                        <Badge variant="yellow" className="text-3xs flex items-center gap-1" title={sourceError}>
+                          <AlertTriangle size={10} /> Error
+                        </Badge>
+                      ) : (
+                        <Badge variant="green" className="text-3xs">
+                          Connected
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="disconnect-btn text-3xs text-red-400 hover:text-red-300 p-1"
+                        onClick={() => setSelectedDisconnectProvider(conn.provider)}
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant="green" className="integration-status-badge">
-                    Connected
-                  </Badge>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="section-card-header" style={{ marginTop: '0.5rem', paddingTop: '1rem' }}>
-            <div className="section-card-title">
-              <ArrowRight size={20} className="text-muted" />
-              <h3>Quick Shortcuts</h3>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div className="quick-link-card" onClick={() => navigate(ROUTES.CHAT)}>
-              <div className="quick-link-icon">
-                <MessageSquare size={20} />
-              </div>
-              <div className="quick-link-info">
-                <div className="quick-link-title">AI Assistant Chat</div>
-                <div className="quick-link-sub">Interactive RAG conversation</div>
-              </div>
-              <ArrowRight size={16} className="text-muted" />
-            </div>
-
-            <div className="quick-link-card" onClick={() => navigate(ROUTES.SEARCH)}>
-              <div className="quick-link-icon">
-                <Search size={20} />
-              </div>
-              <div className="quick-link-info">
-                <div className="quick-link-title">Semantic Document Search</div>
-                <div className="quick-link-sub">Vector index query tool</div>
-              </div>
-              <ArrowRight size={16} className="text-muted" />
-            </div>
-
-            {user?.role === 'admin' && (
-              <div className="quick-link-card" onClick={() => navigate(ROUTES.ADMIN)}>
-                <div className="quick-link-icon">
-                  <ShieldCheck size={20} />
-                </div>
-                <div className="quick-link-info">
-                  <div className="quick-link-title">Admin Management</div>
-                  <div className="quick-link-sub">User privileges & system audit</div>
-                </div>
-                <ArrowRight size={16} className="text-muted" />
-              </div>
+                );
+              })
             )}
           </div>
         </motion.section>
       </motion.div>
+
+      {/* ── Briefing Item Detail Modal (In-App Click-to-Open) ── */}
+      <Modal
+        isOpen={Boolean(selectedItem)}
+        onClose={() => {
+          setSelectedItem(null);
+          setItemDetail(null);
+        }}
+        title={selectedItem ? decodeEntities(selectedItem.title) : 'Item Detail'}
+      >
+        <div className="briefing-detail-modal-body">
+          {isLoadingDetail ? (
+            <div className="py-6 flex flex-col items-center justify-center gap-2">
+              <RefreshCw size={24} className="animate-spin text-accent" />
+              <p className="text-xs text-slate-400">Fetching item content...</p>
+            </div>
+          ) : itemDetail ? (
+            <div className="space-y-4 text-xs text-slate-300">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  {getSourceIcon(itemDetail.source)}
+                  <span className="font-semibold uppercase text-slate-200">{itemDetail.source}</span>
+                  {itemDetail.status && (
+                    <Badge variant="blue" className="text-3xs uppercase">{itemDetail.status}</Badge>
+                  )}
+                </div>
+                {itemDetail.created_or_due_date && (
+                  <span className="text-slate-400 text-2xs">{itemDetail.created_or_due_date}</span>
+                )}
+              </div>
+
+              {itemDetail.sender_or_author && (
+                <div className="text-slate-400">
+                  <span className="text-slate-300 font-medium">Author / Assignee:</span> {itemDetail.sender_or_author}
+                </div>
+              )}
+
+              <div className="bg-slate-900/80 p-3 rounded border border-slate-800 font-mono text-slate-200 whitespace-pre-wrap max-h-60 overflow-y-auto">
+                {itemDetail.body || itemDetail.detail}
+              </div>
+
+              {itemDetail.url && (
+                <div className="pt-2 flex justify-end">
+                  <a
+                    href={itemDetail.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-accent hover:underline text-xs"
+                  >
+                    Open in {itemDetail.source} <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : selectedItem ? (
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-300">{decodeEntities(selectedItem.detail)}</p>
+              {selectedItem.url && (
+                <a
+                  href={selectedItem.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-accent hover:underline"
+                >
+                  Open External Link <ExternalLink size={12} />
+                </a>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+
+      {/* ── Full Briefing Scrollable Modal ── */}
+      <Modal
+        isOpen={isFullBriefingOpen}
+        onClose={() => setIsFullBriefingOpen(false)}
+        title="Full Enterprise Daily Briefing"
+      >
+        <div className="space-y-4">
+          {/* Executive Summary */}
+          {briefing?.summary && (
+            <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg">
+              <span className="text-3xs uppercase tracking-wider font-semibold text-accent block mb-1">
+                Executive Synthesis
+              </span>
+              <p className="text-xs text-slate-200 leading-relaxed">{briefing.summary}</p>
+            </div>
+          )}
+
+          {/* Search + Source Tabs */}
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Search briefing items..."
+              value={fullBriefingSearch}
+              onChange={(e) => setFullBriefingSearch(e.target.value)}
+              className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-accent"
+            />
+
+            <div className="full-briefing-tabs">
+              {['all', 'gmail', 'jira', 'github', 'calendar', 'drive', 'slack'].map((source) => {
+                const count =
+                  source === 'all'
+                    ? briefing?.items?.length ?? 0
+                    : briefing?.items?.filter((i) => i.source === source).length ?? 0;
+
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    className={`full-briefing-tab-btn ${fullBriefingSourceFilter === source ? 'active' : ''}`}
+                    onClick={() => setFullBriefingSourceFilter(source)}
+                  >
+                    {source === 'all' ? 'All' : source.toUpperCase()} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable Item List */}
+          <div className="full-briefing-scroll-container">
+            {briefing?.items
+              ?.filter((item) => fullBriefingSourceFilter === 'all' || item.source === fullBriefingSourceFilter)
+              ?.filter(
+                (item) =>
+                  !fullBriefingSearch ||
+                  item.title.toLowerCase().includes(fullBriefingSearch.toLowerCase()) ||
+                  item.detail.toLowerCase().includes(fullBriefingSearch.toLowerCase())
+              ).length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-6">No briefing items match the selected filter.</p>
+            ) : (
+              briefing?.items
+                ?.filter((item) => fullBriefingSourceFilter === 'all' || item.source === fullBriefingSourceFilter)
+                ?.filter(
+                  (item) =>
+                    !fullBriefingSearch ||
+                    item.title.toLowerCase().includes(fullBriefingSearch.toLowerCase()) ||
+                    item.detail.toLowerCase().includes(fullBriefingSearch.toLowerCase())
+                )
+                .map((item, idx) => {
+                  return (
+                    <div
+                      key={item.id || idx}
+                      className="priority-item-redesigned"
+                      onClick={() => {
+                        setIsFullBriefingOpen(false);
+                        handleItemClick(item);
+                      }}
+                    >
+                      <div className="priority-source-icon">{getSourceIcon(item.source)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="priority-title-line font-medium text-xs text-slate-200 truncate">
+                          {item.title}
+                        </div>
+                        <div className="priority-meta-line text-2xs text-slate-400 truncate">
+                          {decodeEntities(item.detail)}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={item.priority_hint === 'overdue' ? 'red' : 'blue'}
+                        className="text-3xs uppercase shrink-0 px-1.5 py-0.5"
+                      >
+                        {item.priority_hint}
+                      </Badge>
+                    </div>
+                  );
+                })
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Disconnect Confirmation Modal ── */}
+      <Modal
+        isOpen={Boolean(selectedDisconnectProvider)}
+        onClose={() => setSelectedDisconnectProvider(null)}
+        title="Confirm Disconnect"
+      >
+        <div style={{ padding: '0.5rem 0' }}>
+          <p className="text-sm text-slate-300 mb-4">
+            Disconnect <strong>{selectedDisconnectProvider ? selectedDisconnectProvider.charAt(0).toUpperCase() + selectedDisconnectProvider.slice(1) : ''}</strong>?
+            You'll need to reconnect to use its features again.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedDisconnectProvider(null)}
+              disabled={isDisconnecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleConfirmDisconnect}
+              isLoading={isDisconnecting}
+            >
+              Disconnect App
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </motion.div>
   );
 };

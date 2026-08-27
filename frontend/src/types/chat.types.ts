@@ -43,6 +43,7 @@ export interface ChatResponse {
   citations: Citation[];
   conversation_id: string;
   flagged_for_review: boolean;
+  source?: string;          // "documents" | "gmail" | "jira" | "github" | "calendar" | "none"
 }
 
 // ─────────────────────────────────────────────
@@ -65,6 +66,7 @@ export interface Message {
   confidence?: number;
   citations?: Citation[];
   flagged_for_review?: boolean;
+  source?: string;               // "documents" | "gmail" | "jira" | "github" | "calendar" | "none"
   isError?: boolean;             // true when the API call failed
 }
 

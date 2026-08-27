@@ -261,7 +261,7 @@ async def oauth_login(
     if provider == "google":
         client_id = settings.GOOGLE_CLIENT_ID
         redirect_uri = "http://localhost:8000/api/v1/auth/oauth/google/callback"
-        scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly openid email profile"
+        scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly openid email profile"
         url = (
             f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code"
             f"&client_id={client_id}&redirect_uri={redirect_uri}&scope={scopes}"
@@ -457,3 +457,16 @@ async def list_connections(
     res = await db.execute(stmt)
     connections = res.scalars().all()
     return connections
+
+
+
+# NOTE: disconnect lives at DELETE /api/v1/integrations/{provider}
+# (app/routers/integrations.py::disconnect_integration) — that's the endpoint
+# the frontend actually calls, and it correctly resolves provider aliases
+# (e.g. "google" -> "google_drive") via resolve_provider(). A duplicate
+# DELETE /connections/{provider} used to live here; it never resolved
+# aliases and referenced an unimported `Integration` model (a NameError
+# waiting to happen), was never called by the frontend or covered by any
+# test, and was removed rather than fixed to avoid two competing
+# implementations of the same action.
+
