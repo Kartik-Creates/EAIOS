@@ -180,25 +180,32 @@ _OVERVIEW_SOURCES = ["gmail", "calendar", "jira", "github", "google_drive", "sla
 
 
 def _format_source_result(result: SourceResult) -> str:
-    """Format a SourceResult into a prompt-injection-safe data block for the LLM."""
+    """Format a SourceResult into a prompt-injection-safe data block for the LLM.
+
+    Phrased as neutral, factual statements rather than imperative instructions
+    ("please inform the user...") — the LLM grounds a reply from this fine
+    either way, and phrasing it neutrally means this same text is also safe
+    to show a user directly as-is, if generate_tool_response() ever fails and
+    chat.py falls back to presenting the raw data instead of a synthesized
+    sentence. An imperative aimed at "the user" would look broken/confusing
+    if a real user ever saw it verbatim in that fallback.
+    """
     if not result.connected:
         return (
             f"[{result.source.upper()} STATUS] "
-            f"This integration is NOT connected. The user has not linked their "
-            f"{result.source} account yet. Please inform them they need to connect "
-            f"their {result.source} integration in the Integrations settings page."
+            f"This integration is not connected — no {result.source} account is "
+            f"linked yet. (Connect it from the Integrations settings page.)"
         )
     if result.error:
         return (
             f"[{result.source.upper()} STATUS] "
-            f"Integration is connected but the API call failed: {result.error}. "
-            f"Please inform the user of this temporary error."
+            f"{result.source.capitalize()} is connected, but the request failed "
+            f"just now: {result.error}."
         )
     if not result.items:
         return (
             f"[{result.source.upper()} STATUS] "
-            f"Integration is connected and working. No items found — the user has "
-            f"no actionable items from {result.source} right now."
+            f"{result.source.capitalize()} is connected — no items to show right now."
         )
     items_text = "\n".join(
         f"  - {item.title} | {item.detail}" + (f" | Link: {item.url}" if item.url else "")

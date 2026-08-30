@@ -166,10 +166,28 @@ _TOOL_RESPONSE_PROMPT = (
 )
 
 
-async def generate_tool_response(query: str, tool_data: str) -> str:
-    """Generate a natural-language answer from tool execution results."""
+async def generate_tool_response(query: str, tool_data: str, *, retries: int = 1) -> str:
+    """Generate a natural-language answer from tool execution results.
+
+    Retries once (by default) before giving up — a transient network blip or
+    a momentary rate-limit on the LLM provider shouldn't force the user to
+    manually re-ask a question that the tool data was already fetched for.
+    Raises the last exception if every attempt fails; the caller (chat.py)
+    is responsible for falling back to something safe at that point.
+    """
     prompt = _TOOL_RESPONSE_PROMPT.format(tool_data=tool_data, query=query)
-    return await generate_completion(prompt)
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            return await generate_completion(prompt)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < retries:
+                logger.warning(
+                    "generate_tool_response attempt %d/%d failed, retrying: %s",
+                    attempt + 1, retries + 1, exc,
+                )
+    raise last_exc
 
 
 # ── Ollama fallback: prompt-based tool selection ────────────────────

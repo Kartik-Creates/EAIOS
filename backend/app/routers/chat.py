@@ -36,10 +36,25 @@ router = APIRouter()
 logger = logging.getLogger("eaios.chat")
 
 FALLBACK_MESSAGE = "I couldn't find this in company documents — I've flagged it for review."
-TOOL_RESPONSE_FAILURE_MESSAGE = (
-    "I found the relevant data but hit a temporary error putting together a response. "
-    "Please try asking again in a moment."
-)
+
+
+def _raw_data_fallback_answer(combined_results: str) -> str:
+    """Build a user-facing answer directly from the already-fetched tool data,
+    used when generate_tool_response() fails even after a retry.
+
+    This is deliberately different from the earlier bug where a failure
+    leaked the internal data block with no explanation, looking like a raw
+    error dump. Here the fallback is intentional and clearly framed, and the
+    underlying data blocks are phrased neutrally (see chat_tools.py's
+    _format_source_result) rather than as instructions aimed at an LLM, so
+    they read fine shown directly to a person. The user still gets the real
+    answer — just not phrased as a polished sentence — instead of a
+    dead-end apology with no actual information in it.
+    """
+    return (
+        "I couldn't turn this into a full sentence just now, but here's exactly "
+        "what I found:\n\n" + combined_results
+    )
 
 # ── GREETING HEURISTIC ──────────────────────────────────────────────
 
@@ -155,19 +170,16 @@ async def chat(
 
         tool_response_failed = False
         try:
+            # generate_tool_response() already retries once internally before
+            # raising, so reaching this except means two consecutive attempts
+            # failed (not just one transient blip).
             answer = await generate_tool_response(body.query, combined_results)
         except Exception as exc:
-            # NEVER fall back to the raw combined_results string here — it's an
-            # internal prompt-formatted data block (e.g. "[GMAIL DATA — 1
-            # item(s)] - <subject> | From: ... | Link: ..."), not something
-            # meant for a user to read. Leaking it looks like a broken/raw
-            # response and can include unredacted personal data (email
-            # addresses, message links, etc.) straight from the tool result.
             logger.error(
-                "Tool response generation failed, user_id=%s source=%s: %s",
+                "Tool response generation failed after retry, user_id=%s source=%s: %s",
                 current_user.id, source, exc,
             )
-            answer = TOOL_RESPONSE_FAILURE_MESSAGE
+            answer = _raw_data_fallback_answer(combined_results)
             tool_response_failed = True
 
         logger.info(
