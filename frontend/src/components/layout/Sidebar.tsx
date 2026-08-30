@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Palette,
   HelpCircle,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShieldCheck,
   Mic,
   Wand2,
+  FileText,
 };
 
 interface SidebarProps {

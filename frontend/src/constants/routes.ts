@@ -28,6 +28,7 @@ export const ROUTES = {
   PROFILE:      '/profile',
   MEETING:      '/meeting',
   WORKFLOW:     '/workflow',
+  DOCUMENTS:    '/documents',
 
   // ── Admin route (auth + admin role required) ──
   ADMIN:        '/admin',
@@ -91,6 +92,12 @@ export const NAV_ITEMS: NavItem[] = [
     path:      ROUTES.WORKFLOW,
     icon:      'Wand2',
     adminOnly: false,
+  },
+  {
+    label:     'Documents',
+    path:      ROUTES.DOCUMENTS,
+    icon:      'FileText',
+    adminOnly: true,
   },
   {
     label:     'Admin',
