@@ -130,7 +130,7 @@ async def chat(
     if isinstance(tool_decision, list) and tool_decision:
         all_results = []
         all_chunks = []  # only ever populated by search_company_documents
-        source = "none"
+        sources_used: list[str] = []  # preserves call order, no duplicates
 
         for call in tool_decision:
             tool_name = call.get("name", "")
@@ -142,9 +142,14 @@ async def chat(
             )
             all_results.append(result_text)
             all_chunks.extend(chunks)
-            # Use the first tool's source as the primary source label
-            if source == "none":
-                source = tool_source
+            if tool_source not in sources_used:
+                sources_used.append(tool_source)
+
+        # A compound question (e.g. "my GitHub commit and my email") can
+        # trigger multiple tools in one turn — join their labels rather than
+        # reporting only the first, which would mislabel a combined answer
+        # as if it only came from one source.
+        source = ", ".join(sources_used) if sources_used else "none"
 
         combined_results = "\n\n".join(all_results)
 

@@ -253,6 +253,24 @@ async def generate_with_tools(
         )
 
 
+_TOOL_ROUTING_SYSTEM_INSTRUCTION = (
+    "You are a tool-routing assistant for an enterprise chat product. Given "
+    "the user's question, decide which tool(s) to call to answer it fully.\n"
+    "- If the question names or clearly concerns MULTIPLE different apps or "
+    "data sources in the same message (e.g. \"what's my latest GitHub commit "
+    "and what email did I get after that\", \"check my Jira tickets and my "
+    "calendar\"), call ALL of the relevant tools together in this same turn. "
+    "Never silently answer only part of a multi-part question by picking "
+    "just one of the tools it needs.\n"
+    "- If the question only concerns one app or data source, call just that "
+    "one tool.\n"
+    "- If the question is broad and doesn't name a specific app (e.g. "
+    "\"what's my priority today\", \"give me an overview of my day\"), call "
+    "the single cross-cutting overview tool instead of the individual "
+    "per-app tools."
+)
+
+
 def _generate_with_tools_gemini(
     query: str,
     tool_schemas: list[dict],
@@ -275,6 +293,7 @@ def _generate_with_tools_gemini(
             model=settings.GEMINI_MODEL,
             contents=query,
             config=types.GenerateContentConfig(
+                system_instruction=_TOOL_ROUTING_SYSTEM_INSTRUCTION,
                 tools=[tools],
                 temperature=0.1,
             ),

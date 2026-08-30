@@ -238,6 +238,55 @@ async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_chat_compound_question_calls_both_named_tools(client, monkeypatch, db_session):
+    """Regression: a question naming two specific apps in one message (e.g.
+    "what's my latest GitHub commit and what mail did I get after that")
+    must call BOTH tools in the same turn, not silently answer only the
+    first one — and the response's source label must reflect both, not just
+    whichever tool happened to be listed first."""
+
+    async def fake_generate_with_tools_compound(query: str, tool_schemas: list[dict]):
+        return [
+            {"name": "get_github_briefing", "args": {"query": query}},
+            {"name": "get_gmail_briefing", "args": {"query": query}},
+        ]
+
+    async def mock_github(db, user):
+        return SourceResult(
+            source="github", connected=True,
+            items=[BriefingItem(source="github", title="[backend] Fix auth bug",
+                                 detail="PR merged 1h ago", priority_hint="today")],
+        )
+
+    async def mock_gmail(db, user):
+        return SourceResult(
+            source="gmail", connected=True,
+            items=[BriefingItem(source="gmail", title="CI notification",
+                                 detail="From: ci@company.com | Build passed", priority_hint="today")],
+        )
+
+    monkeypatch.setattr("app.routers.chat.generate_with_tools", fake_generate_with_tools_compound)
+    monkeypatch.setattr("app.services.briefing_service.get_github_briefing", mock_github)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_gmail)
+
+    token = register_and_login(client, "compounduser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "what is my latest commit on github and what mail did i receive after the commit"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    # both tools' real data made it into the combined answer
+    assert "Fix auth bug" in data["answer"]
+    assert "CI notification" in data["answer"]
+    # source label reflects both sources actually used, not just the first
+    assert data["source"] == "github, gmail"
+
+
+@pytest.mark.asyncio
 async def test_chat_priority_overview_not_triggered_by_single_app_question(client, db_session):
     """A narrow, single-app question must still route to that app's own tool,
     not the cross-cutting overview — the fake router only returns
