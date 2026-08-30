@@ -1,7 +1,7 @@
-import { useRef, useEffect, useState, type KeyboardEvent } from 'react';
+import { useRef, useEffect, useState, type KeyboardEvent, type ChangeEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, Expand } from 'lucide-react';
+import { Sparkles, Send, Expand, Paperclip, FileText, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { modalContentVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,13 +10,30 @@ import { ChatMessage } from './ChatMessage';
 import { ROUTES } from '@/constants/routes';
 import './FloatingChatAssistant.css';
 
-/**
- * Floating quick-access chat widget, rendered on every page except /chat
- * itself (see DashboardLayout / ROUTES.CHAT check below) — it shares the
- * exact same conversation (via ChatContext/useChat) as the full ChatPage,
- * so a message sent from either surface continues one real conversation
- * against the real backend, not a separate fake one.
- */
+const ACCEPTED_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'text/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+].join(',');
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
 export const FloatingChatAssistant = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -25,7 +42,9 @@ export const FloatingChatAssistant = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,9 +56,6 @@ export const FloatingChatAssistant = () => {
     }
   }, [isOpen, messages, isLoading]);
 
-  // Hidden entirely on the real Chat page — that page already has the full
-  // conversation UI; showing a second copy of the same conversation there
-  // would just be redundant.
   if (location.pathname === '/chat') {
     return null;
   }
@@ -48,9 +64,13 @@ export const FloatingChatAssistant = () => {
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed || isLoading) return;
-    sendMessage(trimmed);
+    if ((!trimmed && !attachedFile) || isLoading) return;
+    const message = attachedFile
+      ? `${trimmed}\n\n[Attached: ${attachedFile.name} (${(attachedFile.size / 1024).toFixed(1)} KB)]`
+      : trimmed;
+    sendMessage(message);
     setInput('');
+    setAttachedFile(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -60,9 +80,29 @@ export const FloatingChatAssistant = () => {
     }
   };
 
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setAttachedFile(files[0]);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
-      {/* Floating Toggle Button */}
       <motion.button
         type="button"
         className={cn('floating-chat-toggle', isOpen && 'floating-chat-toggle-open')}
@@ -74,7 +114,6 @@ export const FloatingChatAssistant = () => {
         {isOpen ? <Sparkles size={22} /> : <Sparkles size={22} />}
       </motion.button>
 
-      {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -84,7 +123,6 @@ export const FloatingChatAssistant = () => {
             animate="visible"
             exit="exit"
           >
-            {/* Header */}
             <div className="floating-chat-header">
               <div className="floating-chat-header-info">
                 <div className="floating-chat-avatar">
@@ -107,7 +145,6 @@ export const FloatingChatAssistant = () => {
               </motion.button>
             </div>
 
-            {/* Messages */}
             <div className="floating-chat-messages">
               {messages.length === 0 && !isLoading && (
                 <div className="floating-chat-empty">
@@ -137,9 +174,34 @@ export const FloatingChatAssistant = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div className="floating-chat-input-area">
+              {attachedFile && (
+                <div className="floating-chat-attachment">
+                  <div className="floating-chat-attachment-info">
+                    <FileText size={14} className="floating-chat-attachment-icon" />
+                    <span className="floating-chat-attachment-name">{attachedFile.name}</span>
+                    <span className="floating-chat-attachment-size">{formatFileSize(attachedFile.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="floating-chat-attachment-remove"
+                    onClick={handleRemoveFile}
+                    aria-label="Remove attachment"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
               <div className="floating-chat-input-bar">
+                <button
+                  type="button"
+                  className="floating-chat-attach-btn"
+                  onClick={handleAttachClick}
+                  aria-label="Attach file"
+                  title="Attach file"
+                >
+                  <Paperclip size={16} />
+                </button>
                 <textarea
                   className="floating-chat-textarea"
                   placeholder="Type a message..."
@@ -154,7 +216,7 @@ export const FloatingChatAssistant = () => {
                   type="button"
                   className="floating-chat-send"
                   onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
+                  disabled={(!input.trim() && !attachedFile) || isLoading}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   aria-label="Send message"
@@ -162,6 +224,14 @@ export const FloatingChatAssistant = () => {
                   <Send size={16} />
                 </motion.button>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_TYPES}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                aria-hidden="true"
+              />
             </div>
           </motion.div>
         )}
@@ -169,3 +239,5 @@ export const FloatingChatAssistant = () => {
     </>
   );
 };
+
+export default FloatingChatAssistant;

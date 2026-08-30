@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import Ferrofluid from '@/components/ui/Ferrofluid';
 
 import { authService } from '@/services/authService';
 import { ROUTES } from '@/constants/routes';
@@ -103,6 +104,25 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-page">
+      <div className="auth-bg-canvas">
+        <Ferrofluid
+          colors={['#ffffff', '#ffffff', '#ffffff']}
+          speed={0.3}
+          scale={1.6}
+          turbulence={1}
+          fluidity={0.1}
+          rimWidth={0.2}
+          sharpness={2.5}
+          shimmer={1.5}
+          glow={2}
+          flowDirection="down"
+          opacity={1}
+          mouseInteraction
+          mouseStrength={1}
+          mouseRadius={0.35}
+        />
+      </div>
+
       <motion.div className="auth-form-card" variants={fadeInUpVariants} initial="hidden" animate="visible">
         <motion.div className="auth-logo" variants={staggerItem}>
           <AppLogo className="app-logo-vertical app-logo-large" />

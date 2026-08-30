@@ -5,8 +5,6 @@ import {
   Lock,
   LogOut,
   CheckCircle2,
-  Laptop,
-  Palette,
   ChevronRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,7 +14,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EditProfileModal } from './EditProfileModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
-import { cn } from '@/utils/cn';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import './ProfilePage.css';
 
@@ -85,20 +82,6 @@ export const ProfilePage = () => {
             <InfoRow label="Full Name" value={user?.full_name || 'Not specified'} />
             <InfoRow label="Email" value={user?.email || 'Not specified'} />
             <InfoRow label="Role" value={roleLabel} />
-            <InfoRow
-              label="Account Status"
-              value={
-                <span
-                  className={cn(
-                    'profile-status-dot',
-                    user?.is_active ? 'profile-status-active' : 'profile-status-suspended'
-                  )}
-                >
-                  {user?.is_active ? 'Active & Verified' : 'Suspended'}
-                </span>
-              }
-            />
-            <InfoRow label="Account ID" value={user?.id || 'N/A'} />
           </div>
         </motion.section>
 
@@ -123,25 +106,8 @@ export const ProfilePage = () => {
               </div>
               <ChevronRight size={16} className="profile-security-chevron" aria-hidden="true" />
             </button>
-            <div className="profile-security-row">
-              <div className="profile-security-icon">
-                <Laptop size={18} aria-hidden="true" />
-              </div>
-              <div className="profile-security-meta">
-                <span className="profile-security-title">Recent Login</span>
-                <span className="profile-security-desc">Web Application (Browser) • Just now</span>
-              </div>
-              <span className="profile-security-tag">Current Session</span>
-            </div>
-          </div>
-        </motion.section>
 
-        {/* ── Preferences ── */}
-        <motion.section className="profile-section-card" variants={staggerItem}>
-          <h2 className="profile-section-title">
-            <Palette size={20} className="text-muted" aria-hidden="true" />
-            Preferences
-          </h2>
+          </div>
         </motion.section>
 
         {/* ── Account Actions ── */}
