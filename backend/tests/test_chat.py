@@ -103,7 +103,7 @@ async def test_chat_routes_to_gmail_briefing(client, monkeypatch, db_session):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_get_gmail_briefing)
 
     token = register_and_login(client, "gmailuser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -149,7 +149,7 @@ async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monk
     async def failing_generate_tool_response(query: str, tool_data: str) -> str:
         raise RuntimeError("simulated LLM failure")
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_get_gmail_briefing)
     monkeypatch.setattr("app.routers.chat.generate_tool_response", failing_generate_tool_response)
 
     token = register_and_login(client, "toolfailureuser@example.com")
@@ -209,12 +209,12 @@ async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeyp
                                  detail="deploy is blocked on review", priority_hint="today")],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_gmail)
-    monkeypatch.setattr("app.services.chat_tools.get_calendar_recent", mock_calendar)
-    monkeypatch.setattr("app.services.chat_tools.get_jira_recent", mock_jira)
-    monkeypatch.setattr("app.services.chat_tools.get_github_briefing", mock_github)
-    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_drive)
-    monkeypatch.setattr("app.services.chat_tools.get_slack_briefing", mock_slack)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_gmail)
+    monkeypatch.setattr("app.services.briefing_service.get_calendar_recent", mock_calendar)
+    monkeypatch.setattr("app.services.briefing_service.get_jira_recent", mock_jira)
+    monkeypatch.setattr("app.services.briefing_service.get_github_briefing", mock_github)
+    monkeypatch.setattr("app.services.briefing_service.get_drive_briefing", mock_drive)
+    monkeypatch.setattr("app.services.briefing_service.get_slack_briefing", mock_slack)
 
     token = register_and_login(client, "priorityuser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -272,7 +272,7 @@ async def test_chat_routes_to_github_briefing(client, monkeypatch, db_session):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_github_briefing", mock_get_github_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_github_briefing", mock_get_github_briefing)
 
     token = register_and_login(client, "githubuser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -306,7 +306,7 @@ async def test_chat_routes_to_jira_briefing(client, monkeypatch, db_session):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_jira_recent", mock_get_jira_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_jira_recent", mock_get_jira_briefing)
 
     token = register_and_login(client, "jirauser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -329,7 +329,7 @@ async def test_chat_disconnected_integration_guidance(client, monkeypatch, db_se
     async def mock_get_gmail_disconnected(db, user):
         return SourceResult(source="gmail", connected=False, items=[])
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_disconnected)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_get_gmail_disconnected)
 
     token = register_and_login(client, "disconnecteduser@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -610,7 +610,7 @@ async def test_chat_gmail_tool_call_still_has_no_citations(client, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_get_gmail_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_get_gmail_briefing)
 
     token = register_and_login(client, "toolroutegmail@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -645,7 +645,7 @@ async def test_chat_routes_drive_question_to_drive_briefing(client, monkeypatch)
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_get_drive_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_drive_briefing", mock_get_drive_briefing)
 
     token = register_and_login(client, "toolroutedrive@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -658,7 +658,7 @@ async def test_chat_routes_drive_question_to_drive_briefing(client, monkeypatch)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["source"] == "drive"
+    assert data["source"] == "google_drive"
     assert data["citations"] == []
     assert data["confidence"] == 0.0
 
@@ -679,7 +679,7 @@ async def test_chat_routes_slack_question_to_slack_briefing(client, monkeypatch)
             ],
         )
 
-    monkeypatch.setattr("app.services.chat_tools.get_slack_briefing", mock_get_slack_briefing)
+    monkeypatch.setattr("app.services.briefing_service.get_slack_briefing", mock_get_slack_briefing)
 
     token = register_and_login(client, "toolrouteslack@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -700,7 +700,7 @@ async def test_chat_drive_not_connected_gives_clear_message(client, monkeypatch)
     async def mock_get_drive_briefing_disconnected(db, user):
         return SourceResult(source="drive", connected=False, items=[])
 
-    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_get_drive_briefing_disconnected)
+    monkeypatch.setattr("app.services.briefing_service.get_drive_briefing", mock_get_drive_briefing_disconnected)
 
     token = register_and_login(client, "drivedisconnected@example.com")
     headers = {"Authorization": f"Bearer {token}"}
@@ -713,5 +713,5 @@ async def test_chat_drive_not_connected_gives_clear_message(client, monkeypatch)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["source"] == "drive"
+    assert data["source"] == "google_drive"
     assert data["flagged_for_review"] is False
