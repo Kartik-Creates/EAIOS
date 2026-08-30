@@ -7,10 +7,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   icon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, id, ...props }, ref) => {
+  ({ className, label, error, icon, rightIcon, id, ...props }, ref) => {
     return (
       <div className={cn('input-wrapper', className)}>
         {label && (
@@ -19,28 +20,66 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             htmlFor={id}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{
+              duration: 0.2,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
             {label}
           </motion.label>
         )}
+
         <motion.div
           className="input-field-container"
           whileFocus={{ scale: 1.01 }}
-          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{
+            duration: 0.2,
+            ease: [0.22, 1, 0.36, 1],
+          }}
         >
-          {icon && <div className="input-icon-left">{icon}</div>}
+          {/* Left icon */}
+          {icon && (
+            <div className="input-icon-left">
+              {icon}
+            </div>
+          )}
+
+          {/* Input */}
           <input
             ref={ref}
             id={id}
-            className={cn('input-field', icon && 'input-with-icon', error && 'input-error')}
+            className={cn(
+              'input-field',
+              icon && 'input-with-icon',
+              rightIcon && 'input-with-right-icon',
+              error && 'input-error'
+            )}
             aria-invalid={!!error}
             {...props}
           />
+
+          {/* Right icon / password visibility button */}
+          {rightIcon && (
+            <div className="input-icon-right">
+              {rightIcon}
+            </div>
+          )}
         </motion.div>
-        {error && <motion.span className="input-error-text" role="alert" initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>{error}</motion.span>}
+
+        {error && (
+          <motion.span
+            className="input-error-text"
+            role="alert"
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {error}
+          </motion.span>
+        )}
       </div>
     );
   }
 );
+
 Input.displayName = 'Input';

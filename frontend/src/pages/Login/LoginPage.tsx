@@ -2,7 +2,7 @@ import React, { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +23,6 @@ import {
 import './LoginPage.css';
 
 const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
-
 const integrationLogos: LogoItem[] = [
   { node: <SlackIcon size={22} />, title: 'Slack' },
   { node: <GitHubIcon size={22} />, title: 'GitHub' },
@@ -63,6 +62,7 @@ const validateForm = (values: LoginFormState): LoginFormErrors => {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formValues, setFormValues] = useState<LoginFormState>({ email: '', password: '' });
   const [formErrors, setFormErrors] = useState<LoginFormErrors>({});
@@ -154,7 +154,7 @@ export default function LoginPage() {
             <Input
               id="login-password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               label="Password"
               placeholder="••••••••"
               autoComplete="current-password"
@@ -164,6 +164,16 @@ export default function LoginPage() {
               icon={<Lock size={18} />}
               disabled={isLoading}
               required
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <Button

@@ -18,6 +18,7 @@ const ProfilePage      = lazy(() => import('@/pages/Profile/ProfilePage'));
 const AdminPage        = lazy(() => import('@/pages/Admin/AdminPage'));
 const MeetingPage      = lazy(() => import('@/pages/Meeting/MeetingPage'));
 const WorkflowPage     = lazy(() => import('@/pages/Workflow/WorkflowPage'));
+const DocumentsPage    = lazy(() => import('@/pages/Documents/DocumentsPage'));
 const NotFoundPage     = lazy(() => import('@/pages/NotFound/NotFoundPage'));
 
 // Full-screen loading fallback used by Suspense during lazy chunk loading
@@ -53,6 +54,7 @@ export const AppRoutes = () => {
         <Route element={<AdminRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path={ROUTES.ADMIN} element={<AdminPage />} />
+            <Route path={ROUTES.DOCUMENTS} element={<DocumentsPage />} />
           </Route>
         </Route>
 
