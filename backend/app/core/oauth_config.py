@@ -41,7 +41,7 @@ PROVIDERS = {
     "jira": {
         "auth_url": "https://auth.atlassian.com/authorize",
         "token_url": "https://auth.atlassian.com/oauth/token",
-        "scope": "read:jira-work offline_access",
+        "scope": "read:jira-work read:jira-user offline_access",
         "get_client_id": lambda: settings.JIRA_CLIENT_ID,
         "get_client_secret": lambda: settings.JIRA_CLIENT_SECRET,
         "extra_params": {"audience": "api.atlassian.com", "prompt": "consent"},

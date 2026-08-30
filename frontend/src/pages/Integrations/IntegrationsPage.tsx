@@ -171,10 +171,16 @@ export const IntegrationsPage = () => {
 
           {/* ── Add Integration Card ── */}
           <motion.div variants={staggerItem}>
-            <button
-              type="button"
+            <div
               className="add-integration-card"
+              role="button"
+              tabIndex={0}
               onClick={() => setIsServicePickerOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setIsServicePickerOpen(true);
+                }
+              }}
             >
               <div className="add-integration-icon">
                 <Plug size={24} />
@@ -184,7 +190,7 @@ export const IntegrationsPage = () => {
               <Button variant="primary" size="md" className="add-integration-button">
                 Choose Service
               </Button>
-            </button>
+            </div>
           </motion.div>
         </motion.section>
       )}

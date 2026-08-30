@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.core.rate_limit import limiter
+from app.models.chat_message import ChatMessage
 from app.models.unanswered_query import UnansweredQuery
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, Citation
@@ -92,6 +93,14 @@ async def chat(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ChatResponse:
     conversation_id = body.conversation_id or str(uuid.uuid4())
+
+    # Persist chat query for the activity feed
+    db.add(ChatMessage(
+        user_id=current_user.id,
+        query_text=body.query,
+        conversation_id=conversation_id,
+    ))
+    await db.commit()
 
     # ── Step 1: Greeting heuristic (fast path, no RAG or tools) ─────
     if _is_greeting(body.query):

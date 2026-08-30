@@ -1,14 +1,17 @@
 """Chat Tool-Calling Service — tool schemas and dispatch for Gemini function-calling.
 
-Registers briefing_service.py functions + search_company_documents as callable
-tools for the chat LLM.  dispatch_tool_call() executes the requested tool using
-the current authenticated user's own OAuth tokens (reuses per-user isolation
-from briefing_service.py, no new token-retrieval logic).
+Registers each connector's chat_fn (see app/connectors/*.py) + search_company_
+documents as callable tools for the chat LLM. dispatch_tool_call() looks up
+the requested tool's connector via the registry and calls its chat_fn, reusing
+the same per-user OAuth token isolation and provider setup the rest of the app
+already uses — no new token-retrieval logic here.
 
-gmail/jira/calendar are backed by dedicated "_recent" functions in
-briefing_service.py — broader-scoped variants built for chat, separate from
-the narrow "_briefing" functions the dashboard's daily briefing still uses
-unchanged (e.g. gmail briefing = unread-only; gmail recent = read+unread).
+Each connector's chat_fn points at a dedicated "_recent" function in
+briefing_service.py for gmail/jira/calendar — broader-scoped variants built
+for chat, separate from the narrower "_briefing" functions the dashboard's
+daily briefing still uses (e.g. gmail briefing = unread-only; gmail recent =
+read+unread). get_priority_overview fans out to all 6 connectors' chat_fn in
+parallel for broad, cross-app questions.
 """
 import asyncio
 import logging
@@ -17,14 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.schemas.briefing import SourceResult
-from app.services.briefing_service import (
-    get_calendar_recent,
-    get_drive_briefing,
-    get_github_briefing,
-    get_gmail_recent,
-    get_jira_recent,
-    get_slack_briefing,
-)
 from app.services.retrieval_service import (
     RetrievedChunk,
     excerpt,
@@ -163,6 +158,10 @@ TOOL_SCHEMAS = [
 ]
 
 # Map tool names to their source labels for the ChatResponse.source field
+# AND to the canonical connector-registry key (app/connectors/*.py CONNECTOR.name)
+# used to look up that source's chat_fn. These must match the registry's
+# canonical names exactly — Drive's is "google_drive", not "drive", the same
+# canonical name used everywhere else in the app (oauth_config, providers.ts).
 TOOL_SOURCE_MAP = {
     "get_priority_overview": "overview",
     "get_gmail_briefing": "gmail",
@@ -170,22 +169,14 @@ TOOL_SOURCE_MAP = {
     "get_github_briefing": "github",
     "get_calendar_briefing": "calendar",
     "search_company_documents": "documents",
-    "get_drive_briefing": "drive",
+    "get_drive_briefing": "google_drive",
     "get_slack_briefing": "slack",
 }
 
-# Map tool names (LLM-facing) to their actual implementation functions.
-# gmail/jira/calendar deliberately point at the "_recent" chat-only variants
-# (broader scope — see briefing_service.py) rather than the dashboard's
-# narrow daily-briefing versions, which stay wired unchanged into
-# generate_daily_briefing(). github/drive/slack are already general enough
-# for chat, so they reuse their single existing implementation as-is.
-_BRIEFING_DISPATCH = {
-    "get_gmail_briefing": get_gmail_recent,
-    "get_jira_briefing": get_jira_recent,
-    "get_github_briefing": get_github_briefing,
-    "get_calendar_briefing": get_calendar_recent,
-}
+# The 6 connector-registry names get_priority_overview fans out to. Kept as a
+# separate list (rather than deriving from TOOL_SOURCE_MAP) so adding a future
+# single-app tool doesn't silently change what the overview aggregates.
+_OVERVIEW_SOURCES = ["gmail", "calendar", "jira", "github", "google_drive", "slack"]
 
 
 def _format_source_result(result: SourceResult) -> str:
@@ -241,75 +232,10 @@ async def dispatch_tool_call(
 ) -> tuple[str, str, list[RetrievedChunk]]:
     """Execute a tool call and return (formatted_result_text, source_label, chunks).
 
-    `chunks` is only ever non-empty for search_company_documents — it's the raw
-    retrieval result, kept alongside the formatted text so the router can build
-    real Citation objects and a real confidence score for document answers
-    instead of losing that data once it's flattened into prompt text. Every
-    other tool returns an empty list; there's no equivalent "excerpt" concept
-    for a Gmail/Jira/GitHub/Calendar item.
-
-    Uses the EXISTING briefing_service.py functions with the same (db, user)
-    signature, reusing per-user OAuth token isolation already tested.
-    Tool results are formatted as data blocks, never as instructions.
+    Uses the connector registry to dynamically dispatch tool calls to the
+    corresponding connector's chat function.
     """
-    source = TOOL_SOURCE_MAP.get(tool_name, "none")
-
-    if tool_name == "get_priority_overview":
-        # Fan out to every connected source in parallel — same pattern as
-        # generate_daily_briefing()'s orchestration, but covering all 6 chat
-        # tools (that function only aggregates 4, for the dashboard widget)
-        # and reusing the broader "_recent" variants so a source with no
-        # unread/overdue/today items still reports what it actually has.
-        results = await asyncio.gather(
-            get_gmail_recent(db, user),
-            get_calendar_recent(db, user),
-            get_jira_recent(db, user),
-            get_github_briefing(db, user),
-            get_drive_briefing(db, user),
-            get_slack_briefing(db, user),
-        )
-        formatted = "\n\n".join(_format_source_result(r) for r in results)
-        logger.info(
-            "tool_dispatch tool=get_priority_overview user_id=%s connected=%d/6",
-            user.id, sum(1 for r in results if r.connected),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_gmail_briefing":
-        result: SourceResult = await get_gmail_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_jira_briefing":
-        result: SourceResult = await get_jira_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_github_briefing":
-        result: SourceResult = await get_github_briefing(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
-
-    if tool_name == "get_calendar_briefing":
-        result: SourceResult = await get_calendar_recent(db, user)
-        formatted = _format_source_result(result)
-        logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
-        )
-        return formatted, source, []
+    from app.connectors.registry import connector_registry
 
     if tool_name == "search_company_documents":
         chunks = await semantic_search(db, query, allowed_roles=[user.role])
@@ -318,23 +244,35 @@ async def dispatch_tool_call(
             "tool_dispatch tool=search_company_documents user_id=%s chunks=%d",
             user.id, len(chunks),
         )
-        return formatted, source, chunks
+        return formatted, "documents", chunks
 
-    if tool_name == "get_drive_briefing":
-        result: SourceResult = await get_drive_briefing(db, user)
-        formatted = _format_source_result(result)
+    source = TOOL_SOURCE_MAP.get(tool_name, "none")
+
+    if tool_name == "get_priority_overview":
+        # Fan out to every connector's chat_fn in parallel — same idea as
+        # generate_daily_briefing()'s orchestration, but covering all 6 chat
+        # sources (that function only aggregates 4, for the dashboard widget)
+        # via the registry so it stays in sync with whatever each connector's
+        # chat_fn actually points to, instead of importing functions directly.
+        connectors = [connector_registry.get_connector(name) for name in _OVERVIEW_SOURCES]
+        results = await asyncio.gather(*(
+            c.chat_fn(db, user) for c in connectors if c and c.chat_fn
+        ))
+        formatted = "\n\n".join(_format_source_result(r) for r in results)
         logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
+            "tool_dispatch tool=get_priority_overview user_id=%s connected=%d/%d",
+            user.id, sum(1 for r in results if r.connected), len(results),
         )
         return formatted, source, []
 
-    if tool_name == "get_slack_briefing":
-        result: SourceResult = await get_slack_briefing(db, user)
+    connector = connector_registry.get_connector(source)
+
+    if connector and connector.chat_fn:
+        result: SourceResult = await connector.chat_fn(db, user)
         formatted = _format_source_result(result)
         logger.info(
-            "tool_dispatch tool=%s user_id=%s connected=%s items=%d",
-            tool_name, user.id, result.connected, len(result.items),
+            "tool_dispatch tool=%s provider=%s user_id=%s connected=%s items=%d",
+            tool_name, connector.name, user.id, result.connected, len(result.items),
         )
         return formatted, source, []
 

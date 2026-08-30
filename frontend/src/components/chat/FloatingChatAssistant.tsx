@@ -1,12 +1,13 @@
 import { useRef, useEffect, useState, type KeyboardEvent } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, X } from 'lucide-react';
+import { Sparkles, Send, Expand } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { modalContentVariants, staggerContainer, staggerItem } from '@/lib/motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useChat } from '@/hooks/useChat';
 import { ChatMessage } from './ChatMessage';
+import { ROUTES } from '@/constants/routes';
 import './FloatingChatAssistant.css';
 
 /**
@@ -18,6 +19,7 @@ import './FloatingChatAssistant.css';
  */
 export const FloatingChatAssistant = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { messages, isLoading, sendMessage } = useChat();
 
@@ -69,7 +71,7 @@ export const FloatingChatAssistant = () => {
         whileTap={{ scale: 0.92 }}
         aria-label="Open AI Assistant"
       >
-        {isOpen ? <X size={22} /> : <Sparkles size={22} />}
+        {isOpen ? <Sparkles size={22} /> : <Sparkles size={22} />}
       </motion.button>
 
       {/* Chat Panel */}
@@ -89,19 +91,19 @@ export const FloatingChatAssistant = () => {
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <h3 className="floating-chat-title">AI Assistant</h3>
-                  <span className="floating-chat-subtitle">Online</span>
+                  <h3 className="floating-chat-title">UnifyAI</h3>
                 </div>
               </div>
               <motion.button
                 type="button"
                 className="floating-chat-close"
-                onClick={() => setIsOpen(false)}
+                onClick={() => navigate(ROUTES.CHAT)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label="Close chat"
+                aria-label="Open Chat"
+                title="Open Chat"
               >
-                <X size={18} />
+                <Expand size={18} />
               </motion.button>
             </div>
 
