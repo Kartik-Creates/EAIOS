@@ -101,7 +101,12 @@ export const ChatPage = () => {
 
       <div className="chat-input-wrapper">
         <ChatInput
-          onSendMessage={sendMessage}
+          onSendMessage={(query, file) => {
+            const message = file
+              ? `${query}\n\n[Attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`
+              : query;
+            sendMessage(message);
+          }}
           isLoading={isLoading}
         />
       </div>
