@@ -126,11 +126,17 @@ async def test_chat_routes_to_gmail_briefing(client, monkeypatch, db_session):
 
 
 @pytest.mark.asyncio
-async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monkeypatch, db_session):
+async def test_chat_tool_response_failure_falls_back_to_real_data_not_apology(client, monkeypatch, db_session):
     """Regression: if generate_tool_response() (the LLM call that turns tool
-    data into a natural-language sentence) fails, the user must get a clean
-    error message — never the raw internal data block (which can contain
-    unredacted emails, links, etc. straight from the tool result)."""
+    data into a natural-language sentence) fails even after its internal
+    retry, the user must still get the REAL data that was already
+    successfully fetched — clearly framed as an unpolished fallback — never
+    a dead-end apology with no actual information in it. (An earlier version
+    of this behavior leaked the raw internal data block with no explanation
+    at all, which looked like a broken error dump — the fix here is that the
+    fallback is now deliberate and clearly framed, and chat_tools.py phrases
+    the underlying data blocks neutrally so they read fine shown directly to
+    a person.)"""
     async def mock_get_gmail_briefing(db, user):
         return SourceResult(
             source="gmail",
@@ -138,7 +144,7 @@ async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monk
             items=[
                 BriefingItem(
                     source="gmail",
-                    title="",
+                    title="Security Audit",
                     detail="From: Someone <someone@example.com> | hello",
                     priority_hint="today",
                     url="https://mail.google.com/mail/u/0/#inbox/msg999",
@@ -147,7 +153,7 @@ async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monk
         )
 
     async def failing_generate_tool_response(query: str, tool_data: str) -> str:
-        raise RuntimeError("simulated LLM failure")
+        raise RuntimeError("simulated LLM failure after internal retry")
 
     monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_get_gmail_briefing)
     monkeypatch.setattr("app.routers.chat.generate_tool_response", failing_generate_tool_response)
@@ -164,9 +170,11 @@ async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monk
     data = response.json()
     assert data["source"] == "gmail"
     assert data["flagged_for_review"] is True
-    assert "[GMAIL DATA" not in data["answer"]
-    assert "someone@example.com" not in data["answer"]
-    assert "msg999" not in data["answer"]
+    # the real data is now surfaced, not hidden behind a generic apology
+    assert "Security Audit" in data["answer"]
+    assert "someone@example.com" in data["answer"]
+    # clearly framed as an unpolished fallback, not presented as if normal
+    assert "couldn't turn this into a full sentence" in data["answer"].lower()
 
 
 @pytest.mark.asyncio
@@ -235,6 +243,55 @@ async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeyp
     assert "deploy is blocked on review" in data["answer"]
     # the disconnected source is reported as such, not silently dropped
     assert "NOT connected" in data["answer"] or "not connected" in data["answer"].lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_compound_question_calls_both_named_tools(client, monkeypatch, db_session):
+    """Regression: a question naming two specific apps in one message (e.g.
+    "what's my latest GitHub commit and what mail did I get after that")
+    must call BOTH tools in the same turn, not silently answer only the
+    first one — and the response's source label must reflect both, not just
+    whichever tool happened to be listed first."""
+
+    async def fake_generate_with_tools_compound(query: str, tool_schemas: list[dict]):
+        return [
+            {"name": "get_github_briefing", "args": {"query": query}},
+            {"name": "get_gmail_briefing", "args": {"query": query}},
+        ]
+
+    async def mock_github(db, user):
+        return SourceResult(
+            source="github", connected=True,
+            items=[BriefingItem(source="github", title="[backend] Fix auth bug",
+                                 detail="PR merged 1h ago", priority_hint="today")],
+        )
+
+    async def mock_gmail(db, user):
+        return SourceResult(
+            source="gmail", connected=True,
+            items=[BriefingItem(source="gmail", title="CI notification",
+                                 detail="From: ci@company.com | Build passed", priority_hint="today")],
+        )
+
+    monkeypatch.setattr("app.routers.chat.generate_with_tools", fake_generate_with_tools_compound)
+    monkeypatch.setattr("app.services.briefing_service.get_github_briefing", mock_github)
+    monkeypatch.setattr("app.services.briefing_service.get_gmail_recent", mock_gmail)
+
+    token = register_and_login(client, "compounduser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "what is my latest commit on github and what mail did i receive after the commit"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    # both tools' real data made it into the combined answer
+    assert "Fix auth bug" in data["answer"]
+    assert "CI notification" in data["answer"]
+    # source label reflects both sources actually used, not just the first
+    assert data["source"] == "github, gmail"
 
 
 @pytest.mark.asyncio

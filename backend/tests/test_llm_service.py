@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from app.core.config import settings
-from app.services.llm_service import LLMServiceError, generate_completion
+from app.services.llm_service import LLMServiceError, generate_completion, generate_tool_response
 
 
 @pytest.mark.asyncio
@@ -76,3 +76,44 @@ async def test_generate_completion_invalid_provider_raises_error(monkeypatch):
         await generate_completion("Test prompt")
 
     assert "Unsupported LLM_PROVIDER" in str(exc_info.value)
+
+
+# ── generate_tool_response() retry behavior ──────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_generate_tool_response_retries_once_then_succeeds(monkeypatch):
+    """A transient failure on the first attempt shouldn't surface at all if
+    the retry succeeds — the caller should just get the real answer."""
+    calls = {"count": 0}
+
+    async def flaky_completion(prompt: str) -> str:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("simulated transient failure")
+        return "Here is your synthesized answer."
+
+    monkeypatch.setattr("app.services.llm_service.generate_completion", flaky_completion)
+
+    result = await generate_tool_response("What's my latest email?", "[GMAIL DATA] ...")
+    assert result == "Here is your synthesized answer."
+    assert calls["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_tool_response_raises_after_exhausting_retries(monkeypatch):
+    """If every attempt fails, generate_tool_response raises (rather than
+    silently returning something) so the caller (chat.py) knows to fall
+    back to something safe instead of assuming success."""
+    calls = {"count": 0}
+
+    async def always_fails(prompt: str) -> str:
+        calls["count"] += 1
+        raise RuntimeError("simulated persistent failure")
+
+    monkeypatch.setattr("app.services.llm_service.generate_completion", always_fails)
+
+    with pytest.raises(RuntimeError, match="simulated persistent failure"):
+        await generate_tool_response("What's my latest email?", "[GMAIL DATA] ...")
+    # default retries=1 means exactly 2 attempts total (1 retry), not more
+    assert calls["count"] == 2

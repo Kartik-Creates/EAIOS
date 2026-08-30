@@ -166,10 +166,28 @@ _TOOL_RESPONSE_PROMPT = (
 )
 
 
-async def generate_tool_response(query: str, tool_data: str) -> str:
-    """Generate a natural-language answer from tool execution results."""
+async def generate_tool_response(query: str, tool_data: str, *, retries: int = 1) -> str:
+    """Generate a natural-language answer from tool execution results.
+
+    Retries once (by default) before giving up — a transient network blip or
+    a momentary rate-limit on the LLM provider shouldn't force the user to
+    manually re-ask a question that the tool data was already fetched for.
+    Raises the last exception if every attempt fails; the caller (chat.py)
+    is responsible for falling back to something safe at that point.
+    """
     prompt = _TOOL_RESPONSE_PROMPT.format(tool_data=tool_data, query=query)
-    return await generate_completion(prompt)
+    last_exc: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            return await generate_completion(prompt)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < retries:
+                logger.warning(
+                    "generate_tool_response attempt %d/%d failed, retrying: %s",
+                    attempt + 1, retries + 1, exc,
+                )
+    raise last_exc
 
 
 # ── Ollama fallback: prompt-based tool selection ────────────────────
@@ -253,6 +271,24 @@ async def generate_with_tools(
         )
 
 
+_TOOL_ROUTING_SYSTEM_INSTRUCTION = (
+    "You are a tool-routing assistant for an enterprise chat product. Given "
+    "the user's question, decide which tool(s) to call to answer it fully.\n"
+    "- If the question names or clearly concerns MULTIPLE different apps or "
+    "data sources in the same message (e.g. \"what's my latest GitHub commit "
+    "and what email did I get after that\", \"check my Jira tickets and my "
+    "calendar\"), call ALL of the relevant tools together in this same turn. "
+    "Never silently answer only part of a multi-part question by picking "
+    "just one of the tools it needs.\n"
+    "- If the question only concerns one app or data source, call just that "
+    "one tool.\n"
+    "- If the question is broad and doesn't name a specific app (e.g. "
+    "\"what's my priority today\", \"give me an overview of my day\"), call "
+    "the single cross-cutting overview tool instead of the individual "
+    "per-app tools."
+)
+
+
 def _generate_with_tools_gemini(
     query: str,
     tool_schemas: list[dict],
@@ -275,6 +311,7 @@ def _generate_with_tools_gemini(
             model=settings.GEMINI_MODEL,
             contents=query,
             config=types.GenerateContentConfig(
+                system_instruction=_TOOL_ROUTING_SYSTEM_INSTRUCTION,
                 tools=[tools],
                 temperature=0.1,
             ),
