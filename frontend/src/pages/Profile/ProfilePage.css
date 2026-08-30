@@ -167,6 +167,7 @@
   align-items: center;
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-md);
+  border-bottom: 1px solid var(--border-color);
   transition: background-color var(--transition-fast);
   gap: var(--space-6);
 }
