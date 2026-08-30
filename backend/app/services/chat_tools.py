@@ -10,6 +10,7 @@ briefing_service.py — broader-scoped variants built for chat, separate from
 the narrow "_briefing" functions the dashboard's daily briefing still uses
 unchanged (e.g. gmail briefing = unread-only; gmail recent = read+unread).
 """
+import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +36,26 @@ logger = logging.getLogger("eaios.chat_tools")
 # ── TOOL SCHEMAS (Gemini function declaration format) ────────────────
 
 TOOL_SCHEMAS = [
+    {
+        "name": "get_priority_overview",
+        "description": (
+            "Get a single cross-cutting summary pulled from ALL of the user's "
+            "connected apps at once — Gmail, Google Calendar, Jira, GitHub, Google "
+            "Drive, and Slack — combined together. Use this tool ONLY when the "
+            "question is broad and spans multiple apps at once, e.g. 'what's on "
+            "my priority today', 'what should I focus on', 'what's on my plate', "
+            "'give me an overview of my day', 'catch me up', or any question "
+            "asking generally what's important right now without naming one "
+            "specific app. Do NOT use this when the user names a specific app or "
+            "asks about only one thing (emails, just Jira, just their calendar, "
+            "etc.) — use that app's own tool instead for those."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
     {
         "name": "get_gmail_briefing",
         "description": (
@@ -143,6 +164,7 @@ TOOL_SCHEMAS = [
 
 # Map tool names to their source labels for the ChatResponse.source field
 TOOL_SOURCE_MAP = {
+    "get_priority_overview": "overview",
     "get_gmail_briefing": "gmail",
     "get_jira_briefing": "jira",
     "get_github_briefing": "github",
@@ -231,6 +253,27 @@ async def dispatch_tool_call(
     Tool results are formatted as data blocks, never as instructions.
     """
     source = TOOL_SOURCE_MAP.get(tool_name, "none")
+
+    if tool_name == "get_priority_overview":
+        # Fan out to every connected source in parallel — same pattern as
+        # generate_daily_briefing()'s orchestration, but covering all 6 chat
+        # tools (that function only aggregates 4, for the dashboard widget)
+        # and reusing the broader "_recent" variants so a source with no
+        # unread/overdue/today items still reports what it actually has.
+        results = await asyncio.gather(
+            get_gmail_recent(db, user),
+            get_calendar_recent(db, user),
+            get_jira_recent(db, user),
+            get_github_briefing(db, user),
+            get_drive_briefing(db, user),
+            get_slack_briefing(db, user),
+        )
+        formatted = "\n\n".join(_format_source_result(r) for r in results)
+        logger.info(
+            "tool_dispatch tool=get_priority_overview user_id=%s connected=%d/6",
+            user.id, sum(1 for r in results if r.connected),
+        )
+        return formatted, source, []
 
     if tool_name == "get_gmail_briefing":
         result: SourceResult = await get_gmail_recent(db, user)

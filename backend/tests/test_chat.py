@@ -31,6 +31,8 @@ async def fake_generate_tool_response(query: str, tool_data: str) -> str:
 
 async def fake_generate_with_tools(query: str, tool_schemas: list[dict]):
     q_lower = query.lower()
+    if any(k in q_lower for k in ["priority", "overview", "focus on", "catch me up", "my plate"]):
+        return [{"name": "get_priority_overview", "args": {"query": query}}]
     if any(k in q_lower for k in ["email", "inbox", "gmail"]):
         return [{"name": "get_gmail_briefing", "args": {"query": query}}]
     if any(k in q_lower for k in ["github", "commit", "pr", "pull request"]):
@@ -165,6 +167,92 @@ async def test_chat_tool_response_failure_never_leaks_raw_tool_data(client, monk
     assert "[GMAIL DATA" not in data["answer"]
     assert "someone@example.com" not in data["answer"]
     assert "msg999" not in data["answer"]
+
+
+@pytest.mark.asyncio
+async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeypatch, db_session):
+    """'what's on my priority today' must pull from every connected app at once
+    (Gmail, Calendar, Jira, GitHub, Drive, Slack) and combine them into a single
+    answer, not just route to one narrow tool."""
+
+    async def mock_gmail(db, user):
+        return SourceResult(
+            source="gmail", connected=True,
+            items=[BriefingItem(source="gmail", title="Urgent: contract review",
+                                 detail="From: legal@company.com", priority_hint="today")],
+        )
+
+    async def mock_calendar(db, user):
+        return SourceResult(
+            source="calendar", connected=True,
+            items=[BriefingItem(source="calendar", title="1:1 with manager",
+                                 detail="When: 14:00", priority_hint="today")],
+        )
+
+    async def mock_jira(db, user):
+        return SourceResult(
+            source="jira", connected=True,
+            items=[BriefingItem(source="jira", title="[PROJ-9] Fix login bug",
+                                 detail="Status: In Progress", priority_hint="overdue")],
+        )
+
+    async def mock_github(db, user):
+        return SourceResult(source="github", connected=False, items=[])
+
+    async def mock_drive(db, user):
+        return SourceResult(source="drive", connected=True, items=[])
+
+    async def mock_slack(db, user):
+        return SourceResult(
+            source="slack", connected=True,
+            items=[BriefingItem(source="slack", title="#eng-team",
+                                 detail="deploy is blocked on review", priority_hint="today")],
+        )
+
+    monkeypatch.setattr("app.services.chat_tools.get_gmail_recent", mock_gmail)
+    monkeypatch.setattr("app.services.chat_tools.get_calendar_recent", mock_calendar)
+    monkeypatch.setattr("app.services.chat_tools.get_jira_recent", mock_jira)
+    monkeypatch.setattr("app.services.chat_tools.get_github_briefing", mock_github)
+    monkeypatch.setattr("app.services.chat_tools.get_drive_briefing", mock_drive)
+    monkeypatch.setattr("app.services.chat_tools.get_slack_briefing", mock_slack)
+
+    token = register_and_login(client, "priorityuser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "what's on my priority today?"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "overview"
+    assert data["flagged_for_review"] is False
+    # every connected source's real content made it into the combined answer
+    assert "Urgent: contract review" in data["answer"]
+    assert "1:1 with manager" in data["answer"]
+    assert "PROJ-9" in data["answer"]
+    assert "deploy is blocked on review" in data["answer"]
+    # the disconnected source is reported as such, not silently dropped
+    assert "NOT connected" in data["answer"] or "not connected" in data["answer"].lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_priority_overview_not_triggered_by_single_app_question(client, db_session):
+    """A narrow, single-app question must still route to that app's own tool,
+    not the cross-cutting overview — the fake router only returns
+    get_priority_overview for broad keywords, so this just confirms routing
+    stays scoped via the source label."""
+    token = register_and_login(client, "narrowuser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "what's my latest email?"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["source"] == "gmail"
 
 
 @pytest.mark.asyncio
