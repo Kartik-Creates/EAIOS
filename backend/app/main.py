@@ -1,10 +1,14 @@
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.rate_limit import limiter
+
+logger = logging.getLogger("eaios.api")
 from app.routers import (
     admin,
     auth,
@@ -29,11 +33,49 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Ensure any unhandled server error returns clean JSON and includes CORS headers,
+    preventing browser-level CORS policy blocks on 500 errors.
+    """
+    logger.exception("Unhandled error on %s %s: %s", request.method, request.url.path, exc)
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"},
+    )
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+
 # Set all CORS enabled origins
-cors_origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else []
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+    "https://unifyai-zeta.vercel.app",
+    "https://eaios-ijy2.onrender.com",
+]
+
+cors_origins = list(DEFAULT_CORS_ORIGINS)
+if settings.BACKEND_CORS_ORIGINS:
+    configured = settings.BACKEND_CORS_ORIGINS if isinstance(settings.BACKEND_CORS_ORIGINS, list) else [settings.BACKEND_CORS_ORIGINS]
+    for o in configured:
+        cleaned = str(o).rstrip("/")
+        if cleaned and cleaned not in cors_origins:
+            cors_origins.append(cleaned)
+
 if settings.FRONTEND_URL:
     clean_frontend = str(settings.FRONTEND_URL).rstrip("/")
-    if clean_frontend not in cors_origins:
+    if clean_frontend and clean_frontend not in cors_origins:
         cors_origins.append(clean_frontend)
 
 app.add_middleware(
@@ -60,9 +102,6 @@ app.include_router(notifications.router, prefix=settings.API_V1_STR, tags=["noti
 
 
 
-import logging
-
-logger = logging.getLogger("eaios.security")
 
 @app.on_event("startup")
 async def startup_security_checks():

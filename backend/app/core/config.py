@@ -1,4 +1,6 @@
-from pydantic import AnyHttpUrl
+import json
+from typing import Any
+from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -8,7 +10,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # CORS
-    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] | str = [
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8000",
@@ -18,6 +20,20 @@ class Settings(BaseSettings):
         "https://unifyai-zeta.vercel.app",
         "https://eaios-ijy2.onrender.com",
     ]
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="after")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return [str(i).rstrip("/") for i in v]
+        return []
 
     # Host URLs for OAuth redirects
     BACKEND_URL: str = "http://localhost:8000"
