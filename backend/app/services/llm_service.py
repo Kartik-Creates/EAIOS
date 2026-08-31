@@ -68,25 +68,45 @@ def _generate_gemini_completion(prompt: str) -> str:
             "GEMINI_API_KEY is not configured in settings. Set GEMINI_API_KEY in your environment or .env file."
         )
 
+    model_name = settings.GEMINI_MODEL
+    # Auto-upgrade deprecated/retired Gemini models to current version
+    if model_name in ("gemini-2.0-flash", "gemini-2.5-flash"):
+        model_name = "gemini-3.6-flash"
+
     try:
         from google import genai
 
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-        )
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+            )
+        except Exception as exc:
+            if model_name != "gemini-3.6-flash":
+                logger.warning(
+                    "Gemini completion failed with %s, retrying with gemini-3.6-flash: %s",
+                    model_name,
+                    exc,
+                )
+                model_name = "gemini-3.6-flash"
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+            else:
+                raise
 
         if not response or not hasattr(response, "text") or not response.text:
             raise LLMServiceError(
-                f"Gemini API returned an empty completion (model={settings.GEMINI_MODEL})"
+                f"Gemini API returned an empty completion (model={model_name})"
             )
         return response.text.strip()
     except Exception as exc:
         if isinstance(exc, LLMServiceError):
             raise
         raise LLMServiceError(
-            f"Gemini API generation failed (model={settings.GEMINI_MODEL}): {type(exc).__name__}: {exc}"
+            f"Gemini API generation failed (model={model_name}): {type(exc).__name__}: {exc}"
         ) from exc
 
 
@@ -297,6 +317,11 @@ def _generate_with_tools_gemini(
     if not settings.GEMINI_API_KEY:
         raise LLMServiceError("GEMINI_API_KEY is not configured for tool-calling.")
 
+    model_name = settings.GEMINI_MODEL
+    # Auto-upgrade deprecated/retired Gemini models to current version
+    if model_name in ("gemini-2.0-flash", "gemini-2.5-flash"):
+        model_name = "gemini-3.6-flash"
+
     try:
         from google import genai
         from google.genai import types
@@ -307,15 +332,45 @@ def _generate_with_tools_gemini(
         declarations = _build_gemini_tool_declarations(tool_schemas)
         tools = types.Tool(function_declarations=declarations)
 
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=query,
-            config=types.GenerateContentConfig(
-                system_instruction=_TOOL_ROUTING_SYSTEM_INSTRUCTION,
-                tools=[tools],
-                temperature=0.1,
-            ),
-        )
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=query,
+                config=types.GenerateContentConfig(
+                    system_instruction=_TOOL_ROUTING_SYSTEM_INSTRUCTION,
+                    tools=[tools],
+                    temperature=0.1,
+                ),
+            )
+        except Exception as exc:
+            if model_name != "gemini-3.6-flash":
+                logger.warning(
+                    "Gemini tool-calling failed with %s, retrying with gemini-3.6-flash: %s",
+                    model_name,
+                    exc,
+                )
+                model_name = "gemini-3.6-flash"
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=query,
+                    config=types.GenerateContentConfig(
+                        system_instruction=_TOOL_ROUTING_SYSTEM_INSTRUCTION,
+                        tools=[tools],
+                        temperature=0.1,
+                    ),
+                )
+            else:
+                raise
+
+        # Check native function_calls on response if exposed by google-genai
+        if hasattr(response, "function_calls") and response.function_calls:
+            return [
+                {
+                    "name": fc.name,
+                    "args": dict(fc.args) if fc.args else {"query": query},
+                }
+                for fc in response.function_calls
+            ]
 
         # Check if the model wants to call a function
         if response.candidates and response.candidates[0].content.parts:

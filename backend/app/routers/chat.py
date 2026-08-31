@@ -251,14 +251,25 @@ async def chat(
             source="documents",
         )
 
-    answer = await generate_answer(body.query, results)
+    rag_failed = False
+    try:
+        answer = await generate_answer(body.query, results)
+    except Exception as exc:
+        logger.error("generate_answer failed, user_id=%s: %s", current_user.id, exc)
+        combined_doc_blocks = "\n\n".join(
+            f"[Source: {chunk.document_title}]\n{chunk.content}" for chunk in results
+        )
+        answer = _raw_data_fallback_answer(combined_doc_blocks)
+        rag_failed = True
+
     confidence = confidence_from_distance(results[0].distance)
 
     logger.info(
-        "chat_answered user_id=%s confidence=%.4f chunks=%d",
+        "chat_answered user_id=%s confidence=%.4f chunks=%d degraded=%s",
         current_user.id,
         confidence,
         len(results),
+        rag_failed,
     )
 
     citations = [
@@ -275,6 +286,6 @@ async def chat(
         confidence=confidence,
         citations=citations,
         conversation_id=conversation_id,
-        flagged_for_review=False,
+        flagged_for_review=rag_failed,
         source="documents",
     )
