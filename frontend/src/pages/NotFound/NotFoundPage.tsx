@@ -73,7 +73,7 @@ export const NotFoundPage = () => {
               { icon: MessageSquare, label: 'AI Assistant', route: ROUTES.CHAT },
               { icon: Search, label: 'Vector Search', route: ROUTES.SEARCH },
               { icon: Plug, label: 'Integrations', route: ROUTES.INTEGRATIONS },
-              ...(user?.role === 'admin' ? [{ icon: ShieldCheck, label: 'Admin Panel', route: ROUTES.ADMIN }] : []),
+              ...((user?.role === 'admin' || user?.role === 'manager') ? [{ icon: ShieldCheck, label: 'Admin Panel', route: ROUTES.ADMIN }] : []),
             ].map((suggestion) => (
               <motion.div
                 key={suggestion.route}

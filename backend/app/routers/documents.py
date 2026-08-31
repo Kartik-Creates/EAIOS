@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db, require_role
+from app.core.deps import get_db, require_admin_access
 from app.models.chunk import Chunk
 from app.models.user import User
 from app.schemas.document import DocumentIngestRequest, DocumentIngestResponse
@@ -16,9 +16,9 @@ router = APIRouter()
 @router.post("/documents", response_model=DocumentIngestResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_document_endpoint(
     body: DocumentIngestRequest,
-    current_admin: Annotated[User, Depends(require_role("admin"))],
+    current_admin: Annotated[User, Depends(require_admin_access)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> DocumentIngestResponse:
+):
     """Manually add a document to the Company Brain knowledge base — admin only.
 
     Runs the same chunk -> embed -> store pipeline already used by Drive sync
