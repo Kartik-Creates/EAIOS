@@ -1,8 +1,12 @@
-"""Tests for POST /api/v1/documents (manual Company Brain ingestion, admin-only).
+"""Tests for POST /api/v1/documents (manual Company Brain ingestion, admin-only),
+POST /api/v1/documents/upload (multipart file upload),
+GET /api/v1/documents (list documents),
+and DELETE /api/v1/documents/{id} (delete document and chunks).
 
 Embedding calls are mocked (no live Ollama/Gemini in this environment) —
 same pattern as test_chat.py / test_meeting.py.
 """
+import io
 import uuid
 
 import pytest
@@ -117,3 +121,141 @@ async def test_documents_ingest_missing_content_returns_422(client, db_session):
         headers=headers,
     )
     assert response.status_code == 422
+
+
+# ── File Upload, List, and Delete Tests ────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_documents_upload_txt_file_success(client, db_session):
+    token = await _make_admin(client, db_session, "admin-upload-txt@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    file_content = b"Remote work is permitted on Mondays and Fridays with manager approval."
+    files = {"file": ("Remote_Work_Guidelines.txt", io.BytesIO(file_content), "text/plain")}
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        files=files,
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Remote_Work_Guidelines.txt"
+    assert data["source"] == "manual_upload"
+    assert data["chunk_count"] >= 1
+    assert data["id"]
+
+
+@pytest.mark.asyncio
+async def test_documents_upload_docx_file_success(client, db_session):
+    import docx
+
+    token = await _make_admin(client, db_session, "admin-upload-docx@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create a real in-memory docx file
+    doc = docx.Document()
+    doc.add_paragraph("Travel Reimbursement Policy details: Per diem allowance is $50/day.")
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    files = {"file": ("Travel_Reimbursement_Policy.docx", buf, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+
+    response = client.post(
+        "/api/v1/documents/upload",
+        files=files,
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Travel_Reimbursement_Policy.docx"
+    assert data["chunk_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_documents_upload_pdf_file_success(client, db_session, monkeypatch):
+    from pypdf import PdfWriter
+
+    token = await _make_admin(client, db_session, "admin-upload-pdf@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Create in-memory PDF with text content via pypdf
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    buf = io.BytesIO()
+    writer.write(buf)
+    buf.seek(0)
+
+    # Mock extract_text_from_file for this test to ensure text is present
+    monkeypatch.setattr(
+        "app.routers.documents.extract_text_from_file",
+        lambda filename, bytes_data: "Health and wellness insurance coverage details.",
+    )
+    files = {"file": ("Healthcare_Benefits.pdf", buf, "application/pdf")}
+    response = client.post(
+        "/api/v1/documents/upload",
+        files=files,
+        headers=headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["title"] == "Healthcare_Benefits.pdf"
+
+
+@pytest.mark.asyncio
+async def test_documents_upload_empty_rejected(client, db_session):
+    token = await _make_admin(client, db_session, "admin-upload-empty@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    files = {"file": ("empty.txt", io.BytesIO(b""), "text/plain")}
+    response = client.post(
+        "/api/v1/documents/upload",
+        files=files,
+        headers=headers,
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_documents_list_endpoint(client, db_session):
+    token = await _make_admin(client, db_session, "admin-list@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Ingest a document first
+    client.post(
+        "/api/v1/documents",
+        json={"title": "Listable Document.pdf", "content": "Listable document content."},
+        headers=headers,
+    )
+
+    response = client.get("/api/v1/documents", headers=headers)
+    assert response.status_code == 200
+    docs = response.json()
+    assert isinstance(docs, list)
+    assert any(d["title"] == "Listable Document.pdf" for d in docs)
+
+
+@pytest.mark.asyncio
+async def test_documents_delete_endpoint(client, db_session):
+    token = await _make_admin(client, db_session, "admin-delete@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Ingest a document first
+    create_resp = client.post(
+        "/api/v1/documents",
+        json={"title": "To Be Deleted.pdf", "content": "Delete me."},
+        headers=headers,
+    )
+    doc_id = create_resp.json()["id"]
+
+    # Delete it
+    del_resp = client.delete(f"/api/v1/documents/{doc_id}", headers=headers)
+    assert del_resp.status_code == 204
+
+    # Verify gone from db
+    stmt = select(Document).where(Document.id == doc_id)
+    row = (await db_session.execute(stmt)).scalars().first()
+    assert row is None

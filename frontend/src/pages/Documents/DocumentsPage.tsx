@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, type DragEvent, type ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -10,18 +10,26 @@ import {
   Presentation,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  Database,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
+import { documentService, type DocumentItem } from '@/services/documentService';
 import toast from 'react-hot-toast';
 import './DocumentsPage.css';
 
-interface UploadedFile {
+interface DisplayFile {
   id: string;
-  file: File;
+  name: string;
+  size?: number;
+  type?: string;
   status: 'ready' | 'uploading' | 'uploaded' | 'failed';
-  progress: number;
+  chunkCount?: number;
+  createdAt?: string | null;
+  restrictedRole?: string | null;
 }
 
 const ACCEPTED_TYPES = {
@@ -36,7 +44,7 @@ const ACCEPTED_TYPES = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
 };
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xls', '.xlsx', '.ppt', '.pptx'];
+const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.csv', '.xls', '.xlsx', '.ppt', '.pptx', '.md', '.json'];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -52,7 +60,7 @@ const getFileExtension = (filename: string): string => {
   return filename.slice(((filename.lastIndexOf('.') - 1) >>> 0) + 2).toUpperCase();
 };
 
-const getFileIcon = (_type: string, extension: string) => {
+const getFileIcon = (extension: string) => {
   const ext = extension.toLowerCase();
   if (['xls', 'xlsx', 'csv'].includes(ext)) {
     return <FileSpreadsheet size={18} className="file-icon file-icon-spreadsheet" />;
@@ -63,36 +71,76 @@ const getFileIcon = (_type: string, extension: string) => {
   if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
     return <FileImage size={18} className="file-icon file-icon-image" />;
   }
-  if (['doc', 'docx'].includes(ext)) {
+  if (['doc', 'docx', 'pdf', 'txt', 'md'].includes(ext)) {
     return <FileText size={18} className="file-icon file-icon-document" />;
   }
   return <File size={18} className="file-icon file-icon-default" />;
 };
 
-const getStatusBadge = (status: UploadedFile['status']) => {
+const getStatusBadge = (status: DisplayFile['status']) => {
   switch (status) {
     case 'ready':
-      return <span className="file-status file-status-ready">Ready</span>;
-    case 'uploading':
-      return <span className="file-status file-status-uploading">Uploading...</span>;
     case 'uploaded':
-      return <span className="file-status file-status-uploaded"><CheckCircle2 size={12} /> Uploaded</span>;
+      return (
+        <span className="file-status file-status-uploaded">
+          <CheckCircle2 size={12} /> Ready
+        </span>
+      );
+    case 'uploading':
+      return (
+        <span className="file-status file-status-uploading">
+          <Loader2 size={12} className="animate-spin" /> Indexing...
+        </span>
+      );
     case 'failed':
-      return <span className="file-status file-status-failed"><AlertCircle size={12} /> Failed</span>;
+      return (
+        <span className="file-status file-status-failed">
+          <AlertCircle size={12} /> Failed
+        </span>
+      );
     default:
       return null;
   }
 };
 
 export const DocumentsPage = () => {
-  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [files, setFiles] = useState<DisplayFile[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
+  // Load existing indexed documents from backend
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const docs: DocumentItem[] = await documentService.getDocuments();
+      const mapped: DisplayFile[] = docs.map((doc) => ({
+        id: doc.id,
+        name: doc.title,
+        status: 'ready',
+        chunkCount: doc.chunk_count,
+        createdAt: doc.created_at,
+        restrictedRole: doc.restricted_role,
+      }));
+      setFiles(mapped);
+    } catch (err: any) {
+      console.error('Failed to load documents:', err);
+      toast.error(err.response?.data?.detail || 'Failed to load documents from knowledge base.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
   const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const isValidType = ACCEPTED_TYPES[file.type as keyof typeof ACCEPTED_TYPES] ||
+    const isValidType =
+      ACCEPTED_TYPES[file.type as keyof typeof ACCEPTED_TYPES] ||
       ACCEPTED_EXTENSIONS.includes(extension);
 
     if (!isValidType) {
@@ -106,42 +154,106 @@ export const DocumentsPage = () => {
     return { valid: true };
   }, []);
 
-  const addFiles = useCallback((newFiles: FileList | File[]) => {
-    const fileArray = Array.from(newFiles);
-    const validFiles: UploadedFile[] = [];
-
-    fileArray.forEach((file) => {
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        toast.error(`${file.name}: ${validation.error}`);
-        return;
-      }
-
-      const isDuplicate = files.some(
-        (f) => f.file.name === file.name && f.file.size === file.size
+  // Upload a single file to backend and update state
+  const uploadSingleFile = useCallback(async (file: File, tempId: string) => {
+    try {
+      const uploadedDoc = await documentService.uploadDocument(file);
+      setFiles((prev) =>
+        prev.map((item) =>
+          item.id === tempId
+            ? {
+                id: uploadedDoc.id,
+                name: uploadedDoc.title,
+                size: file.size,
+                status: 'ready',
+                chunkCount: uploadedDoc.chunk_count,
+                createdAt: uploadedDoc.created_at,
+                restrictedRole: uploadedDoc.restricted_role,
+              }
+            : item
+        )
       );
-      if (isDuplicate) {
-        toast.error(`${file.name} is already added.`);
+      toast.success(`"${file.name}" indexed and ready for AI retrieval!`);
+    } catch (err: any) {
+      console.error(`Upload error for ${file.name}:`, err);
+      setFiles((prev) =>
+        prev.map((item) => (item.id === tempId ? { ...item, status: 'failed' } : item))
+      );
+      const errMsg = err.response?.data?.detail || err.message || 'Upload and indexing failed.';
+      toast.error(`${file.name}: ${errMsg}`);
+    }
+  }, []);
+
+  const addFiles = useCallback(
+    (newFiles: FileList | File[]) => {
+      const fileArray = Array.from(newFiles);
+      const toUpload: { file: File; tempId: string }[] = [];
+
+      fileArray.forEach((file) => {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+          toast.error(`${file.name}: ${validation.error}`);
+          return;
+        }
+
+        const isDuplicate = files.some(
+          (f) => f.name.toLowerCase() === file.name.toLowerCase() && f.status !== 'failed'
+        );
+        if (isDuplicate) {
+          toast.error(`"${file.name}" is already in your knowledge base.`);
+          return;
+        }
+
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        toUpload.push({ file, tempId });
+      });
+
+      if (toUpload.length === 0) return;
+
+      // Add optimistic entries with status 'uploading'
+      const newEntries: DisplayFile[] = toUpload.map(({ file, tempId }) => ({
+        id: tempId,
+        name: file.name,
+        size: file.size,
+        status: 'uploading',
+      }));
+
+      setFiles((prev) => [...newEntries, ...prev]);
+
+      // Trigger actual uploads concurrently
+      toUpload.forEach(({ file, tempId }) => {
+        uploadSingleFile(file, tempId);
+      });
+    },
+    [files, validateFile, uploadSingleFile]
+  );
+
+  const removeFile = useCallback(
+    async (id: string, name: string) => {
+      // If it's a temporary upload that failed or is uploading, just remove locally
+      if (id.startsWith('temp-')) {
+        setFiles((prev) => prev.filter((f) => f.id !== id));
         return;
       }
 
-      validFiles.push({
-        id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file,
-        status: 'ready',
-        progress: 0,
-      });
-    });
-
-    if (validFiles.length > 0) {
-      setFiles((prev) => [...prev, ...validFiles]);
-      toast.success(`${validFiles.length} file${validFiles.length > 1 ? 's' : ''} added successfully.`);
-    }
-  }, [files, validateFile]);
-
-  const removeFile = useCallback((id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
+      setDeletingIds((prev) => new Set(prev).add(id));
+      try {
+        await documentService.deleteDocument(id);
+        setFiles((prev) => prev.filter((f) => f.id !== id));
+        toast.success(`"${name}" removed from knowledge base.`);
+      } catch (err: any) {
+        console.error('Failed to delete document:', err);
+        toast.error(err.response?.data?.detail || 'Failed to remove document.');
+      } finally {
+        setDeletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    []
+  );
 
   const handleDragEnter = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -164,25 +276,31 @@ export const DocumentsPage = () => {
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounterRef.current = 0;
+  const handleDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      dragCounterRef.current = 0;
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(e.dataTransfer.files);
-    }
-  }, [addFiles]);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        addFiles(e.dataTransfer.files);
+      }
+    },
+    [addFiles]
+  );
 
-  const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [addFiles]);
+  const handleFileSelect = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        addFiles(e.target.files);
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [addFiles]
+  );
 
   const handleBrowseClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -196,10 +314,20 @@ export const DocumentsPage = () => {
       animate="visible"
     >
       <motion.div className="documents-header" variants={staggerItem}>
-        <h1 className="documents-title">Documents</h1>
-        <p className="documents-subtitle">
-          Upload and manage your enterprise documents for AI-powered search and analysis.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 className="documents-title">Company Documents & Knowledge Base</h1>
+            <p className="documents-subtitle">
+              Upload policies, handbooks, and documentation. They are automatically chunked, embedded with pgvector, and made accessible to AI agents for search, grounding, and citing.
+            </p>
+          </div>
+          {files.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <Database size={16} style={{ color: 'var(--accent-primary)' }} />
+              <span>{files.length} document{files.length !== 1 ? 's' : ''} indexed</span>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       <motion.div
@@ -211,83 +339,129 @@ export const DocumentsPage = () => {
         onDrop={handleDrop}
       >
         <div className="upload-dropzone-icon">
-          <Upload size={40} />
+          <Upload size={36} />
         </div>
         <h3 className="upload-dropzone-title">Add your documents</h3>
-        <p className="upload-dropzone-text">
-          Drag & drop files here or
-        </p>
+        <p className="upload-dropzone-text">Drag & drop files here or</p>
         <Button variant="primary" size="md" onClick={handleBrowseClick}>
           Browse Files
         </Button>
+        <p className="upload-dropzone-formats">
+          Supported: DOCX, PDF, TXT, CSV, MD (Max 50 MB)
+        </p>
 
         <input
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx"
+          accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.md,.json"
           onChange={handleFileSelect}
           className="upload-hidden-input"
         />
       </motion.div>
 
-      <AnimatePresence>
-        {files.length > 0 && (
-          <motion.div
-            className="documents-list-section"
-            variants={staggerItem}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className="documents-list-title">Uploaded Documents</h2>
+      <motion.div className="documents-list-section" variants={staggerItem}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 className="documents-list-title">Uploaded Documents</h2>
+          {isLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <Spinner size="sm" /> Loading documents...
+            </div>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {files.length > 0 ? (
             <div className="documents-table-wrapper">
               <table className="documents-table">
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>Type</th>
-                    <th>Size</th>
+                    <th>Size / Chunks</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
-                    <motion.tr
-                      key={file.id}
-                      className="documents-table-row"
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <td className="documents-table-name">
-                        {getFileIcon(file.file.type, getFileExtension(file.file.name))}
-                        <span className="documents-table-filename">{file.file.name}</span>
-                      </td>
-                      <td>{getFileExtension(file.file.name)}</td>
-                      <td>{formatFileSize(file.file.size)}</td>
-                      <td>{getStatusBadge(file.status)}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="documents-table-remove"
-                          onClick={() => removeFile(file.id)}
-                          aria-label={`Remove ${file.file.name}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </motion.tr>
-                  ))}
+                  {files.map((file) => {
+                    const ext = getFileExtension(file.name);
+                    const isDeleting = deletingIds.has(file.id);
+                    return (
+                      <motion.tr
+                        key={file.id}
+                        className="documents-table-row"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 8 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <td className="documents-table-name">
+                          {getFileIcon(ext)}
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <span className="documents-table-filename" title={file.name}>
+                              {file.name}
+                            </span>
+                            {file.restrictedRole && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)' }}>
+                                Restricted: {file.restrictedRole.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>{ext || 'DOC'}</td>
+                        <td>
+                          {file.size !== undefined
+                            ? formatFileSize(file.size)
+                            : file.chunkCount !== undefined
+                            ? `${file.chunkCount} chunk${file.chunkCount !== 1 ? 's' : ''}`
+                            : '—'}
+                        </td>
+                        <td>{getStatusBadge(file.status)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="documents-table-remove"
+                            onClick={() => removeFile(file.id, file.name)}
+                            disabled={isDeleting || file.status === 'uploading'}
+                            aria-label={`Remove ${file.name}`}
+                            title={`Delete ${file.name}`}
+                          >
+                            {isDeleting ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </button>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ) : !isLoading ? (
+            <div
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '2.5rem',
+                textAlign: 'center',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <FileText size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.5 }} />
+              <p style={{ fontWeight: 500, margin: '0 0 0.25rem', color: 'var(--text-main)' }}>
+                No documents uploaded yet
+              </p>
+              <p style={{ fontSize: '0.85rem', margin: 0 }}>
+                Upload company documents above to allow the AI assistant to reference policies, guidelines, and procedures.
+              </p>
+            </div>
+          ) : null}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 };
