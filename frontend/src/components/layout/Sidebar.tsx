@@ -58,9 +58,11 @@ export const Sidebar = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
+
   const visibleNavItems = NAV_ITEMS.filter(
     (item) =>
-      (!item.adminOnly || user?.role === 'admin') &&
+      (!item.adminOnly || isManagerOrAdmin) &&
       item.label !== 'Profile' &&
       item.label !== 'Search'
   );

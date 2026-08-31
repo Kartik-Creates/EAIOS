@@ -58,10 +58,9 @@ async def test_admin_route_rejected_for_employee(client):
 
 
 @pytest.mark.asyncio
-async def test_admin_route_rejected_for_manager(client, db_session):
-    """A manager role must also be rejected on admin-only routes."""
+async def test_admin_route_accessible_by_manager(client, db_session):
+    """A manager role MUST be allowed on admin-protected routes."""
     import uuid
-
     from app.core.security import get_password_hash
 
     # Create user directly with role='manager'
@@ -86,7 +85,53 @@ async def test_admin_route_rejected_for_manager(client, db_session):
 
     headers = {"Authorization": f"Bearer {access_token}"}
     response = client.get("/api/v1/admin/users", headers=headers)
+    assert response.status_code == 200
+    users = response.json()
+    assert isinstance(users, list)
+
+
+@pytest.mark.asyncio
+async def test_admin_route_rejected_for_hr(client, db_session):
+    """An HR role must be rejected with 403 on admin-protected routes."""
+    import uuid
+    from app.core.security import get_password_hash
+
+    hr_user = User(
+        id=str(uuid.uuid4()),
+        email="hr@example.com",
+        full_name="HR User",
+        hashed_password=get_password_hash("securepassword"),
+        is_active=True,
+        is_superuser=False,
+        role="hr",
+        token_version=0,
+    )
+    db_session.add(hr_user)
+    await db_session.commit()
+
+    login_resp = client.post("/api/v1/auth/login", data={
+        "username": "hr@example.com", "password": "securepassword"
+    })
+    access_token = login_resp.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.get("/api/v1/admin/users", headers=headers)
     assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_registration_ignores_role_payload(client):
+    """Register payload containing 'admin' or 'manager' role must still assign 'employee' role."""
+    reg_resp = client.post("/api/v1/auth/register", json={
+        "email": "escalate@example.com",
+        "password": "securepassword",
+        "full_name": "Attacker",
+        "role": "admin"
+    })
+    assert reg_resp.status_code == 201
+    created_user = reg_resp.json()
+    assert created_user["role"] == "employee"
+
 
 
 @pytest.mark.asyncio

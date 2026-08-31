@@ -9,11 +9,13 @@ const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
 export const AdminRoute = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
+  const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
+
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.role !== 'admin' && !BYPASS_AUTH) {
+    if (!isLoading && isAuthenticated && !isManagerOrAdmin && !BYPASS_AUTH) {
       toast.error("You don't have permission to access this page.");
     }
-  }, [isLoading, isAuthenticated, user]);
+  }, [isLoading, isAuthenticated, isManagerOrAdmin]);
 
   if (isLoading) {
     return (
@@ -27,7 +29,7 @@ export const AdminRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (user?.role !== 'admin' && !BYPASS_AUTH) {
+  if (!isManagerOrAdmin && !BYPASS_AUTH) {
     return <Navigate to="/dashboard" replace />;
   }
 

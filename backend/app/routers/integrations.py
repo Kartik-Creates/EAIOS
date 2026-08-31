@@ -235,7 +235,7 @@ async def trigger_drive_sync(
     Syncing another user's Drive integration requires 'admin' role privileges.
     """
     if target_user_id and target_user_id != current_user.id:
-        if current_user.role != "admin":
+        if current_user.role not in ("admin", "manager"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions to trigger sync for another user's Drive data.",
