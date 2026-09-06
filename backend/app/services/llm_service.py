@@ -186,28 +186,23 @@ _TOOL_RESPONSE_PROMPT = (
 )
 
 
-async def generate_tool_response(query: str, tool_data: str, *, retries: int = 1) -> str:
+async def generate_tool_response(query: str, tool_data: str) -> str:
     """Generate a natural-language answer from tool execution results.
 
-    Retries once (by default) before giving up — a transient network blip or
-    a momentary rate-limit on the LLM provider shouldn't force the user to
-    manually re-ask a question that the tool data was already fetched for.
-    Raises the last exception if every attempt fails; the caller (chat.py)
-    is responsible for falling back to something safe at that point.
+    This used to retry once on failure at this level too, but that stacked
+    on top of _generate_gemini_completion()'s own retry-with-a-different-model
+    behavior one level down — for a single logical "answer this" call, a
+    failure could trigger up to 4 real Gemini requests (2 models here x 2
+    attempts down there) before finally giving up, which is most of why chat
+    got noticeably slower after both were added independently. Resilience
+    now lives in exactly one place (_generate_gemini_completion): try the
+    configured model, and if that fails, try once more with a fallback
+    model. This function just calls through and lets that single 2-attempt
+    policy do its job. If it still raises, the caller (chat.py) is
+    responsible for falling back to something safe.
     """
     prompt = _TOOL_RESPONSE_PROMPT.format(tool_data=tool_data, query=query)
-    last_exc: Exception | None = None
-    for attempt in range(retries + 1):
-        try:
-            return await generate_completion(prompt)
-        except Exception as exc:
-            last_exc = exc
-            if attempt < retries:
-                logger.warning(
-                    "generate_tool_response attempt %d/%d failed, retrying: %s",
-                    attempt + 1, retries + 1, exc,
-                )
-    raise last_exc
+    return await generate_completion(prompt)
 
 
 # ── Ollama fallback: prompt-based tool selection ────────────────────

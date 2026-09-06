@@ -170,13 +170,14 @@ async def chat(
 
         tool_response_failed = False
         try:
-            # generate_tool_response() already retries once internally before
-            # raising, so reaching this except means two consecutive attempts
-            # failed (not just one transient blip).
+            # generate_tool_response() -> generate_completion() already gets
+            # one retry-with-a-fallback-model attempt inside
+            # _generate_gemini_completion() itself, so reaching this except
+            # means that already failed twice, not just a single blip.
             answer = await generate_tool_response(body.query, combined_results)
         except Exception as exc:
             logger.error(
-                "Tool response generation failed after retry, user_id=%s source=%s: %s",
+                "Tool response generation failed, user_id=%s source=%s: %s",
                 current_user.id, source, exc,
             )
             answer = _raw_data_fallback_answer(combined_results)
