@@ -240,6 +240,30 @@ async def read_user_me(
     return current_user
 
 
+@router.get("/google/login")
+async def google_login():
+    """Initiate Google OAuth 2.0 flow for user authentication / login."""
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth is not configured.",
+        )
+    state_payload = {
+        "action": "login",
+        "provider": "google",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
+    }
+    state_jwt = jwt.encode(state_payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    redirect_uri = f"{settings.BACKEND_URL}/api/v1/auth/oauth/google/callback"
+    scopes = "openid email profile"
+    url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code"
+        f"&client_id={settings.GOOGLE_CLIENT_ID}&redirect_uri={redirect_uri}&scope={scopes}"
+        f"&state={state_jwt}&access_type=offline&prompt=select_account"
+    )
+    return RedirectResponse(url)
+
+
 @router.get("/oauth/{provider}/login")
 async def oauth_login(
     provider: str,
@@ -260,7 +284,7 @@ async def oauth_login(
 
     if provider == "google":
         client_id = settings.GOOGLE_CLIENT_ID
-        redirect_uri = "http://localhost:8000/api/v1/auth/oauth/google/callback"
+        redirect_uri = f"{settings.BACKEND_URL}/api/v1/auth/oauth/google/callback"
         scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly openid email profile"
         url = (
             f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code"
@@ -269,7 +293,7 @@ async def oauth_login(
         )
     else:  # github
         client_id = settings.GITHUB_CLIENT_ID
-        redirect_uri = "http://localhost:8000/api/v1/auth/oauth/github/callback"
+        redirect_uri = f"{settings.BACKEND_URL}/api/v1/auth/oauth/github/callback"
         scopes = "user,repo"
         url = (
             f"https://github.com/login/oauth/authorize?client_id={client_id}"
@@ -288,25 +312,17 @@ async def oauth_callback(
     error: str | None = None,
 ):
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth provider returned error: {error}",
-        )
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error={error}")
 
     try:
         payload = jwt.decode(state, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("user_id")
+        action = payload.get("action")
         provider_from_state = payload.get("provider")
-        if not user_id or provider_from_state != provider:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid OAuth state",
-            )
+        if provider_from_state != provider:
+            return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Invalid+state")
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OAuth state",
-        )
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Expired+or+invalid+state")
 
     token_data = {}
     async with httpx.AsyncClient() as client:
@@ -317,15 +333,12 @@ async def oauth_callback(
                     "code": code,
                     "client_id": settings.GOOGLE_CLIENT_ID,
                     "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                    "redirect_uri": "http://localhost:8000/api/v1/auth/oauth/google/callback",
+                    "redirect_uri": f"{settings.BACKEND_URL}/api/v1/auth/oauth/google/callback",
                     "grant_type": "authorization_code",
                 },
             )
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Google token exchange failed: {response.text}",
-                )
+                return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Google+token+exchange+failed")
             token_data = response.json()
         elif provider == "github":
             response = await client.post(
@@ -334,33 +347,72 @@ async def oauth_callback(
                     "code": code,
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
-                    "redirect_uri": "http://localhost:8000/api/v1/auth/oauth/github/callback",
+                    "redirect_uri": f"{settings.BACKEND_URL}/api/v1/auth/oauth/github/callback",
                 },
                 headers={"Accept": "application/json"},
             )
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"GitHub token exchange failed: {response.text}",
-                )
+                return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=GitHub+token+exchange+failed")
             token_data = response.json()
             if "error" in token_data:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"GitHub token exchange error: {token_data.get('error_description')}",
-                )
+                return RedirectResponse(f"{settings.FRONTEND_URL}/login?error={token_data.get('error_description')}")
         else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported OAuth provider",
-            )
+            return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Unsupported+provider")
 
     access_token = token_data.get("access_token")
     if not access_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No access token received from provider",
-        )
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=No+access+token+received")
+
+    # If this is user authentication / login flow
+    if action == "login":
+        if provider == "google":
+            async with httpx.AsyncClient() as client:
+                userinfo_res = await client.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+                if userinfo_res.status_code != 200:
+                    return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Failed+to+fetch+user+profile")
+                userinfo = userinfo_res.json()
+                email = userinfo.get("email")
+                full_name = userinfo.get("name") or userinfo.get("given_name") or (email.split("@")[0] if email else "User")
+
+                if not email:
+                    return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=No+email+returned+by+Google")
+
+                stmt = select(User).where(User.email == email)
+                res = await db.execute(stmt)
+                user = res.scalars().first()
+
+                if not user:
+                    user = User(
+                        id=str(uuid.uuid4()),
+                        email=email,
+                        full_name=full_name,
+                        hashed_password=get_password_hash(str(uuid.uuid4())),
+                        is_active=True,
+                        is_superuser=False,
+                        role="employee",
+                        token_version=0,
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+
+                if not user.is_active:
+                    return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=Inactive+account")
+
+                app_access_token = create_access_token(subject=user.id)
+                app_refresh_token, jti = create_refresh_token(subject=user.id, token_version=user.token_version)
+                await add_active_jti(user_id=user.id, jti=jti, expire_seconds=7 * 24 * 3600)
+
+                return RedirectResponse(
+                    f"{settings.FRONTEND_URL}/login?access_token={app_access_token}&refresh_token={app_refresh_token}"
+                )
+
+    # Integration linking flow (for authenticated users)
+    if not user_id:
+        return RedirectResponse(f"{settings.FRONTEND_URL}/login?error=User+session+required")
 
     refresh_token = token_data.get("refresh_token")
     expires_in = token_data.get("expires_in")
@@ -400,7 +452,7 @@ async def oauth_callback(
         db.add(db_token)
 
     await db.commit()
-    return {"status": "success", "message": f"Successfully connected to {provider}"}
+    return RedirectResponse(f"{settings.FRONTEND_URL}/integrations?status=success&provider={provider}")
 
 
 @router.post("/connections/token")
