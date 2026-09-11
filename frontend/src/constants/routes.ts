@@ -19,6 +19,8 @@ export const ROUTES = {
   ROOT:         '/',
   LOGIN:        '/login',
   REGISTER:     '/register',
+  TERMS:        '/terms',
+  PRIVACY:      '/privacy',
 
   // ── Protected routes (auth required) ──
   DASHBOARD:    '/dashboard',
@@ -46,8 +48,14 @@ export const ROUTES = {
 export interface NavItem {
   label:     string;
   path:      string;
-  icon:      string; // lucide-react icon name
+  /** Icon name (must exist in the ICON_MAP used by the component rendering the nav).
+   * Use this for sidebar nav items. */
+  icon?:      string;
+  /** When true, the item is only visible/navigable to admin users. */
   adminOnly: boolean;
+  /** When true, this item is hidden from the sidebar navigation (e.g. legal pages
+   * that are linked from the Profile / Footer dropdown instead of the main nav). */
+  hideInNav?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -104,5 +112,17 @@ export const NAV_ITEMS: NavItem[] = [
     path:      ROUTES.ADMIN,
     icon:      'ShieldCheck',
     adminOnly: true,
+  },
+  {
+    label:     'Terms & Conditions',
+    path:      ROUTES.TERMS,
+    adminOnly: false,
+    hideInNav: true,
+  },
+  {
+    label:     'Privacy Policy',
+    path:      ROUTES.PRIVACY,
+    adminOnly: false,
+    hideInNav: true,
   },
 ];

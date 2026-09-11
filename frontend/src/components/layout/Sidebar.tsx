@@ -10,10 +10,9 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronRight,
   Palette,
-  HelpCircle,
   FileText,
+  Shield,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,7 +63,9 @@ export const Sidebar = ({
     (item) =>
       (!item.adminOnly || isManagerOrAdmin) &&
       item.label !== 'Profile' &&
-      item.label !== 'Search'
+      item.label !== 'Search' &&
+      item.label !== 'Terms & Conditions' &&
+      item.label !== 'Privacy Policy'
   );
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export const Sidebar = ({
 
         <nav className="sidebar-nav" aria-label="Application pages">
           {visibleNavItems.map((item) => {
-            const Icon = ICON_MAP[item.icon];
+            const Icon = ICON_MAP[item.icon ?? ''];
             return (
               <NavLink
                 key={item.path}
@@ -177,43 +178,7 @@ export const Sidebar = ({
                 exit="exit"
               >
                 <div role="menu">
-                  <button
-                    type="button"
-                    className="profile-dropdown-header"
-                    onClick={() => navigate(ROUTES.PROFILE)}
-                    role="menuitem"
-                  >
-                    <div className="profile-dropdown-user">
-                      <div className="profile-dropdown-avatar" aria-hidden="true">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt="Profile" />
-                        ) : (
-                          <User size={20} strokeWidth={1.5} />
-                        )}
-                      </div>
-                      <div className="profile-dropdown-info">
-                        <span className="profile-dropdown-name">{user?.full_name || 'User'}</span>
-                        <span className="profile-dropdown-email">{user?.email || ''}</span>
-                      </div>
-                    </div>
-                    <div className="profile-dropdown-header-right">
-                      <ChevronRight size={12} className="text-muted" />
-                    </div>
-                  </button>
-
-                  <div className="profile-dropdown-divider" role="separator" />
-
                   <div className="profile-dropdown-menu">
-
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => toast.success('Personalization coming soon')}
-                      role="menuitem"
-                    >
-                      <Palette size={14} aria-hidden="true" />
-                      <span>Personalization</span>
-                    </button>
                     <button
                       type="button"
                       className="profile-dropdown-item"
@@ -226,23 +191,38 @@ export const Sidebar = ({
                     <button
                       type="button"
                       className="profile-dropdown-item"
+                      onClick={() => toast.success('Personalization coming soon')}
+                      role="menuitem"
+                    >
+                      <Palette size={14} aria-hidden="true" />
+                      <span>Personalization</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => navigate(ROUTES.TERMS)}
+                      role="menuitem"
+                    >
+                      <FileText size={14} aria-hidden="true" />
+                      <span>Terms & Conditions</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => navigate(ROUTES.PRIVACY)}
+                      role="menuitem"
+                    >
+                      <Shield size={14} aria-hidden="true" />
+                      <span>Privacy Policy</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
                       onClick={() => toast.success('Settings coming soon')}
                       role="menuitem"
                     >
                       <Settings size={14} aria-hidden="true" />
                       <span>Settings</span>
-                    </button>
-
-                    <div className="profile-dropdown-divider" role="separator" />
-
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => toast.success('Help coming soon')}
-                      role="menuitem"
-                    >
-                      <HelpCircle size={14} aria-hidden="true" />
-                      <span>Help</span>
                     </button>
                     <button
                       type="button"
