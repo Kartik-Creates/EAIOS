@@ -57,6 +57,8 @@ export interface NavItem {
   /** When true, this item is hidden from the sidebar navigation (e.g. legal pages
    * that are linked from the Profile / Footer dropdown instead of the main nav). */
   hideInNav?: boolean;
+  /** Key for i18n translation */
+  translationKey?: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -65,71 +67,83 @@ export const NAV_ITEMS: NavItem[] = [
     path:      ROUTES.DASHBOARD,
     icon:      'LayoutDashboard',
     adminOnly: false,
+    translationKey: 'navigation.dashboard',
   },
   {
     label:     'Chat',
     path:      ROUTES.CHAT,
     icon:      'MessageSquare',
     adminOnly: false,
+    translationKey: 'navigation.chat',
   },
   {
     label:     'Search',
     path:      ROUTES.SEARCH,
     icon:      'Search',
     adminOnly: false,
+    translationKey: 'navigation.search',
   },
   {
     label:     'Integrations',
     path:      ROUTES.INTEGRATIONS,
     icon:      'Plug',
     adminOnly: false,
+    translationKey: 'navigation.integrations',
   },
   {
     label:     'Profile',
     path:      ROUTES.PROFILE,
     icon:      'User',
     adminOnly: false,
+    translationKey: 'navigation.profile',
   },
   {
     label:     'Meeting',
     path:      ROUTES.MEETING,
     icon:      'Mic',
     adminOnly: false,
+    translationKey: 'navigation.meeting',
   },
   {
     label:     'Workflow',
     path:      ROUTES.WORKFLOW,
     icon:      'Wand2',
     adminOnly: false,
+    translationKey: 'navigation.workflow',
   },
   {
     label:     'Documents',
     path:      ROUTES.DOCUMENTS,
     icon:      'FileText',
     adminOnly: true,
+    translationKey: 'navigation.documents',
   },
   {
     label:     'Admin',
     path:      ROUTES.ADMIN,
     icon:      'ShieldCheck',
     adminOnly: true,
+    translationKey: 'navigation.admin',
   },
   {
     label:     'Terms & Conditions',
     path:      ROUTES.TERMS,
     adminOnly: false,
     hideInNav: true,
+    translationKey: 'navigation.terms',
   },
   {
     label:     'Privacy Policy',
     path:      ROUTES.PRIVACY,
     adminOnly: false,
     hideInNav: true,
+    translationKey: 'navigation.privacy',
   },
   {
     label:     'Personalization',
     path:      ROUTES.PERSONALIZATION,
     adminOnly: false,
     hideInNav: true,
+    translationKey: 'navigation.personalization',
   },
 ];

@@ -2,6 +2,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { ChatProvider } from '@/context/ChatContext';
 import { AppRoutes } from '@/routes/AppRoutes';
 
@@ -10,7 +11,8 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
-          <ChatProvider>
+          <LanguageProvider>
+            <ChatProvider>
 
           {/* Central Router controlling all Navigation */}
           <AppRoutes />
@@ -39,7 +41,8 @@ export default function App() {
             }}
           />
 
-          </ChatProvider>
+            </ChatProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

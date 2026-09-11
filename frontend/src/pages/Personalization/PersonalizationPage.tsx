@@ -7,6 +7,9 @@ import {
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
+import { useLanguage } from '@/hooks/useLanguage';
+import type { ThemePreference } from '@/context/ThemeContext';
+import type { Language } from '@/context/LanguageContext';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { ROUTES } from '@/constants/routes';
 import './personalization.css';
@@ -14,7 +17,6 @@ import './personalization.css';
 // TypeScript Definitions
 type ResponseStyle = 'concise' | 'balanced' | 'detailed';
 type ResponseTone = 'professional' | 'friendly' | 'direct';
-type ThemeMode = 'corporate-white' | 'dark' | 'system';
 
 interface UserPreferences {
   ai: {
@@ -26,10 +28,13 @@ interface UserPreferences {
     useWorkspaceContext: boolean;
   };
   appearance: {
-    theme: ThemeMode;
+    theme: ThemePreference;
   };
   language: {
-    language: string;
+    language: Language;
+    dateFormat: string;
+    timeFormat: string;
+    timezone: string;
   };
   notifications: {
     dailyBriefing: boolean;
@@ -55,6 +60,14 @@ interface UserPreferences {
   };
 }
 
+const getDetectedTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+};
+
 const DEFAULT_PREFERENCES: UserPreferences = {
   ai: {
     responseStyle: 'balanced',
@@ -68,7 +81,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     theme: 'system',
   },
   language: {
-    language: 'english',
+    language: 'en',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '12-hour',
+    timezone: getDetectedTimezone(),
   },
   notifications: {
     dailyBriefing: true,
@@ -76,7 +92,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     workflowApprovals: true,
     taskReminders: true,
     integrationAlerts: true,
-    securityAlerts: true, // Required by infosec architecture
+    securityAlerts: true,
   },
   context: {
     usePreferences: true,
@@ -139,40 +155,60 @@ const SegmentControl = ({
 );
 
 export default function PersonalizationPage() {
-  const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
 
-  // Load from local storage
-  useEffect(() => {
+  const [prefs, setPrefs] = useState<UserPreferences>(() => {
     const stored = localStorage.getItem('eaios_preferences');
     if (stored) {
       try {
-        setPrefs(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse preferences");
+        const parsed = JSON.parse(stored);
+        return {
+          ...DEFAULT_PREFERENCES,
+          ...parsed,
+          appearance: {
+            ...DEFAULT_PREFERENCES.appearance,
+            theme: theme,
+          },
+          language: {
+            ...DEFAULT_PREFERENCES.language,
+            language: language,
+            ...parsed?.language,
+          },
+        };
+      } catch {
+        // ignore fallback
       }
     }
-  }, []);
+    return {
+      ...DEFAULT_PREFERENCES,
+      appearance: { theme },
+      language: { ...DEFAULT_PREFERENCES.language, language },
+    };
+  });
+
+  // Keep local state in sync when global theme or language changes
+  useEffect(() => {
+    setPrefs((prev) => ({
+      ...prev,
+      appearance: { ...prev.appearance, theme },
+      language: { ...prev.language, language },
+    }));
+  }, [theme, language]);
 
   const handleSave = () => {
     localStorage.setItem('eaios_preferences', JSON.stringify(prefs));
-    // Also notify theme hook if appearance.theme was modified differently from global current theme.
-    // The instructions say "if the project already exposes a theme context, use it. Do NOT duplicate theme logic."
-    // We update preference state but let the user toggle global theme via the existing button,
-    // or allow them to set it specifically here and we call toggleTheme() if needed to match.
-    // Given the Topbar only has toggleTheme, we can just switch it if it differs.
-    if ((prefs.appearance.theme === 'dark' && theme === 'corporate-white') ||
-      (prefs.appearance.theme === 'corporate-white' && theme === 'dark')) {
-      toggleTheme();
-    }
-    toast.success('Preferences saved successfully');
+    toast.success(t('personalization.savedSuccess'));
   };
 
   const handleReset = () => {
-    if (window.confirm('Are you sure you want to reset all preferences to their defaults?')) {
+    if (window.confirm(t('personalization.confirmReset'))) {
       setPrefs(DEFAULT_PREFERENCES);
-      toast.success('Preferences reset to defaults');
+      setTheme('system');
+      setLanguage('en');
+      localStorage.setItem('eaios_preferences', JSON.stringify(DEFAULT_PREFERENCES));
+      toast.success(t('personalization.resetSuccess'));
     }
   };
 
@@ -190,6 +226,18 @@ export default function PersonalizationPage() {
     }));
   };
 
+  const handleThemeChange = (newThemeStr: string) => {
+    const nextTheme = newThemeStr as ThemePreference;
+    updateSection('appearance', 'theme', nextTheme);
+    setTheme(nextTheme);
+  };
+
+  const handleLanguageChange = (newLangStr: string) => {
+    const nextLang = newLangStr as Language;
+    updateSection('language', 'language', nextLang);
+    setLanguage(nextLang);
+  };
+
   return (
     <div className="personalization-page">
       <motion.div
@@ -198,10 +246,7 @@ export default function PersonalizationPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <h1 className="personalization-title">Personalization</h1>
-        <p className="personalization-subtitle">
-          Customize how EAIOS looks, responds, and works for you.
-        </p>
+        <h1 className="personalization-title">{t('personalization.title')}</h1>
       </motion.div>
 
       <motion.div
@@ -214,21 +259,21 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><Settings size={20} /></div>
             <div>
-              <h2 className="card-title">AI Preferences</h2>
-              <p className="card-subtitle">Control how EAIOS generates responses.</p>
+              <h2 className="card-title">{t('personalization.aiPrefs')}</h2>
+              <p className="card-subtitle">{t('personalization.aiPrefsDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Response Style</span>
-              <span className="pref-desc">Choose how detailed EAIOS responses should be.</span>
+              <span className="pref-label">{t('personalization.responseStyle')}</span>
+              <span className="pref-desc">{t('personalization.responseStyleDesc')}</span>
             </div>
             <SegmentControl
               options={[
-                { label: 'Concise', value: 'concise' },
-                { label: 'Balanced', value: 'balanced' },
-                { label: 'Detailed', value: 'detailed' }
+                { label: t('personalization.responseStyleConcise'), value: 'concise' },
+                { label: t('personalization.responseStyleBalanced'), value: 'balanced' },
+                { label: t('personalization.responseStyleDetailed'), value: 'detailed' }
               ]}
               value={prefs.ai.responseStyle}
               onChange={(val) => updateSection('ai', 'responseStyle', val as ResponseStyle)}
@@ -237,14 +282,14 @@ export default function PersonalizationPage() {
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Response Tone</span>
-              <span className="pref-desc">Select the personality and tone of the AI.</span>
+              <span className="pref-label">{t('personalization.responseTone')}</span>
+              <span className="pref-desc">{t('personalization.responseToneDesc')}</span>
             </div>
             <SegmentControl
               options={[
-                { label: 'Professional', value: 'professional' },
-                { label: 'Friendly', value: 'friendly' },
-                { label: 'Direct', value: 'direct' }
+                { label: t('personalization.responseToneProfessional'), value: 'professional' },
+                { label: t('personalization.responseToneFriendly'), value: 'friendly' },
+                { label: t('personalization.responseToneDirect'), value: 'direct' }
               ]}
               value={prefs.ai.responseTone}
               onChange={(val) => updateSection('ai', 'responseTone', val as ResponseTone)}
@@ -253,15 +298,15 @@ export default function PersonalizationPage() {
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Default Response Format</span>
+              <span className="pref-label">{t('personalization.defaultFormat')}</span>
             </div>
             <select
               className="pref-select"
               value={prefs.ai.responseFormat}
               onChange={(e) => updateSection('ai', 'responseFormat', e.target.value)}
-              aria-label="Default Response Format"
+              aria-label={t('personalization.defaultFormat')}
             >
-              <option value="structured">Structured</option>
+              <option value="structured">{t('personalization.formatStructured')}</option>
               <option value="plaintext">Plain Text</option>
               <option value="bulleted">Bulleted</option>
               <option value="step-by-step">Step-by-step</option>
@@ -270,13 +315,13 @@ export default function PersonalizationPage() {
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Enable AI Suggestions</span>
-              <span className="pref-desc">Show follow-up suggestions after an answer.</span>
+              <span className="pref-label">{t('personalization.enableSuggestions')}</span>
+              <span className="pref-desc">{t('personalization.enableSuggestionsDesc')}</span>
             </div>
             <Toggle
               checked={prefs.ai.enableSuggestions}
               onChange={(val) => updateSection('ai', 'enableSuggestions', val)}
-              ariaLabel="Enable AI suggestions"
+              ariaLabel={t('personalization.enableSuggestions')}
             />
           </div>
         </motion.section>
@@ -286,27 +331,27 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><Paintbrush size={20} /></div>
             <div>
-              <h2 className="card-title">Appearance</h2>
-              <p className="card-subtitle">Manage EAIOS theme and visual preferences.</p>
+              <h2 className="card-title">{t('personalization.appearance')}</h2>
+              <p className="card-subtitle">{t('personalization.appearanceDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Theme</span>
-              <span className="pref-desc">Select your preferred color theme.</span>
+              <span className="pref-label">{t('personalization.theme')}</span>
+              <span className="pref-desc">{t('personalization.themeDesc')}</span>
             </div>
             <SegmentControl
               options={[
-                { label: 'Light', value: 'corporate-white' },
-                { label: 'Dark', value: 'dark' },
+                { label: t('personalization.themeLight'), value: 'light' },
+                { label: t('personalization.themeDark'), value: 'dark' },
+                { label: t('personalization.themeSystem'), value: 'system' },
               ]}
-              value={prefs.appearance.theme === 'system' ? theme : prefs.appearance.theme}
-              onChange={(val) => {
-                updateSection('appearance', 'theme', val);
-              }}
+              value={theme}
+              onChange={handleThemeChange}
             />
           </div>
+
 
         </motion.section>
 
@@ -315,25 +360,75 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><Globe size={20} /></div>
             <div>
-              <h2 className="card-title">Language & Region</h2>
-              <p className="card-subtitle">Set your regional preferences.</p>
+              <h2 className="card-title">{t('personalization.languageRegion')}</h2>
+              <p className="card-subtitle">{t('personalization.languageRegionDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Language</span>
+              <span className="pref-label">{t('personalization.language')}</span>
             </div>
             <select
               className="pref-select"
-              value={prefs.language.language}
-              onChange={(e) => updateSection('language', 'language', e.target.value)}
-              aria-label="Language"
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              aria-label={t('personalization.language')}
             >
-              <option value="english">English</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="hi">🇮🇳 हिन्दी</option>
+              <option value="mr">🇮🇳 मराठी</option>
             </select>
           </div>
 
+          <div className="pref-row">
+            <div className="pref-info">
+              <span className="pref-label">{t('personalization.dateFormat')}</span>
+            </div>
+            <select
+              className="pref-select"
+              value={prefs.language.dateFormat}
+              onChange={(e) => updateSection('language', 'dateFormat', e.target.value)}
+              aria-label={t('personalization.dateFormat')}
+            >
+              <option value="DD/MM/YYYY">DD/MM/YYYY (e.g. 31/12/2026)</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY (e.g. 12/31/2026)</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD (e.g. 2026-12-31)</option>
+            </select>
+          </div>
+
+          <div className="pref-row">
+            <div className="pref-info">
+              <span className="pref-label">{t('personalization.timeFormat')}</span>
+            </div>
+            <select
+              className="pref-select"
+              value={prefs.language.timeFormat}
+              onChange={(e) => updateSection('language', 'timeFormat', e.target.value)}
+              aria-label={t('personalization.timeFormat')}
+            >
+              <option value="12-hour">12-hour (e.g. 2:30 PM)</option>
+              <option value="24-hour">24-hour (e.g. 14:30)</option>
+            </select>
+          </div>
+
+          <div className="pref-row">
+            <div className="pref-info">
+              <span className="pref-label">{t('personalization.timezone')}</span>
+            </div>
+            <select
+              className="pref-select"
+              value={prefs.language.timezone}
+              onChange={(e) => updateSection('language', 'timezone', e.target.value)}
+              aria-label={t('personalization.timezone')}
+            >
+              <option value={getDetectedTimezone()}>Browser Default ({getDetectedTimezone()})</option>
+              <option value="Asia/Kolkata">Asia/Kolkata (IST - UTC+5:30)</option>
+              <option value="UTC">UTC (Coordinated Universal Time)</option>
+              <option value="America/New_York">America/New_York (EST/EDT)</option>
+              <option value="Europe/London">Europe/London (GMT/BST)</option>
+            </select>
+          </div>
         </motion.section>
 
         {/* Section 4: Notifications */}
@@ -341,44 +436,44 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><Bell size={20} /></div>
             <div>
-              <h2 className="card-title">Notifications</h2>
-              <p className="card-subtitle">Manage which notifications you receive.</p>
+              <h2 className="card-title">{t('personalization.notifications')}</h2>
+              <p className="card-subtitle">{t('personalization.notificationsDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Daily AI Briefing</span>
-              <span className="pref-desc">Receive your daily AI-generated briefing.</span>
+              <span className="pref-label">{t('personalization.dailyBriefing')}</span>
+              <span className="pref-desc">{t('personalization.dailyBriefingDesc')}</span>
             </div>
             <Toggle
               checked={prefs.notifications.dailyBriefing}
               onChange={(val) => updateSection('notifications', 'dailyBriefing', val)}
-              ariaLabel="Daily AI Briefing"
+              ariaLabel={t('personalization.dailyBriefing')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Meeting Summaries</span>
-              <span className="pref-desc">Receive notifications when meeting summaries are ready.</span>
+              <span className="pref-label">{t('personalization.meetingSummaries')}</span>
+              <span className="pref-desc">{t('personalization.meetingSummariesDesc')}</span>
             </div>
             <Toggle
               checked={prefs.notifications.meetingSummaries}
               onChange={(val) => updateSection('notifications', 'meetingSummaries', val)}
-              ariaLabel="Meeting Summaries"
+              ariaLabel={t('personalization.meetingSummaries')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Security Alerts</span>
-              <span className="pref-desc">Receive important security and account notifications. (Required)</span>
+              <span className="pref-label">{t('personalization.securityAlerts')}</span>
+              <span className="pref-desc">{t('personalization.securityAlertsDesc')}</span>
             </div>
             <Toggle
               checked={prefs.notifications.securityAlerts}
-              onChange={() => toast('Security alerts are required by organizational policies.', { icon: '🛡️' })}
-              ariaLabel="Security Alerts"
+              onChange={() => toast(t('personalization.securityAlertMsg'), { icon: '🛡️' })}
+              ariaLabel={t('personalization.securityAlerts')}
             />
           </div>
         </motion.section>
@@ -388,44 +483,44 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><User size={20} /></div>
             <div>
-              <h2 className="card-title">Personal Context</h2>
-              <p className="card-subtitle">These preferences control how EAIOS uses available context within your authorized workspace permissions.</p>
+              <h2 className="card-title">{t('personalization.personalContext')}</h2>
+              <p className="card-subtitle">{t('personalization.personalContextDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Use My Preferences</span>
-              <span className="pref-desc">Allow EAIOS to use my personalization preferences when responding.</span>
+              <span className="pref-label">{t('personalization.useMyPrefs')}</span>
+              <span className="pref-desc">{t('personalization.useMyPrefsDesc')}</span>
             </div>
             <Toggle
               checked={prefs.context.usePreferences}
               onChange={(val) => updateSection('context', 'usePreferences', val)}
-              ariaLabel="Use My Preferences"
+              ariaLabel={t('personalization.useMyPrefs')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Remember Conversation Context</span>
-              <span className="pref-desc">Use relevant previous conversation context for follow-ups.</span>
+              <span className="pref-label">{t('personalization.rememberContext')}</span>
+              <span className="pref-desc">{t('personalization.rememberContextDesc')}</span>
             </div>
             <Toggle
               checked={prefs.context.conversationContext}
               onChange={(val) => updateSection('context', 'conversationContext', val)}
-              ariaLabel="Conversation Context"
+              ariaLabel={t('personalization.rememberContext')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Use Workspace Context</span>
-              <span className="pref-desc">Use authorized workspace information when relevant.</span>
+              <span className="pref-label">{t('personalization.useWorkspaceContext')}</span>
+              <span className="pref-desc">{t('personalization.useWorkspaceContextDesc')}</span>
             </div>
             <Toggle
               checked={prefs.context.workspaceContext}
               onChange={(val) => updateSection('context', 'workspaceContext', val)}
-              ariaLabel="Workspace Context"
+              ariaLabel={t('personalization.useWorkspaceContext')}
             />
           </div>
         </motion.section>
@@ -435,42 +530,42 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><MessageSquare size={20} /></div>
             <div>
-              <h2 className="card-title">Chat Preferences</h2>
-              <p className="card-subtitle">Customize your chat interface experience.</p>
+              <h2 className="card-title">{t('personalization.chatPrefs')}</h2>
+              <p className="card-subtitle">{t('personalization.chatPrefsDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Enter to Send</span>
-              <span className="pref-desc">Press Enter to send a message. (Shift+Enter for newline)</span>
+              <span className="pref-label">{t('personalization.enterToSend')}</span>
+              <span className="pref-desc">{t('personalization.enterToSendDesc')}</span>
             </div>
             <Toggle
               checked={prefs.chat.enterToSend}
               onChange={(val) => updateSection('chat', 'enterToSend', val)}
-              ariaLabel="Enter to Send"
+              ariaLabel={t('personalization.enterToSend')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Show Message Timestamps</span>
+              <span className="pref-label">{t('personalization.showTimestamps')}</span>
             </div>
             <Toggle
               checked={prefs.chat.showTimestamps}
               onChange={(val) => updateSection('chat', 'showTimestamps', val)}
-              ariaLabel="Show Message Timestamps"
+              ariaLabel={t('personalization.showTimestamps')}
             />
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Save Chat History</span>
+              <span className="pref-label">{t('personalization.saveChatHistory')}</span>
             </div>
             <Toggle
               checked={prefs.chat.saveHistory}
               onChange={(val) => updateSection('chat', 'saveHistory', val)}
-              ariaLabel="Save Chat History"
+              ariaLabel={t('personalization.saveChatHistory')}
             />
           </div>
         </motion.section>
@@ -482,8 +577,8 @@ export default function PersonalizationPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
             </div>
             <div>
-              <h2 className="card-title">Integration Context Options</h2>
-              <p className="card-subtitle">Allow EAIOS to use connected platforms to provide richer context.</p>
+              <h2 className="card-title">{t('personalization.integrationOptions')}</h2>
+              <p className="card-subtitle">{t('personalization.integrationOptionsDesc')}</p>
             </div>
           </div>
 
@@ -492,14 +587,14 @@ export default function PersonalizationPage() {
               <Box size={20} />
             </div>
             <div className="pref-info">
-              <span className="pref-label">No connections</span>
-              <span className="pref-desc">Navigate to Integrations to connect Google Workspace, Slack, Jira, etc.</span>
+              <span className="pref-label">{t('personalization.noConnections')}</span>
+              <span className="pref-desc">{t('personalization.noConnectionsDesc')}</span>
             </div>
             <button
               className="btn-reset"
               onClick={() => navigate(ROUTES.INTEGRATIONS)}
             >
-              Manage Integrations
+              {t('personalization.manageIntegrations')}
             </button>
           </div>
         </motion.section>
@@ -509,25 +604,25 @@ export default function PersonalizationPage() {
           <div className="card-header">
             <div className="card-icon"><Database size={20} /></div>
             <div>
-              <h2 className="card-title">Data & History</h2>
-              <p className="card-subtitle">Manage your local data.</p>
+              <h2 className="card-title">{t('personalization.dataHistory')}</h2>
+              <p className="card-subtitle">{t('personalization.dataHistoryDesc')}</p>
             </div>
           </div>
 
           <div className="pref-row">
             <div className="pref-info">
-              <span className="pref-label">Clear Chat History</span>
-              <span className="pref-desc">Delete all locally saved chat history.</span>
+              <span className="pref-label">{t('personalization.clearHistory')}</span>
+              <span className="pref-desc">{t('personalization.clearHistoryDesc')}</span>
             </div>
             <button
               className="btn-danger"
               onClick={() => {
-                if (window.confirm('Are you sure you want to clear your chat history?')) {
-                  toast.success('Chat history cleared');
+                if (window.confirm(t('personalization.confirmClear'))) {
+                  toast.success(t('personalization.clearedSuccess'));
                 }
               }}
             >
-              Clear History
+              {t('personalization.clearHistoryBtn')}
             </button>
           </div>
         </motion.section>
@@ -535,10 +630,10 @@ export default function PersonalizationPage() {
         {/* Action Bar */}
         <motion.div className="personalization-actions" variants={staggerItem}>
           <button className="btn-reset" onClick={handleReset}>
-            Reset to Defaults
+            {t('personalization.resetDefaults')}
           </button>
           <button className="btn-save" onClick={handleSave}>
-            Save Changes
+            {t('personalization.saveChanges')}
           </button>
         </motion.div>
 

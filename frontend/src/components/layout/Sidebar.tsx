@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatar } from '@/hooks/useAvatar';
+import { useLanguage } from '@/hooks/useLanguage';
 import { NAV_ITEMS } from '@/constants/routes';
 import { ROUTES } from '@/constants/routes';
 import { AppLogo } from '@/components/common/AppLogo';
@@ -53,6 +54,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const { user, logout } = useAuth();
   const { avatarUrl } = useAvatar(user?.id);
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -141,7 +143,9 @@ export const Sidebar = ({
                     <Icon size={20} aria-hidden="true" />
                   </motion.span>
                 )}
-                <span className="sidebar-nav-label">{item.label}</span>
+                <span className="sidebar-nav-label">
+                  {item.translationKey ? t(item.translationKey) : item.label}
+                </span>
               </NavLink>
             );
           })}
@@ -187,7 +191,7 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <User size={14} aria-hidden="true" />
-                      <span>Profile</span>
+                      <span>{t('navigation.profile')}</span>
                     </button>
                     <button
                       type="button"
@@ -199,7 +203,7 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <Palette size={14} aria-hidden="true" />
-                      <span>Personalization</span>
+                      <span>{t('navigation.personalization')}</span>
                     </button>
                     <button
                       type="button"
@@ -208,7 +212,7 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <FileText size={14} aria-hidden="true" />
-                      <span>Terms & Conditions</span>
+                      <span>{t('navigation.terms')}</span>
                     </button>
                     <button
                       type="button"
@@ -217,16 +221,16 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <Shield size={14} aria-hidden="true" />
-                      <span>Privacy Policy</span>
+                      <span>{t('navigation.privacy')}</span>
                     </button>
                     <button
                       type="button"
                       className="profile-dropdown-item"
-                      onClick={() => toast.success('Settings coming soon')}
+                      onClick={() => toast.success(t('common.loading'))}
                       role="menuitem"
                     >
                       <Settings size={14} aria-hidden="true" />
-                      <span>Settings</span>
+                      <span>{t('navigation.settings')}</span>
                     </button>
                     <button
                       type="button"
@@ -238,7 +242,7 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <LogOut size={14} aria-hidden="true" />
-                      <span>Log Out</span>
+                      <span>{t('common.logout')}</span>
                     </button>
                   </div>
                 </div>
