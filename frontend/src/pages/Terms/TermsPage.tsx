@@ -7,10 +7,7 @@ import {
   Brain,
   AlertTriangle,
   Lock,
-  RefreshCw,
-  ChevronRight,
   Server,
-  Gavel,
   Ban,
 } from 'lucide-react';
 
@@ -145,17 +142,7 @@ export const TermsPage = () => {
           Terms governing your use of the UnifyAI platform and services.
         </p>
 
-        <div className="legal-meta">
-          <span>
-            <RefreshCw size={14} />
-            Last Updated: September 2026
-          </span>
 
-          <span>
-            <Gavel size={14} />
-            Legal agreement
-          </span>
-        </div>
       </motion.section>
 
       {/* ── 01 QUICK OVERVIEW ── */}
@@ -185,7 +172,6 @@ export const TermsPage = () => {
                 <h3>{card.title}</h3>
                 <p>{card.description}</p>
 
-                <ChevronRight className="card-arrow" size={17} />
               </motion.div>
             );
           })}
@@ -602,17 +588,7 @@ export const TermsPage = () => {
       </motion.section>
 
       {/* ── FOOTER CTA ── */}
-      <motion.section className="policy-footer" variants={staggerItem}>
-        <div>
-          <span className="eyebrow">LEGAL</span>
-          <h2>Questions about these Terms?</h2>
-          <p>
-            Review the Terms carefully and contact support if you have
-            questions.
-          </p>
-        </div>
 
-      </motion.section>
     </motion.div>
   );
 };

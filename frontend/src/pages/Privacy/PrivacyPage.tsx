@@ -10,9 +10,7 @@ import {
   Eye,
   KeyRound,
   Server,
-  RefreshCw,
   Mail,
-  ChevronRight,
 } from 'lucide-react';
 
 import { staggerContainer, staggerItem } from '@/lib/motion';
@@ -129,17 +127,7 @@ export const PrivacyPage = () => {
           information across the platform.
         </p>
 
-        <div className="legal-meta">
-          <span>
-            <RefreshCw size={14} />
-            Last Updated: September 2026
-          </span>
 
-          <span>
-            <Lock size={14} />
-            Security-focused architecture
-          </span>
-        </div>
       </motion.section>
 
       {/* QUICK OVERVIEW */}
@@ -175,10 +163,6 @@ export const PrivacyPage = () => {
                 <h3>{card.title}</h3>
                 <p>{card.description}</p>
 
-                <ChevronRight
-                  className="card-arrow"
-                  size={17}
-                />
               </motion.div>
             );
           })}
@@ -264,7 +248,6 @@ export const PrivacyPage = () => {
             'Monitor rate limits and detect abuse',
             'Maintain audit logs for state-changing actions',
             'Improve reliability, performance and security',
-            'Provide support and respond to inquiries',
           ].map((item, index) => (
             <div className="usage-item" key={item}>
               <span>{String(index + 1).padStart(2, '0')}</span>
@@ -490,18 +473,7 @@ export const PrivacyPage = () => {
       </motion.section>
 
       {/* OTHER POLICIES */}
-      <motion.section className="policy-footer" variants={staggerItem}>
-        <div>
-          <span className="eyebrow">LEGAL</span>
-          <h2>Questions about your privacy?</h2>
-          <p>
-            Review the policy periodically for updates or contact support
-            through the UnifyAI platform.
-          </p>
-        </div>
 
-
-      </motion.section>
 
     </motion.div>
   );
