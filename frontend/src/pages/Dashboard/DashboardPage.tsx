@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/hooks/useLanguage';
 import { integrationsService } from '@/services/integrationsService';
 import {
   dashboardService,
@@ -35,15 +36,16 @@ import { ROUTES } from '@/constants/routes';
 import { staggerContainer, staggerItem, fadeInUpVariants } from '@/lib/motion';
 import './DashboardPage.css';
 
-const getGreeting = (): string => {
+const getGreeting = (t: (key: string) => string): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
+  if (hour < 12) return t('dashboard.greetingMorning');
+  if (hour < 18) return t('dashboard.greetingAfternoon');
+  return t('dashboard.greetingEvening');
 };
 
-const getCurrentDate = (): string => {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+const getCurrentDate = (lang: string): string => {
+  const locale = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-US';
+  return new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
 const decodeEntities = (text: string): string => {
@@ -112,6 +114,7 @@ const getActivityIconComponent = (type: string) => {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
 
   // Integrations state
@@ -211,7 +214,7 @@ export const DashboardPage = () => {
     try {
       setIsDisconnecting(true);
       await integrationsService.disconnectConnection(selectedDisconnectProvider);
-      toast.success(`Disconnected ${selectedDisconnectProvider}`);
+      toast.success(`${t('common.disconnected')} ${selectedDisconnectProvider}`);
       setSelectedDisconnectProvider(null);
       fetchConnections();
       fetchBriefingData();
@@ -250,8 +253,8 @@ export const DashboardPage = () => {
       <motion.header className="dashboard-header-compact" variants={staggerItem}>
         <div className="header-top">
           <div>
-            <h1 className="dashboard-greeting">{getGreeting()}, {userName}</h1>
-            <p className="dashboard-date">{getCurrentDate()}</p>
+            <h1 className="dashboard-greeting">{getGreeting(t)}, {userName}</h1>
+            <p className="dashboard-date">{getCurrentDate(language)}</p>
           </div>
         </div>
       </motion.header>
@@ -260,7 +263,7 @@ export const DashboardPage = () => {
       <motion.section className="priorities-card-compact" variants={staggerItem}>
         <div className="priorities-header">
           <div className="flex items-center gap-2">
-            <h2>Today's Priorities</h2>
+            <h2>{t('dashboard.todayPriorities')}</h2>
             {erroredSources.length > 0 && (
               <Badge variant="yellow" className="text-xs flex items-center gap-1">
                 <AlertTriangle size={12} />
@@ -273,7 +276,7 @@ export const DashboardPage = () => {
             className="priorities-link text-xs cursor-pointer hover:underline text-accent"
             onClick={() => setIsFullBriefingOpen(true)}
           >
-            View Full Briefing →
+            {t('dashboard.viewFullBriefing')}
           </button>
         </div>
 
@@ -358,7 +361,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : openTicketsCount}</span>
-              <span className="stat-label">Open Tickets</span>
+              <span className="stat-label">{t('dashboard.openTickets')}</span>
             </div>
           </MotionCard>
         </motion.div>
@@ -369,7 +372,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : unreadMessagesCount}</span>
-              <span className="stat-label">Unread Messages</span>
+              <span className="stat-label">{t('dashboard.unreadMessages')}</span>
             </div>
           </MotionCard>
         </motion.div>
@@ -380,7 +383,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : pendingReviewsCount}</span>
-              <span className="stat-label">Pending Reviews</span>
+              <span className="stat-label">{t('dashboard.pendingReviews')}</span>
             </div>
           </MotionCard>
         </motion.div>

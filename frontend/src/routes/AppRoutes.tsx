@@ -20,6 +20,9 @@ const MeetingPage      = lazy(() => import('@/pages/Meeting/MeetingPage'));
 const WorkflowPage     = lazy(() => import('@/pages/Workflow/WorkflowPage'));
 const DocumentsPage    = lazy(() => import('@/pages/Documents/DocumentsPage'));
 const NotFoundPage     = lazy(() => import('@/pages/NotFound/NotFoundPage'));
+const TermsPage       = lazy(() => import('@/pages/Terms/TermsPage'));
+const PrivacyPage     = lazy(() => import('@/pages/Privacy/PrivacyPage'));
+const PersonalizationPage = lazy(() => import('@/pages/Personalization/PersonalizationPage'));
 
 // Full-screen loading fallback used by Suspense during lazy chunk loading
 const PageLoader = () => (
@@ -47,6 +50,9 @@ export const AppRoutes = () => {
             <Route path={ROUTES.PROFILE}      element={<ProfilePage />} />
             <Route path={ROUTES.MEETING}      element={<MeetingPage />} />
             <Route path={ROUTES.WORKFLOW}     element={<ErrorBoundary><WorkflowPage /></ErrorBoundary>} />
+            <Route path={ROUTES.TERMS}        element={<TermsPage />} />
+            <Route path={ROUTES.PRIVACY}      element={<PrivacyPage />} />
+            <Route path={ROUTES.PERSONALIZATION} element={<PersonalizationPage />} />
           </Route>
         </Route>
 

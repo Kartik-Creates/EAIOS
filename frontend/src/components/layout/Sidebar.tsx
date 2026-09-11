@@ -10,10 +10,9 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronRight,
   Palette,
-  HelpCircle,
   FileText,
+  Shield,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatar } from '@/hooks/useAvatar';
+import { useLanguage } from '@/hooks/useLanguage';
 import { NAV_ITEMS } from '@/constants/routes';
 import { ROUTES } from '@/constants/routes';
 import { AppLogo } from '@/components/common/AppLogo';
@@ -54,6 +54,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const { user, logout } = useAuth();
   const { avatarUrl } = useAvatar(user?.id);
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -64,7 +65,10 @@ export const Sidebar = ({
     (item) =>
       (!item.adminOnly || isManagerOrAdmin) &&
       item.label !== 'Profile' &&
-      item.label !== 'Search'
+      item.label !== 'Search' &&
+      item.label !== 'Terms & Conditions' &&
+      item.label !== 'Privacy Policy' &&
+      item.label !== 'Personalization'
   );
 
   useEffect(() => {
@@ -118,7 +122,7 @@ export const Sidebar = ({
 
         <nav className="sidebar-nav" aria-label="Application pages">
           {visibleNavItems.map((item) => {
-            const Icon = ICON_MAP[item.icon];
+            const Icon = ICON_MAP[item.icon ?? ''];
             return (
               <NavLink
                 key={item.path}
@@ -139,7 +143,9 @@ export const Sidebar = ({
                     <Icon size={20} aria-hidden="true" />
                   </motion.span>
                 )}
-                <span className="sidebar-nav-label">{item.label}</span>
+                <span className="sidebar-nav-label">
+                  {item.translationKey ? t(item.translationKey) : item.label}
+                </span>
               </NavLink>
             );
           })}
@@ -177,43 +183,7 @@ export const Sidebar = ({
                 exit="exit"
               >
                 <div role="menu">
-                  <button
-                    type="button"
-                    className="profile-dropdown-header"
-                    onClick={() => navigate(ROUTES.PROFILE)}
-                    role="menuitem"
-                  >
-                    <div className="profile-dropdown-user">
-                      <div className="profile-dropdown-avatar" aria-hidden="true">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt="Profile" />
-                        ) : (
-                          <User size={20} strokeWidth={1.5} />
-                        )}
-                      </div>
-                      <div className="profile-dropdown-info">
-                        <span className="profile-dropdown-name">{user?.full_name || 'User'}</span>
-                        <span className="profile-dropdown-email">{user?.email || ''}</span>
-                      </div>
-                    </div>
-                    <div className="profile-dropdown-header-right">
-                      <ChevronRight size={12} className="text-muted" />
-                    </div>
-                  </button>
-
-                  <div className="profile-dropdown-divider" role="separator" />
-
                   <div className="profile-dropdown-menu">
-
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => toast.success('Personalization coming soon')}
-                      role="menuitem"
-                    >
-                      <Palette size={14} aria-hidden="true" />
-                      <span>Personalization</span>
-                    </button>
                     <button
                       type="button"
                       className="profile-dropdown-item"
@@ -221,28 +191,46 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <User size={14} aria-hidden="true" />
-                      <span>Profile</span>
+                      <span>{t('navigation.profile')}</span>
                     </button>
                     <button
                       type="button"
                       className="profile-dropdown-item"
-                      onClick={() => toast.success('Settings coming soon')}
+                      onClick={() => {
+                        navigate(ROUTES.PERSONALIZATION);
+                        setIsProfileOpen(false);
+                      }}
+                      role="menuitem"
+                    >
+                      <Palette size={14} aria-hidden="true" />
+                      <span>{t('navigation.personalization')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => navigate(ROUTES.TERMS)}
+                      role="menuitem"
+                    >
+                      <FileText size={14} aria-hidden="true" />
+                      <span>{t('navigation.terms')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => navigate(ROUTES.PRIVACY)}
+                      role="menuitem"
+                    >
+                      <Shield size={14} aria-hidden="true" />
+                      <span>{t('navigation.privacy')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => toast.success(t('common.loading'))}
                       role="menuitem"
                     >
                       <Settings size={14} aria-hidden="true" />
-                      <span>Settings</span>
-                    </button>
-
-                    <div className="profile-dropdown-divider" role="separator" />
-
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => toast.success('Help coming soon')}
-                      role="menuitem"
-                    >
-                      <HelpCircle size={14} aria-hidden="true" />
-                      <span>Help</span>
+                      <span>{t('navigation.settings')}</span>
                     </button>
                     <button
                       type="button"
@@ -254,7 +242,7 @@ export const Sidebar = ({
                       role="menuitem"
                     >
                       <LogOut size={14} aria-hidden="true" />
-                      <span>Log Out</span>
+                      <span>{t('common.logout')}</span>
                     </button>
                   </div>
                 </div>
