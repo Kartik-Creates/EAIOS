@@ -65,7 +65,8 @@ export const Sidebar = ({
       item.label !== 'Profile' &&
       item.label !== 'Search' &&
       item.label !== 'Terms & Conditions' &&
-      item.label !== 'Privacy Policy'
+      item.label !== 'Privacy Policy' &&
+      item.label !== 'Personalization'
   );
 
   useEffect(() => {
@@ -191,7 +192,10 @@ export const Sidebar = ({
                     <button
                       type="button"
                       className="profile-dropdown-item"
-                      onClick={() => toast.success('Personalization coming soon')}
+                      onClick={() => {
+                        navigate(ROUTES.PERSONALIZATION);
+                        setIsProfileOpen(false);
+                      }}
                       role="menuitem"
                     >
                       <Palette size={14} aria-hidden="true" />

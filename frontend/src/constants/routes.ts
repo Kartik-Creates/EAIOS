@@ -31,6 +31,7 @@ export const ROUTES = {
   MEETING:      '/meeting',
   WORKFLOW:     '/workflow',
   DOCUMENTS:    '/documents',
+  PERSONALIZATION: '/personalization',
 
   // ── Admin route (auth + admin role required) ──
   ADMIN:        '/admin',
@@ -122,6 +123,12 @@ export const NAV_ITEMS: NavItem[] = [
   {
     label:     'Privacy Policy',
     path:      ROUTES.PRIVACY,
+    adminOnly: false,
+    hideInNav: true,
+  },
+  {
+    label:     'Personalization',
+    path:      ROUTES.PERSONALIZATION,
     adminOnly: false,
     hideInNav: true,
   },
