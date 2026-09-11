@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Lock,
@@ -16,7 +15,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-import { ROUTES } from '@/constants/routes';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import './legal.css';
 
@@ -121,14 +119,6 @@ export const PrivacyPage = () => {
     >
       {/* HERO */}
       <motion.section className="legal-hero" variants={staggerItem}>
-        <Link to={ROUTES.ROOT} className="legal-back">
-          ← Back to UnifyAI
-        </Link>
-
-        <div className="legal-badge">
-          <ShieldCheck size={15} />
-          Privacy & Security
-        </div>
 
         <h1 className="legal-title">
           Privacy Policy
@@ -510,17 +500,9 @@ export const PrivacyPage = () => {
           </p>
         </div>
 
-        <Link to={ROUTES.ROOT} className="policy-button">
-          Back to UnifyAI
-          <ChevronRight size={17} />
-        </Link>
+
       </motion.section>
 
-      <motion.nav className="legal-bottom-nav" variants={staggerItem}>
-        <Link to={ROUTES.ROOT}>
-          ← Back to UnifyAI
-        </Link>
-      </motion.nav>
     </motion.div>
   );
 };

@@ -1,9 +1,132 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '@/constants/routes';
-import { staggerContainer, staggerItem } from '@/lib/motion';
-import './legal.css';
+import {
+  FileText,
+  Shield,
+  UserCheck,
+  Plug,
+  Brain,
+  AlertTriangle,
+  Lock,
+  RefreshCw,
+  ChevronRight,
+  Server,
+  Gavel,
+  Ban,
+} from 'lucide-react';
 
+import { staggerContainer, staggerItem } from '@/lib/motion';
+import '../Privacy/legal.css';
+
+/* ─────────────────────────────────────────────
+   Quick-overview cards (top of page)
+───────────────────────────────────────────── */
+const overviewCards = [
+  {
+    icon: Shield,
+    title: 'Platform Use',
+    description: 'Guidelines for accessing and using the UnifyAI platform.',
+  },
+  {
+    icon: UserCheck,
+    title: 'Account Responsibility',
+    description:
+      'You are responsible for maintaining the security and accuracy of your account.',
+  },
+  {
+    icon: Plug,
+    title: 'Connected Services',
+    description:
+      'Connected integrations operate according to their permissions and provider terms.',
+  },
+  {
+    icon: Ban,
+    title: 'Acceptable Use',
+    description:
+      'Use the platform responsibly and only for authorized business purposes.',
+  },
+];
+
+/* ─────────────────────────────────────────────
+   Account responsibility items
+───────────────────────────────────────────── */
+const accountItems = [
+  {
+    icon: UserCheck,
+    title: 'Account Security',
+    description:
+      'You are responsible for maintaining the security of your account credentials.',
+  },
+  {
+    icon: Lock,
+    title: 'Accurate Information',
+    description: 'Provide accurate and up-to-date registration information.',
+  },
+  {
+    icon: Shield,
+    title: 'Credential Protection',
+    description:
+      'Do not share credentials or allow unauthorized access to your account.',
+  },
+  {
+    icon: AlertTriangle,
+    title: 'Breach Notification',
+    description:
+      'Notify UnifyAI immediately of any suspected unauthorized use of your account.',
+  },
+];
+
+/* ─────────────────────────────────────────────
+   Acceptable use list
+───────────────────────────────────────────── */
+const acceptableUseItems = [
+  { icon: Shield, title: 'Authorized Access', description: 'Access only data and systems you are authorized to access.' },
+  { icon: Ban, title: 'No Abuse', description: 'Do not attempt to disrupt, overload, or impair platform services.' },
+  { icon: Lock, title: 'No Unauthorized Data Access', description: 'Do not attempt to access, retrieve or export data beyond your permissions.' },
+  { icon: AlertTriangle, title: 'No Malicious Activity', description: 'Do not introduce malware, spam, or other harmful content.' },
+];
+
+const integrations = ['Gmail', 'Google Drive', 'GitHub', 'Slack', 'Jira'];
+
+const thirdPartyServices = [
+  'Google',
+  'GitHub',
+  'Slack',
+  'Atlassian / Jira',
+  'Vercel',
+  'Render',
+  'Supabase',
+  'Upstash',
+];
+
+/* ─────────────────────────────────────────────
+   Usage items (numbered list)
+───────────────────────────────────────────── */
+const platformUseItems = [
+  'Provide, operate and maintain the UnifyAI platform',
+  'Enable AI-powered search, retrieval and workflow automation',
+  'Retrieve information from connected integrations',
+  'Generate AI-powered insights and briefings',
+  'Maintain secure authentication and session management',
+  'Monitor rate limits and detect misuse',
+  'Enforce role-based access controls',
+  'Maintain audit logs for accountability',
+  'Provide technical support and respond to inquiries',
+  'Improve platform reliability and security',
+];
+
+/* ─────────────────────────────────────────────
+   IP items
+───────────────────────────────────────────── */
+const ipItems = [
+  { icon: FileText, title: 'Platform IP', description: 'All software, code, designs and branding of UnifyAI are owned by UnifyAI.' },
+  { icon: Shield, title: 'Your Content', description: 'You retain ownership of content you provide to the platform.' },
+  { icon: Brain, title: 'AI Outputs', description: 'AI-generated responses are provided for your use but remain subject to these Terms.' },
+  { icon: Server, title: 'Feedback', description: 'Any feedback you submit may be used to improve UnifyAI without obligation.' },
+];
+
+/* ─────────────────────────────────────────────
+   Component
+───────────────────────────────────────────── */
 export const TermsPage = () => {
   return (
     <motion.div
@@ -12,203 +135,484 @@ export const TermsPage = () => {
       initial="hidden"
       animate="visible"
     >
-      <motion.header className="legal-header" variants={staggerItem}>
+      {/* ── HERO ── */}
+      <motion.section className="legal-hero" variants={staggerItem}>
+
+
         <h1 className="legal-title">Terms &amp; Conditions</h1>
+
         <p className="legal-subtitle">
           Terms governing your use of the UnifyAI platform and services.
         </p>
-        <p className="legal-last-updated">Last Updated: September 2026</p>
-      </motion.header>
 
-      <motion.nav className="legal-nav" variants={staggerItem}>
-        <Link to={ROUTES.ROOT} className="legal-back">
-          ← Back to UnifyAI
-        </Link>
-      </motion.nav>
+        <div className="legal-meta">
+          <span>
+            <RefreshCw size={14} />
+            Last Updated: September 2026
+          </span>
 
-      <motion.div className="legal-content" variants={staggerContainer}>
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>1. Acceptance of Terms</h2>
+          <span>
+            <Gavel size={14} />
+            Legal agreement
+          </span>
+        </div>
+      </motion.section>
+
+      {/* ── 01 QUICK OVERVIEW ── */}
+      <motion.section className="legal-overview" variants={staggerItem}>
+        <div className="section-heading">
+          <span>01</span>
+          <div>
+            <h2>Terms at a Glance</h2>
+            <p>The key principles governing your use of UnifyAI.</p>
+          </div>
+        </div>
+
+        <div className="privacy-card-grid">
+          {overviewCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <motion.div
+                key={card.title}
+                className="privacy-card"
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="privacy-card-icon">
+                  <Icon size={21} />
+                </div>
+
+                <h3>{card.title}</h3>
+                <p>{card.description}</p>
+
+                <ChevronRight className="card-arrow" size={17} />
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      {/* ── 02 INTRODUCTION ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>02</span>
+          <div>
+            <h2>Introduction</h2>
+            <p>Our agreement with you as a user of UnifyAI.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
           <p>
-            By accessing or using the UnifyAI platform, including all associated applications,
-            websites, and services (collectively, the "Service"), you agree to be bound by these
-            Terms and Conditions. If you do not agree to these terms, do not use the Service.
+            These Terms &amp; Conditions govern your access to and use of the
+            UnifyAI platform. By using UnifyAI you agree to be bound by these
+            Terms. If you do not agree, please do not use the platform.
+            UnifyAI is an enterprise AI assistant platform designed to help
+            organizations access information across connected services using
+            AI-powered search, retrieval and workflow automation.
           </p>
-        </motion.section>
+        </div>
+      </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>2. Description of Service</h2>
+      {/* ── 03 ELIGIBILITY ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>03</span>
+          <div>
+            <h2>Eligibility</h2>
+            <p>Who may use the UnifyAI platform.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
           <p>
-            UnifyAI is an AI-native enterprise platform that connects your existing workplace
-            tools — Gmail, Slack, Google Drive, GitHub, and Jira — into a single intelligent interface.
-            The Service provides AI-powered search, question answering with source citations, daily
-            briefings, meeting intelligence, workflow automation, and an AI transparency dashboard,
-            all built on a role-based access control system.
+            UnifyAI is intended for authorized business and organizational
+            users. You must be at least 18 years of age or the age of majority
+            in your jurisdiction to use the platform. Access is granted through
+            organizational accounts and subject to the permissions assigned by
+            your organization's administrators.
           </p>
-        </motion.section>
+        </div>
+      </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>3. User Responsibilities</h2>
-          <p>You are responsible for:</p>
-          <ul>
-            <li>
-              <strong>Maintaining the security</strong> of your account credentials and notifying
-              UnifyAI immediately of any unauthorized use.
-            </li>
-            <li>
-              <strong>Providing accurate information</strong> during registration and keeping it
-              updated.
-            </li>
-            <li>
-              <strong>Using the Service only</strong> in accordance with applicable laws and these
-              Terms.
-            </li>
-            <li>
-              <strong>Ensuring authorization</strong> before connecting any third-party service
-              (e.g., Gmail, Google Drive, GitHub, Slack, Jira) and accessing data through those
-              integrations.
-            </li>
-            <li>
-              <strong>Reviewing AI-generated content</strong> before relying on it for important
-              decisions.
-            </li>
-          </ul>
-        </motion.section>
+      {/* ── 04 ACCOUNT REGISTRATION ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>04</span>
+          <div>
+            <h2>Account Registration</h2>
+            <p>Your responsibilities when creating and maintaining an account.</p>
+          </div>
+        </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>4. Account and Authentication</h2>
-          <p>
-            Access to most features requires registration and authentication. UnifyAI uses
-            secure authentication mechanisms to protect your account. You must be at least 18 years
-            old to create an account. Organizations may control user access, roles, and permissions
-            through administrative features.
-          </p>
-        </motion.section>
+        <div className="data-grid">
+          {accountItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                className="data-card"
+                key={item.title}
+                whileHover={{ y: -4 }}
+              >
+                <div className="data-icon">
+                  <Icon size={19} />
+                </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>5. Acceptable Use</h2>
-          <p>You must not:</p>
-          <ul>
-            <li>Use the Service for any unlawful purpose or in violation of these Terms.</li>
-            <li>Attempt to gain unauthorized access to any portion of the Service or connected systems.</li>
-            <li>Circumvent security controls, rate limits, or authentication mechanisms.</li>
-            <li>Abuse or overload the Service or connected third-party integrations.</li>
-            <li>Interfere with or disrupt the operation of the Service.</li>
-            <li>Upload, access, or process information you are not authorized to use.</li>
-            <li>Reverse engineer, decompile, or attempt to extract source code.</li>
-            <li>Use the Service to generate content that is unlawful, harmful, or misleading.</li>
-          </ul>
-        </motion.section>
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>6. Data and User Content</h2>
-          <p>
-            You retain ownership of your content. UnifyAI processes information only to provide the
-            Service. Any data accessed through connected integrations (Gmail, Drive, GitHub, Slack,
-            Jira) remains the property of your organization and is subject to the permissions you
-            grant during the integration setup.
-          </p>
-        </motion.section>
+      {/* ── 05 USE OF THE PLATFORM ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>05</span>
+          <div>
+            <h2>Use of the Platform</h2>
+            <p>Permitted purposes for using UnifyAI.</p>
+          </div>
+        </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>7. Third-Party Integrations and Services</h2>
-          <p>
-            The Service integrates with Gmail, Google Drive, GitHub, Slack, and Jira through OAuth.
-            These services are governed by their own terms and privacy policies. UnifyAI is not
-            responsible for the availability, accuracy, or practices of third-party services. You are
-            responsible for reviewing the permissions granted to each integration.
-          </p>
-        </motion.section>
+        <div className="usage-grid">
+          {platformUseItems.map((item, index) => (
+            <div className="usage-item" key={item}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <p>{item}</p>
+            </div>
+          ))}
+        </div>
+      </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>8. Intellectual Property</h2>
-          <p>
-            The UnifyAI platform, branding, software, and related materials are owned by UnifyAI and
-            its licensors. These Terms do not grant you any license or right to use UnifyAI
-            trademarks without prior written consent.
-          </p>
-        </motion.section>
-
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>9. AI-Generated Content</h2>
-          <div className="legal-highlight">
+      {/* ── 06 CONNECTED INTEGRATIONS ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>06</span>
+          <div>
+            <h2>Connected Integrations</h2>
             <p>
-              <strong>AI responses may contain inaccuracies.</strong> Before acting on any
-              AI-generated content, including search results, summaries, or action items, you should
-              verify the information is correct and appropriate for your situation. UnifyAI does not
-              guarantee the accuracy, completeness, or reliability of AI-generated output.
+              Terms applicable to external services connected to your account.
             </p>
           </div>
-          <p>
-            The Service is designed with safety controls, including confidence thresholds and source
-            citations, but AI-generated responses should be treated as assistive, not authoritative.
-          </p>
-        </motion.section>
+        </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>10. Workflow Automation</h2>
-          <p>
-            Certain workflows may trigger actions in connected systems. UnifyAI requires explicit
-            human confirmation for actions that can modify data or perform sensitive operations.
-            You are responsible for reviewing and approving any automated actions before they execute.
-          </p>
-        </motion.section>
+        <div className="integration-grid">
+          {integrations.map((integration) => (
+            <div className="integration-card" key={integration}>
+              <div className="integration-icon">
+                <Plug size={18} />
+              </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>11. Service Availability</h2>
-          <p>
-            UnifyAI aims to provide reliable service, but the Service is provided "as is" and "as
-            available." Scheduled maintenance, updates, integration limitations, and unforeseen
-            incidents may affect availability and performance. There is no guarantee of uninterrupted
-            service.
-          </p>
-        </motion.section>
+              <span>{integration}</span>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>12. Disclaimer</h2>
-          <p>
-            To the fullest extent permitted by law, UnifyAI disclaims all warranties, express or
-            implied, including warranties of merchantability, fitness for a particular purpose, and
-            non-infringement, to the extent permitted by applicable law. The Service is not a
-            substitute for professional advice.
-          </p>
-        </motion.section>
+              <span className="integration-status">Connected service</span>
+            </div>
+          ))}
+        </div>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>13. Limitation of Liability</h2>
+        <div className="legal-text-card">
           <p>
-            To the maximum extent permitted by applicable law, UnifyAI shall not be liable for any
-            indirect, incidental, special, consequential, or punitive damages, or any loss of data,
-            revenue, or business, arising from the use of the Service. The total liability of
-            UnifyAI shall not exceed the greater of the amounts paid by you for the Service or one
-            hundred dollars ($100). Nothing in these Terms excludes liability for gross negligence,
-            willful misconduct, or fraud.
+            When you connect services such as Gmail, Google Drive, GitHub,
+            Slack, or Jira, UnifyAI accesses those services according to the
+            permissions you grant during OAuth setup. Connected integrations
+            operate under the terms and privacy policies of their respective
+            providers. UnifyAI is not responsible for third-party service
+            availability or policy changes.
           </p>
-        </motion.section>
+        </div>
+      </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>14. Changes to Terms</h2>
+      {/* ── 07 AI-GENERATED CONTENT ── */}
+      <motion.section className="ai-section" variants={staggerItem}>
+        <div className="ai-icon">
+          <Brain size={28} />
+        </div>
+
+        <div>
+          <span className="eyebrow">AI &amp; ENTERPRISE DATA</span>
+
+          <h2>AI-Generated Content</h2>
+
           <p>
-            These Terms may be updated from time to time. Changes are effective immediately upon
-            posting. Your continued use of the Service after changes constitutes acceptance of the
-            updated Terms.
+            UnifyAI uses AI models (Google Gemini in production, Ollama for
+            local development) to generate responses based on enterprise
+            information. AI-generated responses are provided for informational
+            purposes and should be reviewed before being acted upon. UnifyAI
+            applies permission-aware filtering before enterprise content reaches
+            the AI system.
           </p>
-        </motion.section>
 
-        <motion.section className="legal-section" variants={staggerItem}>
-          <h2>15. Contact Information</h2>
+          <div className="ai-points">
+            <span>✓ Permission-aware retrieval</span>
+            <span>✓ Human override tracking</span>
+            <span>✓ Confidence monitoring</span>
+            <span>✓ Audit visibility</span>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ── 08 ENTERPRISE DATA & SECURITY ── */}
+      <motion.section
+        className="legal-section security-section"
+        variants={staggerItem}
+      >
+        <div className="section-heading">
+          <span>08</span>
+          <div>
+            <h2>Enterprise Data &amp; Security</h2>
+            <p>Security controls protecting enterprise information.</p>
+          </div>
+        </div>
+
+        <div className="security-grid">
+          <div className="security-feature">
+            <Lock size={22} />
+            <h3>Encryption</h3>
+            <p>
+              Integration credentials are protected using field-level
+              AES-256-GCM encryption.
+            </p>
+          </div>
+
+          <div className="security-feature">
+            <Shield size={22} />
+            <h3>Role-Based Access</h3>
+            <p>
+              Access to enterprise information is controlled according to user
+              roles and permissions.
+            </p>
+          </div>
+
+          <div className="security-feature">
+            <Server size={22} />
+            <h3>Protected Retrieval</h3>
+            <p>
+              Document retrieval is filtered according to permissions before
+              content reaches the AI system.
+            </p>
+          </div>
+
+          <div className="security-feature">
+            <FileText size={22} />
+            <h3>Audit Logging</h3>
+            <p>
+              State-changing actions are recorded for monitoring and
+              accountability.
+            </p>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ── IMPORTANT TERMS HIGHLIGHT ── */}
+      <motion.section className="legal-highlight" variants={staggerItem}>
+        <div className="highlight-icon">
+          <FileText size={25} />
+        </div>
+
+        <div>
+          <h3>Important</h3>
           <p>
-            For questions about these Terms, please contact us through the UnifyAI platform support
-            channels or use the contact mechanisms available within the application.
+            By using UnifyAI, users agree to comply with these Terms and use
+            the platform only for authorized business and organizational
+            purposes. Unauthorized use, misuse, or violation of these Terms may
+            result in suspension or termination of access.
           </p>
-        </motion.section>
-      </motion.div>
+        </div>
+      </motion.section>
 
-      <motion.nav className="legal-nav" variants={staggerItem}>
-        <Link to={ROUTES.ROOT} className="legal-back">
-          ← Back to UnifyAI
-        </Link>
-      </motion.nav>
+      {/* ── 09 ACCEPTABLE USE ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>09</span>
+          <div>
+            <h2>Acceptable Use</h2>
+            <p>
+              Conduct required of all users when accessing the platform.
+            </p>
+          </div>
+        </div>
+
+        <div className="data-grid">
+          {acceptableUseItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                className="data-card"
+                key={item.title}
+                whileHover={{ y: -4 }}
+              >
+                <div className="data-icon">
+                  <Icon size={19} />
+                </div>
+
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      {/* ── 10 INTELLECTUAL PROPERTY ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>10</span>
+          <div>
+            <h2>Intellectual Property</h2>
+            <p>Ownership of platform components and content.</p>
+          </div>
+        </div>
+
+        <div className="data-grid">
+          {ipItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                className="data-card"
+                key={item.title}
+                whileHover={{ y: -4 }}
+              >
+                <div className="data-icon">
+                  <Icon size={19} />
+                </div>
+
+                <div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      {/* ── 11 AVAILABILITY AND CHANGES ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>11</span>
+          <div>
+            <h2>Availability &amp; Changes</h2>
+            <p>Platform availability and our right to make changes.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
+          <p>
+            UnifyAI aims to maintain high availability but does not guarantee
+            uninterrupted access. We may update, modify or discontinue features
+            of the platform at any time. We will make reasonable efforts to
+            communicate significant changes in advance.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── 12 LIMITATION OF LIABILITY ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>12</span>
+          <div>
+            <h2>Limitation of Liability</h2>
+            <p>Scope of UnifyAI's responsibility.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
+          <p>
+            To the extent permitted by applicable law, UnifyAI is not liable
+            for indirect, incidental or consequential damages arising from use
+            of the platform. AI-generated responses are provided for
+            informational purposes only. Users are responsible for verifying
+            information before taking action based on AI outputs.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── 13 TERMINATION ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>13</span>
+          <div>
+            <h2>Termination</h2>
+            <p>Conditions under which access may be suspended or terminated.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
+          <p>
+            UnifyAI reserves the right to suspend or terminate access to the
+            platform for violations of these Terms, unauthorized use, or other
+            conduct that harms the platform or other users. Users may
+            discontinue use by disconnecting integrations and requesting account
+            deletion through support channels.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── 14 THIRD-PARTY SERVICES ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>14</span>
+          <div>
+            <h2>Third-Party Services</h2>
+            <p>External services used by or integrated with the platform.</p>
+          </div>
+        </div>
+
+        <div className="third-party-list">
+          {thirdPartyServices.map((service) => (
+            <span key={service}>{service}</span>
+          ))}
+        </div>
+
+        <div className="legal-text-card">
+          <p>
+            These services operate under their own terms and privacy policies.
+            UnifyAI is not responsible for the practices of third-party
+            providers. By connecting third-party services, you agree to their
+            respective terms.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── 15 CHANGES TO TERMS ── */}
+      <motion.section className="legal-section" variants={staggerItem}>
+        <div className="section-heading">
+          <span>15</span>
+          <div>
+            <h2>Changes to Terms</h2>
+            <p>How we communicate updates to these Terms.</p>
+          </div>
+        </div>
+
+        <div className="legal-text-card">
+          <p>
+            UnifyAI may update these Terms from time to time. Continued use of
+            the platform after changes are posted constitutes acceptance of the
+            revised Terms. We recommend reviewing these Terms periodically.
+            The "Last Updated" date at the top of this page reflects the most
+            recent revision.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ── FOOTER CTA ── */}
+      <motion.section className="policy-footer" variants={staggerItem}>
+        <div>
+          <span className="eyebrow">LEGAL</span>
+          <h2>Questions about these Terms?</h2>
+          <p>
+            Review the Terms carefully and contact support if you have
+            questions.
+          </p>
+        </div>
+
+      </motion.section>
     </motion.div>
   );
 };
