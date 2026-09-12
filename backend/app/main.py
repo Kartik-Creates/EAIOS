@@ -105,16 +105,43 @@ app.include_router(notifications.router, prefix=settings.API_V1_STR, tags=["noti
 
 @app.on_event("startup")
 async def startup_security_checks():
-    # 1. Run database auto-migrations to guarantee production DB tables exist
-    try:
-        import asyncio
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config("alembic.ini")
-        await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
-        logger.info("Database auto-migrations (alembic upgrade head) applied successfully at startup.")
-    except Exception as exc:
-        logger.warning("Database auto-migration check skipped/failed: %s", exc)
+    import os
+
+    # ---------------------------------------------------------------------------
+    # Startup Migration Guard
+    #
+    # Set RUN_MIGRATIONS_ON_STARTUP=false in your environment / .env to disable
+    # automatic Alembic migrations at server startup.
+    #
+    # WHY: Running `alembic upgrade head` on every boot adds 3–8 seconds to cold
+    # start time and can cause DB lock contention when multiple workers or
+    # replicas start simultaneously (e.g. Render, Gunicorn multi-worker deployments).
+    #
+    # RECOMMENDED PRODUCTION SETUP:
+    #   - Set RUN_MIGRATIONS_ON_STARTUP=false in production .env
+    #   - Run `alembic upgrade head` as a one-off step in your CI/CD pipeline
+    #     or as a Docker ENTRYPOINT before starting Uvicorn workers.
+    #
+    # LOCAL DEVELOPMENT:
+    #   - Leave unset or set to "true" to retain the auto-migrate-on-boot behaviour.
+    # ---------------------------------------------------------------------------
+    run_migrations = os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").strip().lower()
+    if run_migrations not in ("false", "0", "no", "off"):
+        try:
+            import asyncio
+            from alembic.config import Config
+            from alembic import command
+            alembic_cfg = Config("alembic.ini")
+            await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+            logger.info("Database auto-migrations (alembic upgrade head) applied successfully at startup.")
+        except Exception as exc:
+            logger.warning("Database auto-migration check skipped/failed: %s", exc)
+    else:
+        logger.info(
+            "Startup auto-migrations SKIPPED (RUN_MIGRATIONS_ON_STARTUP=%s). "
+            "Ensure 'alembic upgrade head' is run as part of your deployment pipeline.",
+            run_migrations,
+        )
 
     env = getattr(settings, "ENVIRONMENT", "development")
     if env != "development":

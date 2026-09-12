@@ -397,13 +397,4 @@ a:hover {
     transform: scale(1);
   }
 }
-
-/* ------------------------------------------------------------
-   LEGACY UTILITIES (kept for backward compatibility)
-   ------------------------------------------------------------ */
-.gradient-text {
-  background: var(--accent-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+
