@@ -28,6 +28,10 @@ type RGB = [number, number, number];
 
 const MAX_COLORS = 8;
 
+// Cap DPR to 1.5 to avoid excessive GPU work on high-DPI screens (e.g. 3x Retina).
+// Values above 1.5 produce negligible visual improvement for a full-screen shader.
+const MAX_DPR = 1.5;
+
 const hexToRGB = (hex: string): RGB => {
   const c = hex.replace('#', '').padEnd(6, '0');
   const r = parseInt(c.slice(0, 2), 16) / 255;
@@ -240,15 +244,26 @@ const Ferrofluid: React.FC<FerrofluidProps> = ({
   const rendererRef = useRef<Renderer | null>(null);
   const mouseTargetRef = useRef<[number, number]>([0, 0]);
   const lastTimeRef = useRef(0);
+  // Track whether the tab is hidden so we can skip rendering
+  const hiddenRef = useRef(document.hidden);
 
   useEffect(() => {
+    // Respect prefers-reduced-motion: if set, keep canvas paused (no animation)
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
     const container = containerRef.current;
     if (!container) return;
+
+    // Cap device pixel ratio to MAX_DPR (1.5) to limit GPU load on Retina screens
+    const effectiveDpr = Math.min(
+      dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
+      MAX_DPR
+    );
 
     let renderer: Renderer;
     try {
       renderer = new Renderer({
-        dpr: dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
+        dpr: effectiveDpr,
         alpha: true,
         antialias: true
       });
@@ -304,16 +319,17 @@ const Ferrofluid: React.FC<FerrofluidProps> = ({
     const mesh = new Mesh(gl, { geometry, program });
     meshRef.current = mesh;
 
+    // Use ResizeObserver for efficient size tracking — avoids polling on every frame
     const resize = () => {
       const rect = container.getBoundingClientRect();
       renderer.setSize(rect.width, rect.height);
       uniforms.iResolution.value = [gl.drawingBufferWidth, gl.drawingBufferHeight, 1];
     };
-
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(container);
 
+    // Pointer move: update the mouse uniform only when pointer actually moves
     const onPointerMove = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
       const sc = renderer.dpr || 1;
@@ -328,9 +344,23 @@ const Ferrofluid: React.FC<FerrofluidProps> = ({
       canvas.addEventListener('pointermove', onPointerMove);
     }
 
+    // Page Visibility API: pause rendering when the tab is hidden to save GPU/CPU
+    const onVisibilityChange = () => {
+      hiddenRef.current = document.hidden;
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     const loop = (t: number) => {
       rafRef.current = requestAnimationFrame(loop);
+
+      // Skip render if tab is hidden, component is explicitly paused, or reduced motion
+      if (hiddenRef.current || paused || prefersReduced) {
+        lastTimeRef.current = t;
+        return;
+      }
+
       uniforms.iTime.value = t * 0.001;
+
       if (mouseDampening > 0) {
         if (!lastTimeRef.current) lastTimeRef.current = t;
         const dt = (t - lastTimeRef.current) / 1000;
@@ -345,7 +375,8 @@ const Ferrofluid: React.FC<FerrofluidProps> = ({
       } else {
         lastTimeRef.current = t;
       }
-      if (!paused && programRef.current && meshRef.current) {
+
+      if (programRef.current && meshRef.current) {
         try {
           renderer.render({ scene: meshRef.current });
         } catch (e) {
@@ -356,8 +387,10 @@ const Ferrofluid: React.FC<FerrofluidProps> = ({
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
+      // Comprehensive cleanup: cancel animation, remove listeners, destroy GL resources
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (mouseInteraction) canvas.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       ro.disconnect();
       if (canvas.parentElement === container) {
         container.removeChild(canvas);
