@@ -10,13 +10,10 @@ import {
   User,
   Settings,
   LogOut,
-  Palette,
   FileText,
-  Shield,
   type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-hot-toast';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatar } from '@/hooks/useAvatar';
@@ -57,7 +54,9 @@ export const Sidebar = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isHelpPopupOpen, setIsHelpPopupOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const helpPopupRef = useRef<HTMLDivElement>(null);
 
   const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
 
@@ -68,33 +67,57 @@ export const Sidebar = ({
       item.label !== 'Search' &&
       item.label !== 'Terms & Conditions' &&
       item.label !== 'Privacy Policy' &&
-      item.label !== 'Personalization'
+      item.label !== 'Personalization' &&
+      item.label !== 'Settings'
   );
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsProfileOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
 
   useEffect(() => {
     if (!isHovered) {
       setIsProfileOpen(false);
+      setIsHelpPopupOpen(false);
     }
   }, [isHovered]);
+
+  // Close both popups when mobile is closed
+  useEffect(() => {
+    if (isMobileOpen) {
+      setIsProfileOpen(false);
+      setIsHelpPopupOpen(false);
+    }
+  }, [isMobileOpen]);
+
+  // Handle click-outside for Help popup only
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isHelpPopupOpen && helpPopupRef.current && !helpPopupRef.current.contains(event.target as Node)) {
+        setIsHelpPopupOpen(false);
+      }
+    };
+
+    if (isHelpPopupOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isHelpPopupOpen]);
+
+  // Handle Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileOpen(false);
+        setIsHelpPopupOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   return (
     <>
@@ -173,76 +196,103 @@ export const Sidebar = ({
             </div>
           </button>
 
+          {isProfileOpen && (
+            <motion.div
+              className="sidebar-profile-dropdown"
+              variants={dropdownVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div role="menu">
+                <div className="profile-dropdown-menu">
+                  <button
+                    type="button"
+                    className="profile-dropdown-item"
+                    onClick={() => navigate(ROUTES.PROFILE)}
+                    role="menuitem"
+                  >
+                    <User size={14} aria-hidden="true" />
+                    <span>{t('navigation.profile')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-dropdown-item"
+                    onClick={() => navigate(ROUTES.SETTINGS)}
+                    role="menuitem"
+                  >
+                    <Settings size={14} aria-hidden="true" />
+                    <span>{t('navigation.settings')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-dropdown-item"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsHelpPopupOpen(true);
+                    }}
+                    role="menuitem"
+                  >
+                    <FileText size={14} aria-hidden="true" />
+                    <span>Help</span>
+                  </button>
+                  <div className="profile-dropdown-divider" role="separator" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="profile-dropdown-item profile-dropdown-item-danger"
+                    onClick={() => {
+                      logout();
+                      setIsProfileOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    <LogOut size={14} aria-hidden="true" />
+                    <span>{t('common.logout')}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <AnimatePresence>
-            {isProfileOpen && (
+            {isHelpPopupOpen && (
               <motion.div
-                className="sidebar-profile-dropdown"
+                ref={helpPopupRef}
+                className="sidebar-help-popup"
                 variants={dropdownVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
+                onClick={(e) => e.stopPropagation()}
               >
                 <div role="menu">
                   <div className="profile-dropdown-menu">
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => navigate(ROUTES.PROFILE)}
-                      role="menuitem"
-                    >
-                      <User size={14} aria-hidden="true" />
-                      <span>{t('navigation.profile')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => {
-                        navigate(ROUTES.PERSONALIZATION);
-                        setIsProfileOpen(false);
-                      }}
-                      role="menuitem"
-                    >
-                      <Palette size={14} aria-hidden="true" />
-                      <span>{t('navigation.personalization')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => navigate(ROUTES.TERMS)}
-                      role="menuitem"
-                    >
+                    <div className="help-popup-header">
                       <FileText size={14} aria-hidden="true" />
-                      <span>{t('navigation.terms')}</span>
-                    </button>
+                      <span>Help</span>
+                    </div>
                     <button
                       type="button"
                       className="profile-dropdown-item"
-                      onClick={() => navigate(ROUTES.PRIVACY)}
-                      role="menuitem"
-                    >
-                      <Shield size={14} aria-hidden="true" />
-                      <span>{t('navigation.privacy')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="profile-dropdown-item"
-                      onClick={() => toast.success(t('common.loading'))}
-                      role="menuitem"
-                    >
-                      <Settings size={14} aria-hidden="true" />
-                      <span>{t('navigation.settings')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="profile-dropdown-item profile-dropdown-item-danger"
                       onClick={() => {
-                        logout();
-                        setIsProfileOpen(false);
+                        navigate(ROUTES.TERMS);
+                        setIsHelpPopupOpen(false);
                       }}
                       role="menuitem"
                     >
-                      <LogOut size={14} aria-hidden="true" />
-                      <span>{t('common.logout')}</span>
+                      <span>Terms of Service</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="profile-dropdown-item"
+                      onClick={() => {
+                        navigate(ROUTES.PRIVACY);
+                        setIsHelpPopupOpen(false);
+                      }}
+                      role="menuitem"
+                    >
+                      <span>Privacy Policy</span>
                     </button>
                   </div>
                 </div>

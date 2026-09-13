@@ -32,6 +32,7 @@ export const ROUTES = {
   WORKFLOW:     '/workflow',
   DOCUMENTS:    '/documents',
   PERSONALIZATION: '/personalization',
+  SETTINGS:     '/settings',
 
   // ── Admin route (auth + admin role required) ──
   ADMIN:        '/admin',
@@ -145,5 +146,12 @@ export const NAV_ITEMS: NavItem[] = [
     adminOnly: false,
     hideInNav: true,
     translationKey: 'navigation.personalization',
+  },
+  {
+    label:     'Settings',
+    path:      ROUTES.SETTINGS,
+    adminOnly: false,
+    hideInNav: true,
+    translationKey: 'navigation.settings',
   },
 ];

@@ -23,6 +23,7 @@ const NotFoundPage     = lazy(() => import('@/pages/NotFound/NotFoundPage'));
 const TermsPage       = lazy(() => import('@/pages/Terms/TermsPage'));
 const PrivacyPage     = lazy(() => import('@/pages/Privacy/PrivacyPage'));
 const PersonalizationPage = lazy(() => import('@/pages/Personalization/PersonalizationPage'));
+const SettingsPage    = lazy(() => import('@/pages/Settings/SettingsPage'));
 
 // Full-screen loading fallback used by Suspense during lazy chunk loading
 const PageLoader = () => (
@@ -45,14 +46,15 @@ export const AppRoutes = () => {
             <Route path={ROUTES.ROOT}         element={<Navigate to={ROUTES.DASHBOARD} replace />} />
             <Route path={ROUTES.DASHBOARD}    element={<DashboardPage />} />
             <Route path={ROUTES.CHAT}         element={<ChatPage />} />
-            <Route path={ROUTES.SEARCH}       element={<SearchPage />} />
             <Route path={ROUTES.INTEGRATIONS} element={<IntegrationsPage />} />
             <Route path={ROUTES.PROFILE}      element={<ProfilePage />} />
             <Route path={ROUTES.MEETING}      element={<MeetingPage />} />
             <Route path={ROUTES.WORKFLOW}     element={<ErrorBoundary><WorkflowPage /></ErrorBoundary>} />
+            <Route path={ROUTES.DOCUMENTS}    element={<DocumentsPage />} />
             <Route path={ROUTES.TERMS}        element={<TermsPage />} />
             <Route path={ROUTES.PRIVACY}      element={<PrivacyPage />} />
             <Route path={ROUTES.PERSONALIZATION} element={<PersonalizationPage />} />
+            <Route path={ROUTES.SETTINGS}     element={<SettingsPage />} />
           </Route>
         </Route>
 
