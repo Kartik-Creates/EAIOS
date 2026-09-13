@@ -17,6 +17,7 @@ import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
+import { ChangePasswordModal } from '@/pages/Profile/ChangePasswordModal';
 import './SettingsPage.css';
 
 // TypeScript Definitions
@@ -166,6 +167,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<'general' | 'personalization' | 'notifications' | 'security' | 'privacy' | 'integrations' | 'about'>('general');
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const [prefs, setPrefs] = useState<UserPreferences>(() => {
     const stored = localStorage.getItem('eaios_preferences');
@@ -616,10 +618,7 @@ export default function SettingsPage() {
               <div className="settings-actions-list">
                 <button
                   className="settings-action-item"
-                  onClick={() => {
-                    // Navigate to profile page for password change
-                    navigate(ROUTES.PROFILE);
-                  }}
+                  onClick={() => setIsPasswordModalOpen(true)}
                 >
                   <div className="settings-action-info">
                     <span>Change Password</span>
@@ -627,6 +626,11 @@ export default function SettingsPage() {
                   </div>
                   <ChevronRight size={20} />
                 </button>
+
+                <ChangePasswordModal 
+                  isOpen={isPasswordModalOpen} 
+                  onClose={() => setIsPasswordModalOpen(false)} 
+                />
 
                 <button
                   className="settings-action-item"
