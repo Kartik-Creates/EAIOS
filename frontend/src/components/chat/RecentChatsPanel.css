@@ -1,80 +1,37 @@
 /* ============================================================
-   Recent Chats Panel — Right Edge Handle + Floating Panel
+   Recent Chats Panel — Always-visible floating card on right
    ============================================================ */
 
+/* The panel is positioned absolute within .chat-workspace (position: relative) */
 .recent-chats-panel {
   position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: var(--z-topbar);
-}
+  top: 25%;
+  /* above the input area */
+  width: fit-content;
 
-/* ── Handle (no background, no border, no shadow, no card) ── */
-.recent-chats-handle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  width: 8px;
-  height: 240px;
-  padding: 8px 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.recent-chats-handle:hover {
-  opacity: 0.7;
-}
-
-.handle-line {
-  display: block;
-  width: 25px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--text-muted);
-  transition: background-color var(--transition-fast);
-}
-
-.recent-chats-handle:hover .handle-line {
-  background: var(--text-secondary);
-}
-
-.recent-chats-handle-open {
-  opacity: 0.7;
-}
-
-/* ── Floating Panel ── */
-.recent-chats-floating-panel {
-  position: absolute;
-  right: calc(100% + 4px);
-  top: 50%;
-  transform: translateY(-50%);
-  width: clamp(280px, 30vw, 320px);
-  max-height: 80vh;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(12px);
+  z-index: 10;
+  max-height: 50vh;
+  max-width: 270px;
+  left: 7%;
 }
 
 /* ── Panel Header ── */
 .recent-chats-panel-header {
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .recent-chats-panel-title {
-  font-size: var(--font-size-sm);
+  font-size: small;
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
   margin: 0;
@@ -92,9 +49,9 @@
 
 .recent-chat-item {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: transparent;
   border: none;
@@ -111,26 +68,17 @@
   background: var(--bg-hover);
 }
 
-.recent-chat-item-active {
-  background: rgba(91, 140, 255, 0.06);
-}
-
-.recent-chat-item-active:hover {
-  background: rgba(91, 140, 255, 0.1);
-}
-
 /* ── Chat Item Icon ── */
 .recent-chat-item-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
   color: var(--text-muted);
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 /* ── Chat Item Content ── */
@@ -140,22 +88,12 @@
 }
 
 .recent-chat-item-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-size: small;
+  font-weight: var(--font-weight-medium);
   color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.15rem;
-}
-
-.recent-chat-item-preview {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
 }
 
 /* ── Chat Item Meta ── */
@@ -166,7 +104,7 @@
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   flex-shrink: 0;
-  margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* ── Delete Button ── */
@@ -174,8 +112,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;
@@ -184,7 +122,6 @@
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
-  margin-top: 2px;
 }
 
 .recent-chat-item:hover .recent-chat-item-delete {
@@ -196,63 +133,30 @@
   color: var(--color-error);
 }
 
-/* ── Chat Item Arrow ── */
-.recent-chat-item-arrow {
-  color: var(--text-muted);
-  flex-shrink: 0;
-  margin-top: 2px;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.recent-chat-item:hover .recent-chat-item-arrow {
-  opacity: 1;
-}
-
 /* ── Responsive ── */
-@media (max-width: 768px) {
-  .recent-chats-floating-panel {
-    width: clamp(240px, 85vw, 320px);
-    right: auto;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    transform: none;
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-    max-height: 100vh;
-  }
-
+@media (max-width: 1024px) {
   .recent-chats-panel {
-    top: auto;
-    bottom: 0;
-    right: 0;
-    transform: none;
+    width: clamp(200px, 28vw, 260px);
+    right: var(--space-4, 1rem);
+    bottom: 130px;
   }
+}
 
-  .recent-chats-handle {
-    width: 240px;
-    height: 40px;
-    flex-direction: row;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-    border: none;
-    background: transparent;
-    padding: 0 4px;
-  }
-
-  .handle-line {
-    width: 2px;
-    height: 12px;
+@media (max-width: 768px) {
+  .recent-chats-panel {
+    /* On tablet/mobile: show at bottom-right corner, smaller */
+    position: absolute;
+    right: var(--space-3, 0.75rem);
+    bottom: 120px;
+    width: min(85vw, 260px);
+    max-height: 40vh;
   }
 }
 
 @media (max-width: 480px) {
-  .recent-chats-floating-panel {
-    width: 100%;
-  }
-
-  .recent-chats-handle {
-    width: 100%;
-    height: 36px;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  .recent-chats-panel {
+    right: var(--space-2, 0.5rem);
+    width: calc(100% - var(--space-4, 1rem));
+    bottom: 110px;
   }
 }
