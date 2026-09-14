@@ -1,13 +1,14 @@
 /* ============================================================
-   Recent Chats Panel — Always-visible floating card on right
+   Recent Chats Panel — collapsible floating panel
    ============================================================ */
 
-/* The panel is positioned absolute within .chat-workspace (position: relative) */
+/* ── Expanded Panel ── */
 .recent-chats-panel {
-  position: fixed;
-  top: 25%;
-  /* above the input area */
+  position: absolute;
+  top: var(--space-4, 1rem);
   width: fit-content;
+  min-width: 240px;
+  max-width: 270px;
 
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -18,9 +19,7 @@
   overflow: hidden;
   backdrop-filter: blur(12px);
   z-index: 10;
-  max-height: 50vh;
-  max-width: 270px;
-  left: 7%;
+  max-height: 70vh;
 }
 
 /* ── Panel Header ── */
@@ -28,6 +27,10 @@
   padding: var(--space-3) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .recent-chats-panel-title {
@@ -35,6 +38,25 @@
   font-weight: var(--font-weight-semibold);
   color: var(--text-main);
   margin: 0;
+}
+
+.recent-chats-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.recent-chats-collapse-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
 }
 
 /* ── Chat List ── */
@@ -96,17 +118,6 @@
   text-overflow: ellipsis;
 }
 
-/* ── Chat Item Meta ── */
-.recent-chat-item-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 /* ── Delete Button ── */
 .recent-chat-item-delete {
   display: flex;
@@ -133,30 +144,75 @@
   color: var(--color-error);
 }
 
+/* ── Collapsed Floating Button ── */
+.recent-chats-float-btn {
+  position: absolute;
+  left: var(--space-4, 1rem);
+  top: var(--space-4, 1rem);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.recent-chats-float-btn:hover {
+  background: var(--bg-hover);
+  transform: scale(1.08);
+  box-shadow: var(--shadow-lg);
+}
+
+.recent-chats-float-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .recent-chats-panel {
-    width: clamp(200px, 28vw, 260px);
-    right: var(--space-4, 1rem);
-    bottom: 130px;
+    left: var(--space-3, 0.75rem);
+    top: var(--space-3, 0.75rem);
+  }
+
+  .recent-chats-float-btn {
+    left: var(--space-3, 0.75rem);
+    top: var(--space-3, 0.75rem);
   }
 }
 
 @media (max-width: 768px) {
   .recent-chats-panel {
-    /* On tablet/mobile: show at bottom-right corner, smaller */
-    position: absolute;
-    right: var(--space-3, 0.75rem);
-    bottom: 120px;
-    width: min(85vw, 260px);
-    max-height: 40vh;
+    left: var(--space-2, 0.5rem);
+    top: var(--space-2, 0.5rem);
+    max-width: min(85vw, 260px);
+    max-height: 60vh;
+  }
+
+  .recent-chats-float-btn {
+    left: var(--space-2, 0.5rem);
+    top: var(--space-2, 0.5rem);
   }
 }
 
 @media (max-width: 480px) {
   .recent-chats-panel {
-    right: var(--space-2, 0.5rem);
-    width: calc(100% - var(--space-4, 1rem));
-    bottom: 110px;
+    left: var(--space-2, 0.5rem);
+    top: var(--space-2, 0.5rem);
+    max-width: calc(100% - var(--space-4, 1rem));
+    max-height: 50vh;
+  }
+
+  .recent-chats-float-btn {
+    left: var(--space-2, 0.5rem);
+    top: var(--space-2, 0.5rem);
   }
 }
