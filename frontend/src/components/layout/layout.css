@@ -54,28 +54,7 @@
   color: var(--text-main);
 }
 
-.sidebar-logo-icon-img {
-  height: 32px;
-  width: auto;
-  object-fit: contain;
-  flex-shrink: 0;
-  display: none;
-}
 
-.sidebar-logo-full-img {
-  height: 34px;
-  width: auto;
-  object-fit: contain;
-  transition: opacity var(--transition-base);
-}
-
-.sidebar-collapsed .sidebar-logo-full-img {
-  display: none;
-}
-
-.sidebar-collapsed .sidebar-logo-icon-img {
-  display: block;
-}
 
 
 /* ── Sidebar Nav ── */

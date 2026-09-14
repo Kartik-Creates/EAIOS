@@ -29,6 +29,23 @@ from app.services.llm_service import generate_completion
 
 logger = logging.getLogger("eaios.briefing")
 
+# Serialize token reads/refreshes so concurrent briefing connectors (asyncio.gather)
+# never share an AsyncSession unsafely, and so Google/Jira refresh is not raced.
+_token_refresh_lock = asyncio.Lock()
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _is_google_provider(provider: str) -> bool:
+    name = (provider or "").lower()
+    return name in {"gmail", "google", "google_drive"} or "google" in name
+
 # ── JIRA TOKEN REFRESH ───────────────────────────────────────────────
 
 
@@ -91,24 +108,40 @@ async def _refresh_jira_token(db: AsyncSession, db_token: OAuthToken) -> str:
 
 
 async def get_decrypted_token(
-    db: AsyncSession, user_id: str, providers: list[str]
+    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False
 ) -> str | None:
     """Fetch and decrypt the user's active OAuth access token for any of the specified provider names.
 
     Automatically refreshes expired Google and Jira tokens if a refresh token is present.
     GitHub OAuth App tokens do not expire (no refresh needed).
     Returns decrypted access token string, or None if the integration is not connected.
+
+    Provider list order is a preference: the first matching row wins so Gmail
+    does not accidentally use a Drive-only token.
     """
+    async with _token_refresh_lock:
+        return await _get_decrypted_token_unlocked(
+            db, user_id, providers, force_refresh=force_refresh
+        )
+
+
+async def _get_decrypted_token_unlocked(
+    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False
+) -> str | None:
     stmt = select(OAuthToken).where(
         OAuthToken.user_id == user_id,
         OAuthToken.provider.in_(providers),
     )
-
-
     res = await db.execute(stmt)
-    db_token = res.scalars().first()
+    rows = list(res.scalars().all())
+    if not rows:
+        return None
 
-    if not db_token or not db_token.access_token_encrypted:
+    rank = {name.lower(): idx for idx, name in enumerate(providers)}
+    rows.sort(key=lambda t: rank.get((t.provider or "").lower(), 999))
+    db_token = rows[0]
+
+    if not db_token.access_token_encrypted:
         return None
 
     try:
@@ -120,20 +153,26 @@ async def get_decrypted_token(
     if not access_token:
         return None
 
+    expires_at = _as_utc(db_token.expires_at)
+    now = datetime.now(timezone.utc)
+
     # Handle Google OAuth token refresh if token is expired or expires_at missing
-    if db_token.refresh_token_encrypted and any(p in db_token.provider.lower() for p in ("google", "gmail")):
-        is_expired = (not db_token.expires_at) or (datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60))
-        if is_expired:
+    if db_token.refresh_token_encrypted and _is_google_provider(db_token.provider):
+        is_expired = (expires_at is None) or (now >= expires_at - timedelta(seconds=60))
+        if force_refresh or is_expired:
             try:
                 access_token = await _refresh_google_token(db, db_token)
             except Exception as exc:
                 logger.warning("Failed to refresh Google token for user %s: %s", user_id, exc)
-                return None
+                if force_refresh:
+                    return None
+                # Keep the existing token; callers may still succeed or 401-retry.
+                return access_token
 
     # Handle Jira/Atlassian token refresh (tokens expire after ~1 hour)
     if db_token.refresh_token_encrypted and db_token.provider.lower() == "jira":
-        is_expired = (not db_token.expires_at) or (datetime.now(timezone.utc) >= db_token.expires_at - timedelta(seconds=60))
-        if is_expired:
+        is_expired = (expires_at is None) or (now >= expires_at - timedelta(seconds=60))
+        if force_refresh or is_expired:
             access_token = await _refresh_jira_token(db, db_token)
             if not access_token:
                 return None
@@ -144,6 +183,23 @@ async def get_decrypted_token(
     # tokens — no refresh logic needed.
 
     return access_token
+
+
+async def _with_google_401_retry(db: AsyncSession, user_id: str, providers: list[str], fetch_fn):
+    """Run fetch_fn(token); on HTTP 401, force-refresh the Google token and retry once."""
+    token = await get_decrypted_token(db, user_id, providers)
+    if not token:
+        return None
+    try:
+        return await fetch_fn(token)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 401:
+            raise
+        logger.info("Google API 401 for user %s providers=%s — forcing token refresh", user_id, providers)
+        token = await get_decrypted_token(db, user_id, providers, force_refresh=True)
+        if not token:
+            raise
+        return await fetch_fn(token)
 
 
 # ── 1. JIRA BRIEFING TOOL ───────────────────────────────────────────

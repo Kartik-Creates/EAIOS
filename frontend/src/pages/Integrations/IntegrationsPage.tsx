@@ -31,11 +31,19 @@ export const IntegrationsPage = () => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get('connected');
     const callbackError = params.get('error');
+    const refreshBriefing = params.get('refresh_briefing');
 
     if (connected) {
       toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
       window.history.replaceState({}, document.title, window.location.pathname);
       refreshConnections();
+      
+      // Signal to other components that briefing should be refreshed
+      if (refreshBriefing === 'true') {
+        window.dispatchEvent(new CustomEvent('integration-reconnected', { 
+          detail: { provider: connected } 
+        }));
+      }
     } else if (callbackError) {
       toast.error(`Connection cancelled or failed: ${callbackError}`);
       window.history.replaceState({}, document.title, window.location.pathname);

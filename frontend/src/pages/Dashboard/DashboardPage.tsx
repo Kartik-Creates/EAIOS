@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/hooks/useLanguage';
 import { integrationsService } from '@/services/integrationsService';
 import {
   dashboardService,
@@ -35,15 +36,16 @@ import { ROUTES } from '@/constants/routes';
 import { staggerContainer, staggerItem, fadeInUpVariants } from '@/lib/motion';
 import './DashboardPage.css';
 
-const getGreeting = (): string => {
+const getGreeting = (t: (key: string) => string): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good Morning';
-  if (hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
+  if (hour < 12) return t('dashboard.greetingMorning');
+  if (hour < 18) return t('dashboard.greetingAfternoon');
+  return t('dashboard.greetingEvening');
 };
 
-const getCurrentDate = (): string => {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+const getCurrentDate = (lang: string): string => {
+  const locale = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-US';
+  return new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
 const decodeEntities = (text: string): string => {
@@ -112,6 +114,7 @@ const getActivityIconComponent = (type: string) => {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
 
   // Integrations state
@@ -187,6 +190,37 @@ export const DashboardPage = () => {
     fetchActivityData();
   }, [fetchConnections, fetchBriefingData, fetchActivityData]);
 
+  // Listen for integration reconnection events to refresh briefing
+  useEffect(() => {
+    const handleIntegrationReconnected = () => {
+      // Refresh briefing data when an integration is reconnected
+      fetchBriefingData();
+    };
+
+    window.addEventListener('integration-reconnected', handleIntegrationReconnected);
+    return () => {
+      window.removeEventListener('integration-reconnected', handleIntegrationReconnected);
+    };
+  }, [fetchBriefingData]);
+
+  // Track previous connections length to detect actual changes
+  const prevConnectionsLength = useRef(0);
+  
+  // Refresh briefing when connections change (added/removed)
+  useEffect(() => {
+    // Skip initial load and if still loading
+    if (isLoadingConnections) {
+      prevConnectionsLength.current = connections.length;
+      return;
+    }
+    
+    // Only refresh if the number of connections actually changed
+    if (connections.length !== prevConnectionsLength.current) {
+      prevConnectionsLength.current = connections.length;
+      fetchBriefingData();
+    }
+  }, [connections.length, isLoadingConnections, fetchBriefingData]);
+
   // Handle item click for detail modal
   const handleItemClick = async (item: BriefingItem) => {
     setSelectedItem(item);
@@ -211,7 +245,7 @@ export const DashboardPage = () => {
     try {
       setIsDisconnecting(true);
       await integrationsService.disconnectConnection(selectedDisconnectProvider);
-      toast.success(`Disconnected ${selectedDisconnectProvider}`);
+      toast.success(`${t('common.disconnected')} ${selectedDisconnectProvider}`);
       setSelectedDisconnectProvider(null);
       fetchConnections();
       fetchBriefingData();
@@ -250,8 +284,8 @@ export const DashboardPage = () => {
       <motion.header className="dashboard-header-compact" variants={staggerItem}>
         <div className="header-top">
           <div>
-            <h1 className="dashboard-greeting">{getGreeting()}, {userName}</h1>
-            <p className="dashboard-date">{getCurrentDate()}</p>
+            <h1 className="dashboard-greeting">{getGreeting(t)}, {userName}</h1>
+            <p className="dashboard-date">{getCurrentDate(language)}</p>
           </div>
         </div>
       </motion.header>
@@ -260,7 +294,7 @@ export const DashboardPage = () => {
       <motion.section className="priorities-card-compact" variants={staggerItem}>
         <div className="priorities-header">
           <div className="flex items-center gap-2">
-            <h2>Today's Priorities</h2>
+            <h2>{t('dashboard.todayPriorities')}</h2>
             {erroredSources.length > 0 && (
               <Badge variant="yellow" className="text-xs flex items-center gap-1">
                 <AlertTriangle size={12} />
@@ -268,13 +302,16 @@ export const DashboardPage = () => {
               </Badge>
             )}
           </div>
+
+
           <button
             type="button"
             className="priorities-link text-xs cursor-pointer hover:underline text-accent"
             onClick={() => setIsFullBriefingOpen(true)}
           >
-            View Full Briefing →
+            {t('dashboard.viewFullBriefing')}
           </button>
+
         </div>
 
         {isLoadingBriefing ? (
@@ -286,8 +323,8 @@ export const DashboardPage = () => {
           <div className="dashboard-state-box py-2">
             <AlertTriangle size={20} className="text-amber-400 mb-1" />
             <p className="text-xs">Failed to load priorities payload.</p>
-            <Button variant="ghost" size="sm" onClick={fetchBriefingData} className="mt-1 text-xs">
-              <RefreshCw size={12} className="mr-1" /> Retry
+            <Button variant="ghost" size="sm" onClick={fetchBriefingData} className="mt-1 text-xs" isLoading={isLoadingBriefing}>
+              Retry
             </Button>
           </div>
         ) : hasNoIntegrations ? (
@@ -358,7 +395,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : openTicketsCount}</span>
-              <span className="stat-label">Open Tickets</span>
+              <span className="stat-label">{t('dashboard.openTickets')}</span>
             </div>
           </MotionCard>
         </motion.div>
@@ -369,7 +406,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : unreadMessagesCount}</span>
-              <span className="stat-label">Unread Messages</span>
+              <span className="stat-label">{t('dashboard.unreadMessages')}</span>
             </div>
           </MotionCard>
         </motion.div>
@@ -380,7 +417,7 @@ export const DashboardPage = () => {
             </div>
             <div className="stat-content">
               <span className="stat-value">{isLoadingBriefing ? '…' : pendingReviewsCount}</span>
-              <span className="stat-label">Pending Reviews</span>
+              <span className="stat-label">{t('dashboard.pendingReviews')}</span>
             </div>
           </MotionCard>
         </motion.div>

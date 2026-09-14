@@ -220,7 +220,7 @@ async def oauth_provider_callback(
     await db.commit()
     logger.info("Successfully connected provider '%s' for user_id: %s", canonical_provider, user_id)
 
-    return RedirectResponse(f"{frontend_base}?connected={canonical_provider}")
+    return RedirectResponse(f"{frontend_base}?connected={canonical_provider}&refresh_briefing=true")
 
 
 @router.post("/drive/sync")

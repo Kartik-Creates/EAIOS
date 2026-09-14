@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640" color="#171B24">
+  <title>UnifyAI — Connecting an App (OAuth)</title>
+  <desc>The user's browser is redirected to the OAuth provider's consent screen, approves, and is redirected back with an authorization code; the backend then exchanges that code for access and refresh tokens directly with the provider — a server-to-server call with no browser involved — and encrypts and stores them before redirecting the browser back into the app.</desc>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap');
+    .n-box { fill: #FFFFFF; stroke: #171B24; stroke-width: 1.4; }
+    .e-line { stroke: #171B24; stroke-width: 1.3; fill: none; }
+    .e-line-muted { stroke: #5B6472; stroke-width: 1.1; fill: none; }
+    .e-key { stroke: #4338CA; stroke-width: 1.6; fill: none; }
+    .lbl-title { fill: #171B24; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+    .lbl-edge { fill: #3A4051; font-family: "IBM Plex Mono", monospace; }
+    .lane-head { fill: #5B6472; font-family: "IBM Plex Mono", monospace; letter-spacing: .06em; }
+  </style>
+  <defs>
+    <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+    </marker>
+    <marker id="arrowBKey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4338CA" />
+    </marker>
+  </defs>
+
+  <rect class="n-box" x="60" y="16" width="160" height="42" rx="5"/>
+  <text class="lbl-title" x="140" y="42" text-anchor="middle" font-size="13">User's browser</text>
+  <line class="e-line-muted" x1="140" y1="58" x2="140" y2="600"/>
+
+  <rect class="n-box" x="370" y="16" width="160" height="42" rx="5"/>
+  <text class="lbl-title" x="450" y="42" text-anchor="middle" font-size="13">Backend</text>
+  <line class="e-line-muted" x1="450" y1="58" x2="450" y2="600"/>
+
+  <rect class="n-box" x="680" y="16" width="160" height="42" rx="5"/>
+  <text class="lbl-title" x="760" y="42" text-anchor="middle" font-size="13">OAuth provider</text>
+  <line class="e-line-muted" x1="760" y1="58" x2="760" y2="600"/>
+
+  <line class="e-line" x1="140" y1="100" x2="450" y2="100" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="295" y="92" text-anchor="middle" font-size="11">clicks Connect → GET /oauth/init</text>
+
+  <line class="e-line" x1="450" y1="146" x2="140" y2="146" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="295" y="138" text-anchor="middle" font-size="11">302 redirect to provider's consent screen</text>
+
+  <line class="e-line" x1="140" y1="192" x2="760" y2="192" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="450" y="184" text-anchor="middle" font-size="11">follows redirect, reviews &amp; approves</text>
+
+  <line class="e-line" x1="760" y1="238" x2="140" y2="238" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="450" y="230" text-anchor="middle" font-size="11">302 redirect back with an authorization code</text>
+
+  <line class="e-line" x1="140" y1="284" x2="450" y2="284" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="295" y="276" text-anchor="middle" font-size="11">delivers code to /oauth/callback</text>
+
+  <line class="e-key" x1="450" y1="336" x2="760" y2="336" stroke-dasharray="6 4" marker-end="url(#arrowBKey)"/>
+  <text class="lbl-edge" x="605" y="328" text-anchor="middle" font-size="11">exchanges code for tokens</text>
+
+  <line class="e-key" x1="760" y1="382" x2="450" y2="382" stroke-dasharray="6 4" marker-end="url(#arrowBKey)"/>
+  <text class="lbl-edge" x="605" y="374" text-anchor="middle" font-size="11">access + refresh tokens</text>
+
+  <path class="e-key" d="M 450 420 C 540 420, 540 468, 450 468" fill="none" marker-end="url(#arrowBKey)"/>
+  <text class="lbl-edge" x="558" y="436" font-size="11">encrypts &amp; stores tokens,</text>
+  <text class="lbl-edge" x="558" y="452" font-size="11">keyed to user + canonical provider</text>
+
+  <line class="e-line" x1="450" y1="520" x2="140" y2="520" marker-end="url(#arrowB)"/>
+  <text class="lbl-edge" x="295" y="512" text-anchor="middle" font-size="11">redirect into the app, connected = true</text>
+
+  <text class="lane-head" x="140" y="612" text-anchor="middle" font-size="10">solid = browser redirect</text>
+  <text class="lane-head" x="605" y="612" text-anchor="middle" font-size="10" fill="#4338CA">dashed = direct server-to-server call</text>
+</svg>

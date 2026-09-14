@@ -2,6 +2,7 @@ import {
   Menu,
   Moon,
   Sun,
+
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
@@ -9,17 +10,13 @@ import { useTheme } from '@/hooks/useTheme';
 import { iconHoverVariants } from '@/lib/motion';
 import './layout.css';
 
-
-
-
-
 interface TopbarProps {
   isCollapsed: boolean;
   onToggleMobile: () => void;
 }
 
 export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
-  const { theme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   return (
     <header
@@ -39,7 +36,10 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
       </div>
 
       {/* ── Right Actions ── */}
-      <div className="topbar-actions">
+      <div className="topbar-actions flex items-center gap-3">
+        {/* Quick Language Selector */}
+
+
         {/* Theme Toggle */}
         <motion.button
           type="button"
@@ -51,7 +51,7 @@ export const Topbar = ({ isCollapsed, onToggleMobile }: TopbarProps) => {
           whileHover="hover"
           whileTap="tap"
         >
-          {theme === 'dark' ? (
+          {resolvedTheme === 'dark' ? (
             <Moon size={18} aria-hidden="true" />
           ) : (
             <Sun size={18} aria-hidden="true" />
