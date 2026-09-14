@@ -32,9 +32,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { staggerContainer, staggerItem } from '@/lib/motion';
+import { type ApiErrorShape } from '@/utils/apiError';
 import './WorkflowPage.css';
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
   FileText,
   CheckSquare,
   Video,
@@ -55,7 +56,7 @@ export const WorkflowPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({});
   const [executionPlan, setExecutionPlan] = useState<ExecutionPlan | null>(null);
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,8 +76,9 @@ export const WorkflowPage = () => {
       ]);
       setWorkflows(listData);
       setCategories(['All', ...catData]);
-    } catch (err: any) {
-      const message = err?.response?.data?.detail || err?.message || 'Failed to load workflow metadata.';
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      const message = e?.response?.data?.detail || e?.message || 'Failed to load workflow metadata.';
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -87,7 +89,7 @@ export const WorkflowPage = () => {
     setSelectedWorkflow(wf);
     setExecutionPlan(null);
     setExecutionResult(null);
-    const initial: Record<string, any> = {};
+    const initial: Record<string, unknown> = {};
     wf.parameter_schema.forEach((param) => {
       if (param.default_value !== undefined) {
         initial[param.id] = param.default_value;
@@ -96,7 +98,7 @@ export const WorkflowPage = () => {
     setFormValues(initial);
   };
 
-  const handleInputChange = (paramId: string, value: any) => {
+  const handleInputChange = (paramId: string, value: unknown) => {
     setFormValues((prev) => ({ ...prev, [paramId]: value }));
   };
 
@@ -114,8 +116,9 @@ export const WorkflowPage = () => {
       } else {
         toast.error('Parameter validation failed. Please check errors.');
       }
-    } catch (err: any) {
-      const message = err?.response?.data?.detail || err?.message || 'Failed to generate execution plan.';
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      const message = e?.response?.data?.detail || e?.message || 'Failed to generate execution plan.';
       toast.error(message);
     } finally {
       setIsGeneratingPlan(false);
@@ -136,8 +139,9 @@ export const WorkflowPage = () => {
       } else {
         toast.error(`Workflow execution failed.`);
       }
-    } catch (err: any) {
-      const message = err?.response?.data?.detail || err?.message || 'Failed to execute workflow plan.';
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      const message = e?.response?.data?.detail || e?.message || 'Failed to execute workflow plan.';
       toast.error(message);
     } finally {
       setIsExecuting(false);
@@ -150,8 +154,9 @@ export const WorkflowPage = () => {
       const res = await workflowService.approveRequest(requestId, 'Approved via Policy Queue UI');
       setExecutionResult(res);
       toast.success(`Approval Request '${requestId}' approved! Workflow resumed.`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to approve workflow.');
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      toast.error(e?.response?.data?.detail || 'Failed to approve workflow.');
     } finally {
       setIsExecuting(false);
     }
@@ -163,8 +168,9 @@ export const WorkflowPage = () => {
       const res = await workflowService.rejectRequest(requestId, 'Rejected via Policy Queue UI');
       setExecutionResult(res);
       toast.error(`Approval Request '${requestId}' rejected. Workflow terminated.`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to reject workflow.');
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      toast.error(e?.response?.data?.detail || 'Failed to reject workflow.');
     } finally {
       setIsExecuting(false);
     }
@@ -181,7 +187,7 @@ export const WorkflowPage = () => {
   });
 
   // Helper: safely coerce any value to a display string
-  const s = (v: any): string => (v == null ? '' : String(v));
+  const s = (v: unknown): string => (v == null ? '' : String(v));
 
   return (
     <div className="workflow-page">
@@ -333,7 +339,7 @@ export const WorkflowPage = () => {
 
                         {s(param.type) === 'select' ? (
                           <select
-                            value={formValues[param.id] || ''}
+                            value={String(formValues[param.id] ?? '')}
                             onChange={(e) => handleInputChange(param.id, e.target.value)}
                           >
                             {param.validation_rules?.options?.map((opt) => (
@@ -346,14 +352,14 @@ export const WorkflowPage = () => {
                           <textarea
                             rows={3}
                             placeholder={s(param.placeholder)}
-                            value={formValues[param.id] || ''}
+                            value={String(formValues[param.id] ?? '')}
                             onChange={(e) => handleInputChange(param.id, e.target.value)}
                           />
                         ) : s(param.type) === 'boolean' ? (
                           <label className="checkbox-label">
                             <input
                               type="checkbox"
-                              checked={!!formValues[param.id]}
+                              checked={Boolean(formValues[param.id])}
                               onChange={(e) => handleInputChange(param.id, e.target.checked)}
                             />
                             <span>Enable {s(param.label)}</span>
@@ -362,7 +368,7 @@ export const WorkflowPage = () => {
                           <input
                             type={s(param.type) === 'number' ? 'number' : 'text'}
                             placeholder={s(param.placeholder)}
-                            value={formValues[param.id] || ''}
+                            value={String(formValues[param.id] ?? '')}
                             onChange={(e) => handleInputChange(param.id, e.target.value)}
                           />
                         )}

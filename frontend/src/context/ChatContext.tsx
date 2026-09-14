@@ -1,14 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useCallback, type ReactNode } from 'react';
-import type { Message, ChatState } from '@/types/chat.types';
+import { useState, useCallback, type ReactNode } from 'react';
+import type { ChatState } from '@/types/chat.types';
 import { chatService } from '@/services/chatService';
+import { createContext, type Context } from 'react';
 
 export interface ChatContextType extends ChatState {
   sendMessage: (queryText: string) => Promise<void>;
   clearChat: () => void;
 }
 
-export const ChatContext = createContext<ChatContextType | undefined>(undefined);
+export const ChatContext: Context<ChatContextType | undefined> =
+  createContext<ChatContextType | undefined>(undefined);
 
 /**
  * Single shared chat conversation for the whole app.
@@ -32,9 +34,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       if (!trimmed || state.isLoading) return;
 
       const userMessageId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-      const userMessage: Message = {
+      const userMessage = {
         id: userMessageId,
-        role: 'user',
+        role: 'user' as const,
         content: trimmed,
         timestamp: new Date(),
       };
@@ -53,9 +55,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         });
 
         const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-        const aiMessage: Message = {
+        const aiMessage = {
           id: aiMessageId,
-          role: 'assistant',
+          role: 'assistant' as const,
           content: response.answer,
           timestamp: new Date(),
           confidence: response.confidence,
@@ -70,15 +72,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           messages: [...prev.messages, aiMessage],
           isLoading: false,
         }));
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { response?: { status?: number; data?: { detail?: string } }; message?: string };
         const errorMessageText =
-          err?.response?.status === 429
+          e?.response?.status === 429
             ? 'Rate limit exceeded (10 queries/min limit). Please wait a moment before sending another query.'
-            : err?.response?.data?.detail || err?.message || 'Failed to communicate with AI Assistant.';
+            : e?.response?.data?.detail || e?.message || 'Failed to communicate with AI Assistant.';
 
-        const errorMessage: Message = {
+        const errorMessage = {
           id: `err-${Date.now()}`,
-          role: 'assistant',
+          role: 'assistant' as const,
           content: errorMessageText,
           timestamp: new Date(),
           isError: true,
@@ -119,3 +122,5 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     </ChatContext.Provider>
   );
 };
+
+export default ChatProvider;

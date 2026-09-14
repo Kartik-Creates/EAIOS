@@ -13,6 +13,10 @@ interface ManualTokenModalProps {
   onSubmitToken: (payload: TokenManualInput) => Promise<void>;
 }
 
+interface ApiError {
+  message?: string;
+}
+
 export const ManualTokenModal = ({
   isOpen,
   onClose,
@@ -40,8 +44,9 @@ export const ManualTokenModal = ({
       setAccessToken('');
       setRefreshToken('');
       onClose();
-    } catch (err: any) {
-      setError(err?.message || `Failed to save ${providerLabel} token.`);
+    } catch (err: unknown) {
+      const e = err as ApiError;
+      setError(e?.message || `Failed to save ${providerLabel} token.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -109,3 +114,5 @@ export const ManualTokenModal = ({
     </Modal>
   );
 };
+
+export default ManualTokenModal;

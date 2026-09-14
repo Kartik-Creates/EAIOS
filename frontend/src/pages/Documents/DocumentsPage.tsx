@@ -13,6 +13,7 @@ import {
   Loader2,
   Database,
 } from 'lucide-react';
+import { type ApiErrorShape } from '@/utils/apiError';
 import { cn } from '@/utils/cn';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import { Button } from '@/components/ui/Button';
@@ -125,9 +126,10 @@ export const DocumentsPage = () => {
         restrictedRole: doc.restricted_role,
       }));
       setFiles(mapped);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load documents:', err);
-      toast.error(err.response?.data?.detail || 'Failed to load documents from knowledge base.');
+      const e = err as ApiErrorShape;
+      toast.error(e?.response?.data?.detail || 'Failed to load documents from knowledge base.');
     } finally {
       setIsLoading(false);
     }
@@ -174,12 +176,13 @@ export const DocumentsPage = () => {
         )
       );
       toast.success(`"${file.name}" indexed and ready for AI retrieval!`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Upload error for ${file.name}:`, err);
       setFiles((prev) =>
         prev.map((item) => (item.id === tempId ? { ...item, status: 'failed' } : item))
       );
-      const errMsg = err.response?.data?.detail || err.message || 'Upload and indexing failed.';
+      const e = err as ApiErrorShape;
+      const errMsg = e?.response?.data?.detail || e?.message || 'Upload and indexing failed.';
       toast.error(`${file.name}: ${errMsg}`);
     }
   }, []);
@@ -241,9 +244,10 @@ export const DocumentsPage = () => {
         await documentService.deleteDocument(id);
         setFiles((prev) => prev.filter((f) => f.id !== id));
         toast.success(`"${name}" removed from knowledge base.`);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to delete document:', err);
-        toast.error(err.response?.data?.detail || 'Failed to remove document.');
+        const e = err as ApiErrorShape;
+        toast.error(e?.response?.data?.detail || 'Failed to remove document.');
       } finally {
         setDeletingIds((prev) => {
           const next = new Set(prev);

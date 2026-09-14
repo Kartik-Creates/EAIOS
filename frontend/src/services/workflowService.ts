@@ -48,7 +48,7 @@ export const workflowService = {
   /**
    * Phase 2: Generates an immutable ExecutionPlan preview for a workflow and parameter inputs.
    */
-  createPlan: async (workflowId: string, parameters: Record<string, any>): Promise<ExecutionPlan> => {
+  createPlan: async (workflowId: string, parameters: Record<string, unknown>): Promise<ExecutionPlan> => {
     const response = await apiClient.post<ExecutionPlan>(`/workflows/${workflowId}/plan`, parameters);
     return response.data;
   },

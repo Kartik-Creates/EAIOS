@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { adminService } from '@/services/adminService';
+import { type ApiErrorShape } from '@/utils/apiError';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import type { AdminUser } from '@/types/admin.types';
@@ -37,11 +38,12 @@ export const AdminPage = () => {
       setError(null);
       const list = await adminService.listUsers();
       setUsers(list);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
       const msg =
-        err?.response?.status === 403
+        e?.response?.status === 403
           ? 'Access Denied: Admin role privileges are required.'
-          : err?.response?.data?.detail || err?.message || 'Failed to fetch system users.';
+          : e?.response?.data?.detail || e?.message || 'Failed to fetch system users.';
       setError(msg);
     } finally {
       setIsLoading(false);
