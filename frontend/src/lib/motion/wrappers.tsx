@@ -86,7 +86,7 @@ export const MotionCard = ({ children, className, style, onClick, hoverable = tr
         variants={reduced ? undefined : cardHoverVariants}
         initial="rest"
         whileHover={reduced || !hoverable ? undefined : 'hover'}
-        whileTap={reduced ? undefined : { scale: 0.985 } as any}
+        whileTap={reduced || !hoverable ? undefined : { scale: 0.985 }}
         onClick={onClick}
         role="button"
         tabIndex={0}
@@ -103,7 +103,7 @@ export const MotionCard = ({ children, className, style, onClick, hoverable = tr
       initial={reduced ? false : { opacity: 0, y: 10 }}
       whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-10px' }}
-      transition={reduced ? undefined : { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as any}
+      transition={reduced ? undefined : { duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>
@@ -244,7 +244,7 @@ export const IconHover = ({ children, className, onClick }: { children: ReactNod
       variants={reduced ? undefined : iconHoverVariants}
       initial="rest"
       whileHover={reduced ? undefined : 'hover'}
-      whileTap={reduced ? undefined : { scale: 0.95 } as any}
+      whileTap={reduced ? undefined : { scale: 0.95 }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

@@ -55,6 +55,7 @@ export const AppRoutes = () => {
             <Route path={ROUTES.PRIVACY}      element={<PrivacyPage />} />
             <Route path={ROUTES.PERSONALIZATION} element={<PersonalizationPage />} />
             <Route path={ROUTES.SETTINGS}     element={<SettingsPage />} />
+            <Route path={ROUTES.SEARCH}       element={<SearchPage />} />
           </Route>
         </Route>
 

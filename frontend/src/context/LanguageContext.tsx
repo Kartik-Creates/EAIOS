@@ -1,15 +1,15 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { en } from '@/i18n/translations/en';
 import { hi } from '@/i18n/translations/hi';
 import { mr } from '@/i18n/translations/mr';
+import { createContext, type Context } from 'react';
 
 export type Language = 'en' | 'hi' | 'mr';
 
-const translations: Record<Language, any> = {
-  en,
-  hi,
-  mr
-};
+export interface TranslationSchema {
+  [key: string]: string | TranslationSchema;
+}
 
 export interface LanguageContextType {
   language: Language;
@@ -17,7 +17,8 @@ export interface LanguageContextType {
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+export const LanguageContext: Context<LanguageContextType | undefined> =
+  createContext<LanguageContextType | undefined>(undefined);
 
 const LANG_STORAGE_KEY = 'eaios-language';
 
@@ -30,7 +31,7 @@ const getInitialLanguage = (): Language => {
   try {
     const prefRaw = localStorage.getItem('eaios_preferences');
     if (prefRaw) {
-      const parsed = JSON.parse(prefRaw);
+      const parsed = JSON.parse(prefRaw) as { language?: { language?: string } };
       const prefLang = parsed?.language?.language;
       if (prefLang === 'en' || prefLang === 'hi' || prefLang === 'mr') {
         return prefLang;
@@ -45,23 +46,32 @@ const getInitialLanguage = (): Language => {
   return 'en';
 };
 
-const getNestedValue = (obj: any, pathKeys: string[]): any => {
-  let current = obj;
+const getNestedValue = (
+  obj: TranslationSchema | undefined,
+  pathKeys: string[]
+): string | undefined => {
+  let current: unknown = obj;
   for (const k of pathKeys) {
     if (current === undefined || current === null) return undefined;
-    current = current[k];
+    if (typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[k];
   }
   return typeof current === 'string' ? current : undefined;
+};
+
+const translationsRecord: Record<Language, TranslationSchema> = {
+  en: en as TranslationSchema,
+  hi: hi as TranslationSchema,
+  mr: mr as TranslationSchema,
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage);
 
   useEffect(() => {
-    localStorage.setItem(LANG_STORAGE_KEY, language);
+    localStorage.setItem('eaios-language', language);
     document.documentElement.lang = language;
 
-    // Sync with eaios_preferences if present
     try {
       const stored = localStorage.getItem('eaios_preferences');
       const prefs = stored ? JSON.parse(stored) : {};
@@ -80,21 +90,17 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     if (!key) return '';
     const keys = key.split('.');
-    
-    // 1. Try target language
-    let result = getNestedValue(translations[language], keys);
 
-    // 2. Fallback to English if missing in target language
+    let result = getNestedValue(translationsRecord[language], keys);
+
     if (result === undefined && language !== 'en') {
-      result = getNestedValue(translations.en, keys);
+      result = getNestedValue(translationsRecord.en, keys);
     }
 
-    // 3. Fallback to last segment of key or full key string
     if (result === undefined) {
       result = keys[keys.length - 1] || key;
     }
 
-    // Interpolate params: e.g. {count}, {provider}, {name}
     if (params && typeof result === 'string') {
       let interpolated = result;
       Object.entries(params).forEach(([pK, pV]) => {
@@ -113,3 +119,4 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+export default LanguageProvider;

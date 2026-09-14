@@ -215,7 +215,7 @@ export default function PersonalizationPage() {
     const updateSection = <K extends keyof UserPreferences>(
         section: K,
         key: keyof UserPreferences[K],
-        value: any
+        value: UserPreferences[K][typeof key]
     ) => {
         setPrefs((prev) => ({
             ...prev,

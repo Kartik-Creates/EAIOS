@@ -79,6 +79,8 @@ export interface ValidationRules {
   options?: string[];
 }
 
+export type WorkflowParameterValue = string | number | boolean | null;
+
 export interface WorkflowParameter {
   id: string;
   label: string;
@@ -86,7 +88,7 @@ export interface WorkflowParameter {
   type: ParameterType;
   required: boolean;
   placeholder?: string;
-  default_value?: any;
+  default_value?: WorkflowParameterValue;
   validation_rules?: ValidationRules;
 }
 
@@ -141,6 +143,8 @@ export interface ExecutionPlanStep {
   requires_confirmation: boolean;
 }
 
+export type ExecutionPlanParameters = Record<string, WorkflowParameterValue>;
+
 export interface ExecutionPlan {
   plan_id: string;
   workflow_id: string;
@@ -148,7 +152,7 @@ export interface ExecutionPlan {
   workflow_name: string;
   generated_at: string;
   generated_by?: string;
-  parameters: Record<string, any>;
+  parameters: ExecutionPlanParameters;
   estimated_runtime: string;
   risk_level: RiskLevel;
   requires_confirmation: boolean;
@@ -183,13 +187,15 @@ export interface ApprovalRequestModel {
 // Phase 3 Execution Result Contracts
 // ─────────────────────────────────────────────
 
+export type StepOutputs = Record<string, WorkflowParameterValue>;
+
 export interface StepResult {
   step_id: string;
   status: WorkflowRunStatus;
   started_at: string;
   finished_at: string;
   duration: number;
-  outputs: Record<string, any>;
+  outputs: StepOutputs;
   warnings: string[];
   error?: string;
   retryable: boolean;
@@ -205,7 +211,7 @@ export interface WorkflowToolParameter {
   label: string;
   description: string;
   required: boolean;
-  default?: any;
+  default?: WorkflowParameterValue;
 }
 
 export interface WorkflowTool {
@@ -217,7 +223,7 @@ export interface WorkflowTool {
 
 export interface WorkflowExecuteRequest {
   workflow_id: string;
-  parameters: Record<string, any>;
+  parameters: ExecutionPlanParameters;
   triggered_by?: string;
 }
 
@@ -225,8 +231,8 @@ export interface WorkflowRun {
   id: string;
   workflow_id: string;
   status: WorkflowRunStatus;
-  inputs?: Record<string, any>;
-  outputs?: Record<string, any>;
+  inputs?: ExecutionPlanParameters;
+  outputs?: StepOutputs;
   error_message?: string;
   started_at?: string;
   completed_at?: string;
@@ -236,6 +242,8 @@ export interface WorkflowRun {
 // ─────────────────────────────────────────────
 // Phase 3 Execution Result Contracts
 // ─────────────────────────────────────────────
+
+export type ExecutionSummary = Record<string, WorkflowParameterValue | Record<string, unknown>>;
 
 export interface ExecutionResult {
   execution_id: string;
@@ -247,6 +255,6 @@ export interface ExecutionResult {
   failed_steps: number;
   skipped_steps: number;
   step_results: StepResult[];
-  execution_summary: Record<string, any>;
+  execution_summary: ExecutionSummary;
   executed_at: string;
 }

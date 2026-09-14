@@ -18,6 +18,7 @@ import { meetingService } from '@/services/meetingService';
 import type { MeetingSummary, ActionItem, Decision } from '@/types/meeting.types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { type ApiErrorShape } from '@/utils/apiError';
 import { Spinner } from '@/components/ui/Spinner';
 import { staggerContainer, staggerItem } from '@/lib/motion';
 import './MeetingPage.css';
@@ -70,10 +71,11 @@ export const MeetingPage = () => {
       const result = await meetingService.summarize({ transcript: transcript.trim() });
       setSummary(result);
       toast.success('Meeting intelligence report generated.');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
       const message =
-        err?.response?.data?.detail ||
-        err?.message ||
+        e?.response?.data?.detail ||
+        e?.message ||
         'Failed to generate meeting summary. Please try again.';
       setError(message);
       toast.error(message);
