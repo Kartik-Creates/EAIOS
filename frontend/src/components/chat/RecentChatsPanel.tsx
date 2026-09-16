@@ -7,7 +7,7 @@ import type { Message } from '@/types/chat.types';
 import './RecentChatsPanel.css';
 
 const STORAGE_KEY = 'eaios_recent_chats';
-const AUTO_COLLAPSE_DELAY = 8000;
+const AUTO_COLLAPSE_DELAY = 3000;
 
 interface ChatEntry {
   id: string;

@@ -4,11 +4,10 @@
 
 /* ── Expanded Panel ── */
 .recent-chats-panel {
-  position: absolute;
-  top: var(--space-4, 1rem);
-  width: fit-content;
-  min-width: 240px;
-  max-width: 270px;
+  position: fixed;
+  left: calc(var(--sidebar-collapsed) + var(--space-4, 1rem));
+  top: calc(var(--topbar-height, 64px) + var(--space-4, 1rem));
+  width: 230px;
 
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -18,8 +17,8 @@
   flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(12px);
-  z-index: 10;
-  max-height: 70vh;
+  z-index: calc(var(--z-sidebar, 200) + 5);
+  max-height: 60vh;
 }
 
 /* ── Panel Header ── */
@@ -146,28 +145,45 @@
 
 /* ── Collapsed Floating Button ── */
 .recent-chats-float-btn {
-  position: absolute;
-  left: var(--space-4, 1rem);
-  top: var(--space-4, 1rem);
+  position: fixed;
+  left: var(--recent-chats-left);
+  margin-left: -65px;
+  transform: translateX(-15px);
+  margin-top: 10%;
+  top: calc(var(--topbar-height, 64px) + var(--space-4, 1rem));
+
   width: 40px;
   height: 40px;
   border-radius: var(--radius-full);
+
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-main);
+
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(12px);
-  z-index: 10;
-  transition: background-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+
+  z-index: calc(var(--z-sidebar, 200) + 5);
+
+  transition:
+    left 250ms ease,
+    transform var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.dashboard-layout:has(.sidebar:hover) .recent-chats-float-btn {
+  margin-left: 0 !important;
 }
 
 .recent-chats-float-btn:hover {
   background: var(--bg-hover);
-  transform: scale(1.08);
+  transform: translateX(-15px) scale(1.08);
   box-shadow: var(--shadow-lg);
 }
 
@@ -180,39 +196,53 @@
 @media (max-width: 1024px) {
   .recent-chats-panel {
     left: var(--space-3, 0.75rem);
-    top: var(--space-3, 0.75rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-3, 0.75rem));
   }
 
   .recent-chats-float-btn {
-    left: var(--space-3, 0.75rem);
-    top: var(--space-3, 0.75rem);
+    left: calc((var(--sidebar-collapsed, 72px) - 40px) / 2);
+    top: calc(var(--topbar-height, 64px) + var(--space-3, 0.75rem));
   }
 }
 
 @media (max-width: 768px) {
   .recent-chats-panel {
     left: var(--space-2, 0.5rem);
-    top: var(--space-2, 0.5rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
     max-width: min(85vw, 260px);
     max-height: 60vh;
   }
 
   .recent-chats-float-btn {
+    left: calc((var(--sidebar-collapsed, 72px) - 40px) / 2);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
+  }
+}
+
+@media (max-width: 639px) {
+
+  /* On mobile the sidebar slides off-screen, so reposition into the chat area */
+  .recent-chats-panel {
     left: var(--space-2, 0.5rem);
-    top: var(--space-2, 0.5rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
+  }
+
+  .recent-chats-float-btn {
+    left: var(--space-2, 0.5rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
   }
 }
 
 @media (max-width: 480px) {
   .recent-chats-panel {
     left: var(--space-2, 0.5rem);
-    top: var(--space-2, 0.5rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
     max-width: calc(100% - var(--space-4, 1rem));
     max-height: 50vh;
   }
 
   .recent-chats-float-btn {
     left: var(--space-2, 0.5rem);
-    top: var(--space-2, 0.5rem);
+    top: calc(var(--topbar-height, 64px) + var(--space-2, 0.5rem));
   }
 }
