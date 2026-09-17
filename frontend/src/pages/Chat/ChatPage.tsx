@@ -99,7 +99,7 @@ export const ChatPage = () => {
         </main>
 
         {/* Recent chats — absolute positioned to the right within chat-workspace */}
-        <RecentChatsPanel messages={messages} />
+        <RecentChatsPanel />
 
         {/* Input — stays at bottom of workspace */}
         <div className="chat-input-wrapper">

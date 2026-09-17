@@ -1,66 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Trash2, ChevronDown } from 'lucide-react';
-import { ROUTES } from '@/constants/routes';
-import type { Message } from '@/types/chat.types';
+import { MessageSquare, Trash2, ChevronDown, Plus } from 'lucide-react';
+import { useChat } from '@/hooks/useChat';
 import './RecentChatsPanel.css';
 
-const STORAGE_KEY = 'eaios_recent_chats';
 const AUTO_COLLAPSE_DELAY = 3000;
 
-interface ChatEntry {
-  id: string;
-  title: string;
-  time: string;
-}
-
-const loadChats = (): ChatEntry[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch {
-    // ignore
-  }
-  return [];
-};
-
-const saveChats = (chats: ChatEntry[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-};
-
-export const RecentChatsPanel = ({ messages }: { messages: Message[] }) => {
-  const [chats, setChats] = useState<ChatEntry[]>(loadChats);
+export const RecentChatsPanel = () => {
+  const { chatSessions, newChat, switchChat, deleteChat, currentChatId } = useChat();
   const [isOpen, setIsOpen] = useState(true);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
-  const prevUserMsgCount = useRef(0);
   const autoCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const userMessages = messages.filter((m) => m.role === 'user');
-    const currentCount = userMessages.length;
-
-    if (currentCount > prevUserMsgCount.current && currentCount > 0) {
-      const latestMsg = userMessages[currentCount - 1];
-      const title = latestMsg.content.length > 35
-        ? latestMsg.content.slice(0, 35) + '...'
-        : latestMsg.content;
-
-      const newChat: ChatEntry = {
-        id: latestMsg.id,
-        title,
-        time: 'Just now',
-      };
-
-      const updated = [newChat, ...chats.filter((c) => c.id !== latestMsg.id)];
-      setChats(updated);
-      saveChats(updated);
-    }
-
-    prevUserMsgCount.current = currentCount;
-  }, [messages, chats]);
 
   // Auto-collapse timer: starts on mount, clears on unmount
   useEffect(() => {
@@ -104,20 +55,19 @@ export const RecentChatsPanel = ({ messages }: { messages: Message[] }) => {
     setIsOpen(true);
   }, []);
 
-  const handleChatClick = (title: string) => {
-    navigate(`${ROUTES.CHAT}?prompt=${encodeURIComponent(title)}`);
+  const handleChatClick = (chatId: string) => {
+    switchChat(chatId);
+    if (window.innerWidth <= 768) setIsOpen(false); // friendly for mobile
   };
 
   const handleDelete = (chatId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const updated = chats.filter((c) => c.id !== chatId);
-    setChats(updated);
-    saveChats(updated);
+    deleteChat(chatId);
   };
 
-  const hasConversations = chats.length > 0;
-
-  if (!hasConversations) return null;
+  const handleNewChat = () => {
+    newChat();
+  };
 
   return (
     <AnimatePresence>
@@ -143,12 +93,27 @@ export const RecentChatsPanel = ({ messages }: { messages: Message[] }) => {
           </div>
 
           <div className="recent-chats-list">
-            {chats.map((chat) => (
+            <button
+              type="button"
+              className="recent-chat-item"
+              onClick={handleNewChat}
+            >
+              <div className="recent-chat-item-icon">
+                <Plus size={16} />
+              </div>
+              <div className="recent-chat-item-content">
+                <div className="recent-chat-item-title">New Chat</div>
+              </div>
+            </button>
+
+            {chatSessions.length > 0 && <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 'var(--space-1) 0' }} />}
+
+            {chatSessions.map((chat) => (
               <button
                 key={chat.id}
                 type="button"
-                className="recent-chat-item"
-                onClick={() => handleChatClick(chat.title)}
+                className={`recent-chat-item ${chat.id === currentChatId ? 'active' : ''}`}
+                onClick={() => handleChatClick(chat.id)}
               >
                 <div className="recent-chat-item-icon">
                   <MessageSquare size={16} />
