@@ -2,8 +2,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { LanguageProvider } from '@/context/LanguageContext';
-import { ChatProvider } from '@/context/ChatContext';
+import LanguageProvider from '@/context/LanguageContext';
+import ChatProvider from '@/context/ChatContext';
 import { AppRoutes } from '@/routes/AppRoutes';
 
 export default function App() {

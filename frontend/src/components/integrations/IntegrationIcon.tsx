@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface BrandIconProps {
+export interface BrandIconProps {
   className?: string;
   size?: number;
 }
@@ -98,30 +98,4 @@ export const AsanaIcon = DefaultPlugIcon;
 export const ClickUpIcon = DefaultPlugIcon;
 export const ZendeskIcon = DefaultPlugIcon;
 export const CustomIntegrationIcon = DefaultPlugIcon;
-
-export const ICON_MAP: Record<string, React.FC<BrandIconProps>> = {
-  gmail: GmailIcon,
-  google: GoogleDriveIcon,
-  google_drive: GoogleDriveIcon,
-  github: GitHubIcon,
-  slack: SlackIcon,
-  jira: JiraIcon,
-  notion: NotionIcon,
-  confluence: ConfluenceIcon,
-  'microsoft-teams': MicrosoftTeamsIcon,
-  'microsoft-sharepoint': MicrosoftSharePointIcon,
-  onedrive: OneDriveIcon,
-  dropbox: DropboxIcon,
-  gitlab: GitLabIcon,
-  bitbucket: BitbucketIcon,
-  linear: LinearIcon,
-  asana: AsanaIcon,
-  trello: TrelloIcon,
-  clickup: ClickUpIcon,
-  salesforce: SalesforceIcon,
-  hubspot: HubSpotIcon,
-  zendesk: ZendeskIcon,
-  discord: DiscordIcon,
-  custom: CustomIntegrationIcon,
-};
 

@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { authService } from '@/services/authService';
+import { type ApiErrorShape } from '@/utils/apiError';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -47,8 +48,9 @@ export const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProp
         setSuccess(null);
         onClose();
       }, 1500);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Failed to update password.');
+    } catch (err: unknown) {
+      const e = err as ApiErrorShape;
+      setError(e?.response?.data?.detail || 'Failed to update password.');
     } finally {
       setIsLoading(false);
     }

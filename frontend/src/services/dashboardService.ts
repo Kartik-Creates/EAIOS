@@ -21,7 +21,7 @@ export interface BriefingItemDetail {
   sender_or_author?: string;
   created_or_due_date?: string;
   status?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SourceStatus {

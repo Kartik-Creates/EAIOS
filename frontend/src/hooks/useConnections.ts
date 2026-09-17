@@ -2,6 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { integrationsService } from '@/services/integrationsService';
 import type { OAuthConnection, TokenManualInput, DriveSyncResult } from '@/types/integration.types';
 
+interface ApiError {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
+}
+
+const getApiErrorMessage = (err: unknown, fallback: string): string => {
+  const e = err as ApiError;
+  return e?.response?.data?.detail || e?.message || fallback;
+};
+
 export const useConnections = () => {
   const [connections, setConnections] = useState<OAuthConnection[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -15,8 +29,8 @@ export const useConnections = () => {
       setError(null);
       const list = await integrationsService.listConnections();
       setConnections(list);
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || 'Failed to load integration connections.';
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Failed to load integration connections.');
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -32,8 +46,8 @@ export const useConnections = () => {
       setError(null);
       await integrationsService.connectManualToken(payload);
       await fetchConnections();
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || `Failed to connect ${payload.provider} token.`;
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, `Failed to connect ${payload.provider} token.`);
       throw new Error(msg);
     }
   };
@@ -45,8 +59,8 @@ export const useConnections = () => {
       const result = await integrationsService.triggerDriveSync();
       setSyncResult(result);
       return result;
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || 'Drive sync failed. Make sure Google Drive is connected.';
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Drive sync failed. Make sure Google Drive is connected.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -67,8 +81,8 @@ export const useConnections = () => {
       setError(null);
       await integrationsService.disconnectConnection(providerId);
       await fetchConnections();
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || `Failed to disconnect ${providerId}.`;
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, `Failed to disconnect ${providerId}.`);
       throw new Error(msg);
     }
   };

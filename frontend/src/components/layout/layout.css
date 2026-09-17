@@ -247,6 +247,38 @@
   transform: translateX(-50%);
 }
 
+/* ── Help Popup (always above Profile popup) ── */
+.sidebar-help-popup {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: calc(var(--space-3));
+  width: clamp(200px, 18vw, 240px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-dropdown);
+  overflow: hidden;
+  transform: translateX(-50%);
+  animation: dropdown-enter 0.2s ease-out;
+}
+
+.sidebar-collapsed .sidebar-help-popup {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.help-popup-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
 /* ── Profile Dropdown Header ── */
 .profile-dropdown-header {
   display: flex;

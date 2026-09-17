@@ -14,9 +14,6 @@ import './ChatPage.css';
 export const ChatPage = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  // conversation state (messages/isLoading/sendMessage) is shared globally via
-  // ChatContext — the same conversation continues here regardless of whether
-  // it was started on this page or via FloatingChatAssistant elsewhere.
   const { messages, isLoading, sendMessage } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,66 +49,71 @@ export const ChatPage = () => {
 
   return (
     <div className={`chat-page ${hasInteracted ? 'chat-has-interacted' : ''}`}>
-      <main className="chat-messages-container" aria-label="Conversation thread">
-        <motion.div variants={staggerContainer}>
-          {messages.length === 0 && !isLoading && (
-            <motion.div className="chat-empty-state" variants={staggerItem}>
-              <AnimatePresence mode="wait">
-                <motion.h2
-                  key={welcomeMessage}
-                  className="chat-empty-title"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {welcomeMessage}
-                </motion.h2>
-              </AnimatePresence>
-            </motion.div>
-          )}
+      {/* Main workspace — position:relative so RecentChatsPanel can be absolute inside */}
+      <div className="chat-workspace">
+        <main className="chat-messages-container" aria-label="Conversation thread">
+          <motion.div variants={staggerContainer}>
+            {messages.length === 0 && !isLoading && (
+              <motion.div className="chat-empty-state" variants={staggerItem}>
+                <AnimatePresence mode="wait">
+                  <motion.h2
+                    key={welcomeMessage}
+                    className="chat-empty-title"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {welcomeMessage}
+                  </motion.h2>
+                </AnimatePresence>
+              </motion.div>
+            )}
 
-          {messages.map((msg) => (
-            <motion.div key={msg.id} variants={staggerItem}>
-              <ChatMessage message={msg} userName={userName} />
-            </motion.div>
-          ))}
+            {messages.map((msg) => (
+              <motion.div key={msg.id} variants={staggerItem}>
+                <ChatMessage message={msg} userName={userName} />
+              </motion.div>
+            ))}
 
-          {isLoading && (
-            <motion.div className="chat-message-row assistant-row" variants={staggerItem}>
-              <div className="assistant-avatar-icon">
-                <Sparkles size={18} />
-              </div>
-              <div className="message-bubble-wrapper">
-                <span className="sender-name text-xs text-slate-400">UnifyAI Assistant</span>
-                <div className="message-bubble assistant-row">
-                  <div className="typing-indicator">
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
-                    <span className="typing-dot" />
+            {isLoading && (
+              <motion.div className="chat-message-row assistant-row" variants={staggerItem}>
+                <div className="assistant-avatar-icon">
+                  <Sparkles size={18} />
+                </div>
+                <div className="message-bubble-wrapper">
+                  <span className="sender-name text-xs text-slate-400">UnifyAI Assistant</span>
+                  <div className="message-bubble assistant-row">
+                    <div className="typing-indicator">
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
+              </motion.div>
+            )}
+          </motion.div>
 
-        <div ref={messagesEndRef} />
-      </main>
+          <div ref={messagesEndRef} />
+        </main>
 
-      <div className="chat-input-wrapper">
-        <ChatInput
-          onSendMessage={(query, file) => {
-            const message = file
-              ? `${query}\n\n[Attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`
-              : query;
-            sendMessage(message);
-          }}
-          isLoading={isLoading}
-        />
+        {/* Recent chats — absolute positioned to the right within chat-workspace */}
+        <RecentChatsPanel />
+
+        {/* Input — stays at bottom of workspace */}
+        <div className="chat-input-wrapper">
+          <ChatInput
+            onSendMessage={(query, file) => {
+              const message = file
+                ? `${query}\n\n[Attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`
+                : query;
+              sendMessage(message);
+            }}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
-
-      <RecentChatsPanel messages={messages} />
     </div>
   );
 };

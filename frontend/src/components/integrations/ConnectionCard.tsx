@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { ManualTokenModal } from './ManualTokenModal';
 import { integrationsService } from '@/services/integrationsService';
 import { iconHoverVariants } from '@/lib/motion';
-import { ICON_MAP } from './IntegrationIcon';
+import { ICON_MAP } from './iconMap';
 
 interface ConnectionCardProps {
   providerMeta: ProviderMeta;
@@ -26,6 +26,20 @@ interface ConnectionCardProps {
   onRemove?: (providerId: string) => void;
   isRemoving?: boolean;
 }
+
+interface ApiError {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
+}
+
+const getApiErrorMessage = (err: unknown, fallback: string): string => {
+  const e = err as ApiError;
+  return e?.response?.data?.detail || e?.message || fallback;
+};
 
 export const ConnectionCard = ({
   providerMeta,
@@ -56,11 +70,11 @@ export const ConnectionCard = ({
       } else {
         toast.error('Failed to generate OAuth authorization URL.');
       }
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ||
-        err?.message ||
-        `Failed to connect to ${providerMeta.label}`;
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(
+        err,
+        `Failed to connect to ${providerMeta.label}`
+      );
       toast.error(msg);
     } finally {
       setIsConnecting(false);
@@ -73,8 +87,11 @@ export const ConnectionCard = ({
       setIsDisconnecting(true);
       await onDisconnect(providerMeta.id);
       toast.success(`Disconnected ${providerMeta.label}.`);
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || `Failed to disconnect ${providerMeta.label}.`;
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(
+        err,
+        `Failed to disconnect ${providerMeta.label}.`
+      );
       toast.error(msg);
     } finally {
       setIsDisconnecting(false);
@@ -96,9 +113,7 @@ export const ConnectionCard = ({
     await onRemove(providerMeta.id);
   };
 
-  const ctaLabel = isConnected
-    ? 'Disconnect'
-    : 'Connect';
+  const ctaLabel = isConnected ? 'Disconnect' : 'Connect';
 
   const handleCtaClick = () => {
     if (isConnected) {
@@ -164,3 +179,5 @@ export const ConnectionCard = ({
     </>
   );
 };
+
+export default ConnectionCard;

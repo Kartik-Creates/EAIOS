@@ -7,11 +7,20 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - var(--topbar-height));
-  max-width: var(--content-max-width);
-  margin: 0 auto;
   width: 100%;
+  overflow: hidden;
+}
+
+/* ── Chat Workspace (position:relative so Recent Chats can be absolute) ── */
+.chat-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
 }
 
 /* ── Messages Container ── */
@@ -373,13 +382,11 @@
   }
 }
 
-/* ── Input Wrapper (Chat started) ── */
+/* ── Input Wrapper ── */
 .chat-input-wrapper {
   flex-shrink: 0;
-  padding: 0 var(--space-4) var(--space-4);
+  padding: 0 var(--space-4) var(--space-6);
   width: 100%;
-  max-width: var(--content-max-width);
-  margin: 0 auto;
 }
 
 /* ── Chat Input Container (ChatGPT-style pill) ── */

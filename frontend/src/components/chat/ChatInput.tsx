@@ -1,4 +1,4 @@
-import { useState, useRef, type KeyboardEvent, type FormEvent, ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type KeyboardEvent, type FormEvent, ChangeEvent } from 'react';
 import { Send, Paperclip, Mic, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -49,6 +49,7 @@ export const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+      textareaRef.current.focus();
     }
   };
 
@@ -58,6 +59,12 @@ export const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
       handleSubmit();
     }
   };
+
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;

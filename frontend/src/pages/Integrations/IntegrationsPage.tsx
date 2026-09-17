@@ -1,20 +1,16 @@
-import { useEffect } from 'react';
-import {
-  Plug,
-  AlertCircle,
-  X,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
-import { useConnections } from '@/hooks/useConnections';
-import { ConnectionCard } from '@/components/integrations/ConnectionCard';
-import { ServicePickerModal } from '@/components/integrations/ServicePickerModal';
-import { PROVIDERS } from '@/constants/providers';
-import { Spinner } from '@/components/ui/Spinner';
-import { Button } from '@/components/ui/Button';
-import { useState } from 'react';
-import { staggerContainer, staggerItem } from '@/lib/motion';
-import './IntegrationsPage.css';
+import { useEffect } from "react";
+import { Plug, AlertCircle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
+import { useConnections } from "@/hooks/useConnections";
+import { ConnectionCard } from "@/components/integrations/ConnectionCard";
+import { ServicePickerModal } from "@/components/integrations/ServicePickerModal";
+import { PROVIDERS } from "@/constants/providers";
+import { Spinner } from "@/components/ui/Spinner";
+import { Button } from "@/components/ui/Button";
+import { useState } from "react";
+import { staggerContainer, staggerItem } from "@/lib/motion";
+import "./IntegrationsPage.css";
 
 export const IntegrationsPage = () => {
   const {
@@ -29,20 +25,24 @@ export const IntegrationsPage = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const connected = params.get('connected');
-    const callbackError = params.get('error');
-    const refreshBriefing = params.get('refresh_briefing');
+    const connected = params.get("connected");
+    const callbackError = params.get("error");
+    const refreshBriefing = params.get("refresh_briefing");
 
     if (connected) {
-      toast.success(`Successfully connected ${connected.toUpperCase()} integration!`);
+      toast.success(
+        `Successfully connected ${connected.toUpperCase()} integration!`,
+      );
       window.history.replaceState({}, document.title, window.location.pathname);
       refreshConnections();
-      
+
       // Signal to other components that briefing should be refreshed
-      if (refreshBriefing === 'true') {
-        window.dispatchEvent(new CustomEvent('integration-reconnected', { 
-          detail: { provider: connected } 
-        }));
+      if (refreshBriefing === "true") {
+        window.dispatchEvent(
+          new CustomEvent("integration-reconnected", {
+            detail: { provider: connected },
+          }),
+        );
       }
     } else if (callbackError) {
       toast.error(`Connection cancelled or failed: ${callbackError}`);
@@ -53,7 +53,7 @@ export const IntegrationsPage = () => {
   const connectedCount = connections.length;
   const [activeProviders, setActiveProviders] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem('eaios_active_integrations');
+      const stored = localStorage.getItem("eaios_active_integrations");
       if (stored) {
         // Migrate any pre-existing cached "google" id (the old, incorrect
         // card id) to "google_drive" — the actual canonical name the
@@ -61,19 +61,28 @@ export const IntegrationsPage = () => {
         // user with the old id cached would silently lose the Drive card
         // entirely (PROVIDERS.find(p => p.id === 'google') no longer matches).
         const parsed: string[] = JSON.parse(stored);
-        return parsed.map((id) => (id === 'google' ? 'google_drive' : id));
+        return parsed.map((id) => (id === "google" ? "google_drive" : id));
       }
     } catch {
       // ignore parse errors
     }
-    return ['gmail', 'google_drive', 'github', 'slack', 'jira'];
+    return ["gmail", "google_drive", "github", "slack", "jira"];
   });
   const [isServicePickerOpen, setIsServicePickerOpen] = useState(false);
-  const [removeConfirm, setRemoveConfirm] = useState<{ providerId: string; label: string } | null>(null);
-  const [connectedModal, setConnectedModal] = useState<{ providerId: string; label: string } | null>(null);
+  const [removeConfirm, setRemoveConfirm] = useState<{
+    providerId: string;
+    label: string;
+  } | null>(null);
+  const [connectedModal, setConnectedModal] = useState<{
+    providerId: string;
+    label: string;
+  } | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('eaios_active_integrations', JSON.stringify(activeProviders));
+    localStorage.setItem(
+      "eaios_active_integrations",
+      JSON.stringify(activeProviders),
+    );
   }, [activeProviders]);
 
   const handleRemoveCard = (providerId: string) => {
@@ -86,8 +95,15 @@ export const IntegrationsPage = () => {
       await disconnectConnection(providerId);
       toast.success(`Disconnected and removed integration.`);
       handleRemoveCard(providerId);
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || `Failed to disconnect ${providerId}.`;
+    } catch (err: unknown) {
+      const e = err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+      };
+      const msg =
+        e?.response?.data?.detail ||
+        e?.message ||
+        `Failed to disconnect ${providerId}.`;
       toast.error(msg);
     }
   };
@@ -120,15 +136,15 @@ export const IntegrationsPage = () => {
       {error && (
         <div
           style={{
-            padding: '1rem',
-            borderRadius: 'var(--radius-lg)',
-            background: 'var(--color-error-bg)',
-            border: '1px solid var(--color-error)',
-            color: '#fca5a5',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
+            padding: "1rem",
+            borderRadius: "var(--radius-lg)",
+            background: "var(--color-error-bg)",
+            border: "1px solid var(--color-error)",
+            color: "#fca5a5",
+            fontSize: "0.875rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
           }}
         >
           <AlertCircle size={20} />
@@ -138,12 +154,26 @@ export const IntegrationsPage = () => {
 
       {/* ── Provider Cards Grid ── */}
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem 0', gap: '1rem' }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "4rem 0",
+            gap: "1rem",
+          }}
+        >
           <Spinner size="lg" />
-          <p className="text-slate-400 text-sm">Loading integration connection states...</p>
+          <p className="text-slate-400 text-sm">
+            Loading integration connection states...
+          </p>
         </div>
       ) : (
-        <motion.section className="integrations-grid" aria-label="Available Connectors" variants={staggerContainer}>
+        <motion.section
+          className="integrations-grid"
+          aria-label="Available Connectors"
+          variants={staggerContainer}
+        >
           <AnimatePresence>
             {activeProviders.map((providerId) => {
               const providerMeta = PROVIDERS.find((p) => p.id === providerId);
@@ -157,7 +187,11 @@ export const IntegrationsPage = () => {
                   variants={staggerItem}
                   initial="rest"
                   animate="animate"
-                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.9,
+                    transition: { duration: 0.2 },
+                  }}
                 >
                   <ConnectionCard
                     providerMeta={providerMeta}
@@ -166,9 +200,15 @@ export const IntegrationsPage = () => {
                     onDisconnect={disconnectConnection}
                     onRemove={(id) => {
                       if (isConnected) {
-                        setConnectedModal({ providerId: id, label: providerMeta.label });
+                        setConnectedModal({
+                          providerId: id,
+                          label: providerMeta.label,
+                        });
                       } else {
-                        setRemoveConfirm({ providerId: id, label: providerMeta.label });
+                        setRemoveConfirm({
+                          providerId: id,
+                          label: providerMeta.label,
+                        });
                       }
                     }}
                   />
@@ -185,7 +225,7 @@ export const IntegrationsPage = () => {
               tabIndex={0}
               onClick={() => setIsServicePickerOpen(true)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   setIsServicePickerOpen(true);
                 }
               }}
@@ -194,8 +234,14 @@ export const IntegrationsPage = () => {
                 <Plug size={24} />
               </div>
               <h3 className="add-integration-title">Add Integration</h3>
-              <p className="add-integration-subtitle">Add another enterprise service.</p>
-              <Button variant="primary" size="md" className="add-integration-button">
+              <p className="add-integration-subtitle">
+                Add another enterprise service.
+              </p>
+              <Button
+                variant="primary"
+                size="md"
+                className="add-integration-button"
+              >
                 Choose Service
               </Button>
             </div>
@@ -239,14 +285,18 @@ export const IntegrationsPage = () => {
                 </button>
               </div>
               <p className="modal-body">
-                Are you sure you want to remove <strong>{removeConfirm.label}</strong>?
-                This action cannot be undone.
+                Are you sure you want to remove{" "}
+                <strong>{removeConfirm.label}</strong>? This action cannot be
+                undone.
               </p>
               <div className="modal-actions">
                 <Button variant="ghost" onClick={() => setRemoveConfirm(null)}>
                   Cancel
                 </Button>
-                <Button variant="secondary" onClick={() => handleRemoveCard(removeConfirm.providerId)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleRemoveCard(removeConfirm.providerId)}
+                >
                   Remove
                 </Button>
               </div>
@@ -283,7 +333,8 @@ export const IntegrationsPage = () => {
                 </button>
               </div>
               <p className="modal-body">
-                This integration cannot be removed because it is currently connected.
+                This integration cannot be removed because it is currently
+                connected.
                 <br />
                 Please disconnect the service first.
               </p>
@@ -291,7 +342,12 @@ export const IntegrationsPage = () => {
                 <Button variant="ghost" onClick={() => setConnectedModal(null)}>
                   Cancel
                 </Button>
-                <Button variant="primary" onClick={() => handleDisconnectAndRemove(connectedModal.providerId)}>
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    handleDisconnectAndRemove(connectedModal.providerId)
+                  }
+                >
                   Disconnect Service
                 </Button>
               </div>

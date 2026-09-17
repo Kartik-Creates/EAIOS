@@ -2,6 +2,15 @@ import { useState, useCallback } from 'react';
 import { searchService } from '@/services/searchService';
 import type { SearchState } from '@/types/search.types';
 
+interface ApiErrorShape {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
+}
+
 export const useSearch = () => {
   const [state, setState] = useState<SearchState>({
     results: [],
@@ -43,10 +52,11 @@ export const useSearch = () => {
           error: null,
           hasSearched: true,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as ApiErrorShape;
         const errorMessage =
-          err?.response?.data?.detail ||
-          err?.message ||
+          e?.response?.data?.detail ||
+          e?.message ||
           'Semantic search query failed. Please check network connection.';
 
         setState((prev) => ({
