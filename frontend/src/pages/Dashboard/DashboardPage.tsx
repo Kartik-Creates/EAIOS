@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
@@ -190,6 +190,37 @@ export const DashboardPage = () => {
     fetchActivityData();
   }, [fetchConnections, fetchBriefingData, fetchActivityData]);
 
+  // Listen for integration reconnection events to refresh briefing
+  useEffect(() => {
+    const handleIntegrationReconnected = () => {
+      // Refresh briefing data when an integration is reconnected
+      fetchBriefingData();
+    };
+
+    window.addEventListener('integration-reconnected', handleIntegrationReconnected);
+    return () => {
+      window.removeEventListener('integration-reconnected', handleIntegrationReconnected);
+    };
+  }, [fetchBriefingData]);
+
+  // Track previous connections length to detect actual changes
+  const prevConnectionsLength = useRef(0);
+  
+  // Refresh briefing when connections change (added/removed)
+  useEffect(() => {
+    // Skip initial load and if still loading
+    if (isLoadingConnections) {
+      prevConnectionsLength.current = connections.length;
+      return;
+    }
+    
+    // Only refresh if the number of connections actually changed
+    if (connections.length !== prevConnectionsLength.current) {
+      prevConnectionsLength.current = connections.length;
+      fetchBriefingData();
+    }
+  }, [connections.length, isLoadingConnections, fetchBriefingData]);
+
   // Handle item click for detail modal
   const handleItemClick = async (item: BriefingItem) => {
     setSelectedItem(item);
@@ -271,6 +302,8 @@ export const DashboardPage = () => {
               </Badge>
             )}
           </div>
+
+
           <button
             type="button"
             className="priorities-link text-xs cursor-pointer hover:underline text-accent"
@@ -278,6 +311,7 @@ export const DashboardPage = () => {
           >
             {t('dashboard.viewFullBriefing')}
           </button>
+
         </div>
 
         {isLoadingBriefing ? (
@@ -289,8 +323,8 @@ export const DashboardPage = () => {
           <div className="dashboard-state-box py-2">
             <AlertTriangle size={20} className="text-amber-400 mb-1" />
             <p className="text-xs">Failed to load priorities payload.</p>
-            <Button variant="ghost" size="sm" onClick={fetchBriefingData} className="mt-1 text-xs">
-              <RefreshCw size={12} className="mr-1" /> Retry
+            <Button variant="ghost" size="sm" onClick={fetchBriefingData} className="mt-1 text-xs" isLoading={isLoadingBriefing}>
+              Retry
             </Button>
           </div>
         ) : hasNoIntegrations ? (
