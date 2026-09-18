@@ -4,10 +4,10 @@ LLM calls and embedding calls are mocked (no live Ollama/Gemini in this
 environment) — see tests/rag_fixtures.py for the same pattern used by chat/search.
 """
 import pytest
-from app.models.meeting import Meeting
-from app.services.meeting_service import MeetingIntelligenceError, _extract_json_object
 from sqlalchemy import select
 
+from app.models.meeting import Meeting
+from app.services.meeting_service import MeetingIntelligenceError, _extract_json_object
 from tests.rag_fixtures import register_and_login
 
 SAMPLE_TRANSCRIPT = (

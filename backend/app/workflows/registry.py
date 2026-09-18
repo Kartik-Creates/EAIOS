@@ -1,6 +1,6 @@
+import builtins
 import logging
 import threading
-from typing import Dict, List, Optional, Tuple
 
 from app.schemas.workflow import WorkflowDefinition
 from app.workflows.definitions import ALL_BUILTIN_WORKFLOWS
@@ -17,7 +17,7 @@ class WorkflowRegistry:
     """
 
     def __init__(self) -> None:
-        self._registry: Dict[Tuple[str, str], WorkflowDefinition] = {}
+        self._registry: dict[tuple[str, str], WorkflowDefinition] = {}
         self._lock = threading.Lock()
         self._load_builtins()
 
@@ -40,7 +40,7 @@ class WorkflowRegistry:
             self._registry[key] = definition
             logger.info("Registered workflow definition: %s (v%s)", definition.id, definition.version)
 
-    def unregister(self, workflow_id: str, version: Optional[str] = None) -> bool:
+    def unregister(self, workflow_id: str, version: str | None = None) -> bool:
         """Remove a workflow definition from the registry."""
         with self._lock:
             keys_to_remove = [
@@ -53,7 +53,7 @@ class WorkflowRegistry:
                 return True
             return False
 
-    def get(self, workflow_id: str, version: Optional[str] = None) -> Optional[WorkflowDefinition]:
+    def get(self, workflow_id: str, version: str | None = None) -> WorkflowDefinition | None:
         """
         Retrieve a workflow definition by ID and optional version.
         If version is omitted, returns the latest registered version for that ID.
@@ -70,21 +70,21 @@ class WorkflowRegistry:
             # Return latest version by default
             return sorted(matching, key=lambda w: w.version, reverse=True)[0]
 
-    def exists(self, workflow_id: str, version: Optional[str] = None) -> bool:
+    def exists(self, workflow_id: str, version: str | None = None) -> bool:
         """Check if a workflow definition exists in the registry."""
         return self.get(workflow_id, version) is not None
 
-    def list(self) -> List[WorkflowDefinition]:
+    def list(self) -> list[WorkflowDefinition]:
         """Return all registered workflow definitions."""
         with self._lock:
             return list(self._registry.values())
 
-    def list_by_category(self, category: WorkflowCategory) -> List[WorkflowDefinition]:
+    def list_by_category(self, category: WorkflowCategory) -> builtins.list[WorkflowDefinition]:
         """Return workflow definitions filtered by category."""
         with self._lock:
             return [w for w in self._registry.values() if w.category == category]
 
-    def search(self, query: str) -> List[WorkflowDefinition]:
+    def search(self, query: str) -> builtins.list[WorkflowDefinition]:
         """Search workflow definitions by name or description."""
         q = query.lower()
         with self._lock:
@@ -93,7 +93,7 @@ class WorkflowRegistry:
                 if q in w.name.lower() or q in w.description.lower() or q in w.id.lower()
             ]
 
-    def get_categories(self) -> List[str]:
+    def get_categories(self) -> builtins.list[str]:
         """Return list of distinct categories from registered workflows."""
         with self._lock:
             categories = {w.category.value for w in self._registry.values()}

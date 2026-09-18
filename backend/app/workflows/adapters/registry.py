@@ -1,10 +1,9 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.workflows.adapters.base import BaseIntegrationAdapter
 from app.workflows.adapters.company_brain_adapter import CompanyBrainAdapter
 from app.workflows.adapters.drive_adapter import DriveAdapter
-from app.workflows.adapters.exceptions import AdapterConfigurationError, AdapterResourceNotFoundError
 from app.workflows.adapters.github_adapter import GitHubAdapter
 from app.workflows.adapters.gmail_adapter import GmailAdapter
 from app.workflows.adapters.jira_adapter import JiraAdapter
@@ -22,7 +21,7 @@ class AdapterRegistry:
     """
 
     def __init__(self) -> None:
-        self._adapters: Dict[str, BaseIntegrationAdapter] = {}
+        self._adapters: dict[str, BaseIntegrationAdapter] = {}
         self._register_default_adapters()
 
     def _register_default_adapters(self) -> None:
@@ -65,13 +64,13 @@ class AdapterRegistry:
         self._adapters[name] = adapter
         logger.info("Registered Integration Adapter: %s -> %s", name, adapter.__class__.__name__)
 
-    def get_adapter(self, key: Any) -> Optional[BaseIntegrationAdapter]:
+    def get_adapter(self, key: Any) -> BaseIntegrationAdapter | None:
         name = key.value if isinstance(key, IntegrationType) else str(key)
         return self._adapters.get(name)
 
-    def validate_integrations(self, integrations: List[IntegrationType], user_id: Optional[str] = None) -> Dict[str, bool]:
+    def validate_integrations(self, integrations: list[IntegrationType], user_id: str | None = None) -> dict[str, bool]:
         """Validate connections for a list of integrations."""
-        results: Dict[str, bool] = {}
+        results: dict[str, bool] = {}
         for integ in integrations:
             adapter = self.get_adapter(integ)
             if not adapter:

@@ -3,7 +3,7 @@
 All endpoints require authentication and are strictly scoped to the
 requesting user only — a user can only see/manage their own notifications.
 """
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -28,14 +28,14 @@ class NotificationRead(BaseModel):
 
 
 class MarkReadRequest(BaseModel):
-    notification_ids: List[str]
+    notification_ids: list[str]
 
 
 class UnreadCountResponse(BaseModel):
     unread_count: int
 
 
-@router.get("/notifications", response_model=List[NotificationRead])
+@router.get("/notifications", response_model=list[NotificationRead])
 async def get_notifications(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

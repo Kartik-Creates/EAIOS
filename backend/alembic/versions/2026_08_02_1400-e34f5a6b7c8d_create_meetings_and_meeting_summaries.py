@@ -8,8 +8,9 @@ NOTE: hand-written (no live DB available to autogenerate against) — verify
 with `alembic upgrade head` against a fresh database before merging.
 """
 import sqlalchemy as sa
-from alembic import op
 from pgvector.sqlalchemy import Vector
+
+from alembic import op
 
 revision = "e34f5a6b7c8d"
 down_revision = "d01e2f3a4b5c"

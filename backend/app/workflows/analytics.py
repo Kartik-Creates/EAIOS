@@ -1,5 +1,4 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.workflows.event_store import event_store
 from app.workflows.events import WorkflowEventType
@@ -23,7 +22,7 @@ class AnalyticsEngine:
     Computes workflow metrics, success rates, average duration, and error analytics from Event Store.
     """
 
-    def compute_metrics(self, workflow_id: Optional[str] = None) -> WorkflowAnalyticsSummary:
+    def compute_metrics(self, workflow_id: str | None = None) -> WorkflowAnalyticsSummary:
         events = event_store.list_events(workflow_id=workflow_id)
         if not events:
             return WorkflowAnalyticsSummary()

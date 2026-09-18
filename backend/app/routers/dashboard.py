@@ -3,7 +3,7 @@
 Exposes endpoints for user-scoped activity feed and role-gated pending approvals.
 """
 from datetime import datetime, timezone
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -36,16 +36,16 @@ class PendingApprovalItem(BaseModel):
     requester: str
     type: str
     submittedAt: str
-    workflow_id: Optional[str] = None
+    workflow_id: str | None = None
 
 
-@router.get("/activity", response_model=List[ActivityItem])
+@router.get("/activity", response_model=list[ActivityItem])
 async def get_recent_user_activity(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Retrieve recent system activity feed strictly scoped to the requesting user."""
-    items: List[dict] = []
+    items: list[dict] = []
 
     # 1. Fetch user's workflow runs
     stmt_wf = (
@@ -169,7 +169,7 @@ async def get_recent_user_activity(
     return formatted
 
 
-@router.get("/pending-approvals", response_model=List[PendingApprovalItem])
+@router.get("/pending-approvals", response_model=list[PendingApprovalItem])
 async def get_pending_approvals(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -183,7 +183,7 @@ async def get_pending_approvals(
 
     # 1. Fetch pending requests from ApprovalEngine
     requests = approval_engine.list_requests(status=ApprovalLifecycleState.PENDING)
-    res_items: List[PendingApprovalItem] = []
+    res_items: list[PendingApprovalItem] = []
 
     for req in requests:
         res_items.append(

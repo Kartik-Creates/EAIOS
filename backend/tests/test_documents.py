@@ -10,11 +10,11 @@ import io
 import uuid
 
 import pytest
+from sqlalchemy import select
+
 from app.core.security import get_password_hash
 from app.models.document import Document
 from app.models.user import User
-from sqlalchemy import select
-
 from tests.rag_fixtures import register_and_login
 
 FAKE_EMBEDDING = [0.01] * 768

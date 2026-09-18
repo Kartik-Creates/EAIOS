@@ -1,7 +1,8 @@
 import pytest
+from sqlalchemy.future import select
+
 from app.core.security import decrypt_token, encrypt_token
 from app.models.oauth_token import OAuthToken
-from sqlalchemy.future import select
 
 
 def test_token_encryption_decryption():

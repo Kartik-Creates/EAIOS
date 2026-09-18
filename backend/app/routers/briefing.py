@@ -13,7 +13,10 @@ from app.core.deps import get_current_user, get_db
 from app.core.rate_limit import limiter
 from app.models.user import User
 from app.schemas.briefing import BriefingItemDetail, BriefingResponse
-from app.services.briefing_service import generate_daily_briefing, get_briefing_item_detail
+from app.services.briefing_service import (
+    generate_daily_briefing,
+    get_briefing_item_detail,
+)
 
 router = APIRouter()
 

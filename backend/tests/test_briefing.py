@@ -16,7 +16,12 @@ from httpx import HTTPError
 from app.core.security import decrypt_token, encrypt_token, get_password_hash
 from app.models.oauth_token import OAuthToken
 from app.models.user import User
-from app.schemas.briefing import BriefingItem, BriefingResponse, SourceResult, SourceStatus
+from app.schemas.briefing import (
+    BriefingItem,
+    BriefingResponse,
+    SourceResult,
+    SourceStatus,
+)
 from app.services.briefing_service import (
     generate_daily_briefing,
     get_calendar_briefing,

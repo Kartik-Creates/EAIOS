@@ -1,7 +1,5 @@
 import logging
-from typing import List, Optional
 
-from app.schemas.workflow import WorkflowDefinition
 from app.workflows.approval_models import ApprovalDecision
 from app.workflows.approval_rules import (
     AdminRoleRule,
@@ -24,7 +22,7 @@ class PolicyEngine:
     Does NOT create approval requests or manage execution state.
     """
 
-    def __init__(self, rules: Optional[List[BasePolicyRule]] = None) -> None:
+    def __init__(self, rules: list[BasePolicyRule] | None = None) -> None:
         self._rules = rules or [
             CriticalRiskRule(),
             HighRiskRule(),
@@ -36,8 +34,8 @@ class PolicyEngine:
         """Evaluate registered policy rules and produce an ApprovalDecision."""
         workflow_def = workflow_registry.get(plan.workflow_id, version=plan.workflow_version)
 
-        reasons: List[str] = []
-        evaluated_rules: List[str] = []
+        reasons: list[str] = []
+        evaluated_rules: list[str] = []
         approver_role = "manager"
 
         for rule in self._rules:

@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from typing import Any
+
+from pydantic import BaseModel, model_validator
 
 from app.models.workflow import (
     WorkflowApprovalStatus,
     WorkflowRunStatus,
-    WorkflowStatus,
-    WorkflowTriggerType,
 )
 from app.workflows.enums import (
     CapabilityType,
@@ -18,12 +17,12 @@ from app.workflows.enums import (
 
 
 class ValidationRules(BaseModel):
-    min_length: Optional[int] = None
-    max_length: Optional[int] = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    regex_pattern: Optional[str] = None
-    options: Optional[List[str]] = None
+    min_length: int | None = None
+    max_length: int | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    regex_pattern: str | None = None
+    options: list[str] | None = None
 
 
 class WorkflowParameter(BaseModel):
@@ -32,9 +31,9 @@ class WorkflowParameter(BaseModel):
     description: str
     type: ParameterType = ParameterType.STRING
     required: bool = True
-    placeholder: Optional[str] = None
-    default_value: Optional[Any] = None
-    validation_rules: Optional[ValidationRules] = None
+    placeholder: str | None = None
+    default_value: Any | None = None
+    validation_rules: ValidationRules | None = None
 
 
 class WorkflowStepDefinition(BaseModel):
@@ -57,10 +56,10 @@ class WorkflowDefinition(BaseModel):
     risk_level: RiskLevel = RiskLevel.LOW
     estimated_runtime: str = "Instant"
     requires_confirmation: bool = False
-    integrations: List[IntegrationType] = []
-    capabilities: List[CapabilityType] = []
-    parameter_schema: List[WorkflowParameter] = []
-    execution_steps: List[WorkflowStepDefinition] = []
+    integrations: list[IntegrationType] = []
+    capabilities: list[CapabilityType] = []
+    parameter_schema: list[WorkflowParameter] = []
+    execution_steps: list[WorkflowStepDefinition] = []
 
     @model_validator(mode="after")
     def validate_workflow(self):
@@ -97,11 +96,11 @@ class WorkflowStepRunRead(BaseModel):
     step_key: str
     step_type: str
     status: WorkflowRunStatus
-    input_data: Optional[Dict[str, Any]] = None
-    output_data: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    input_data: dict[str, Any] | None = None
+    output_data: dict[str, Any] | None = None
+    error_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -113,11 +112,11 @@ class WorkflowApprovalRead(BaseModel):
     id: str
     workflow_run_id: str
     step_key: str
-    approver_id: Optional[str] = None
+    approver_id: str | None = None
     status: WorkflowApprovalStatus
     prompt: str
-    comment: Optional[str] = None
-    decided_at: Optional[datetime] = None
+    comment: str | None = None
+    decided_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -128,18 +127,18 @@ class WorkflowApprovalRead(BaseModel):
 class WorkflowRunRead(BaseModel):
     id: str
     workflow_id: str
-    workflow_version: Optional[str] = "1.0.0"
-    triggered_by_id: Optional[str] = None
+    workflow_version: str | None = "1.0.0"
+    triggered_by_id: str | None = None
     status: WorkflowRunStatus
-    inputs: Optional[Dict[str, Any]] = None
-    outputs: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    inputs: dict[str, Any] | None = None
+    outputs: dict[str, Any] | None = None
+    error_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
-    steps: List[WorkflowStepRunRead] = []
-    approvals: List[WorkflowApprovalRead] = []
+    steps: list[WorkflowStepRunRead] = []
+    approvals: list[WorkflowApprovalRead] = []
 
     class Config:
         from_attributes = True

@@ -2,8 +2,9 @@ import enum
 import logging
 import threading
 import time
-from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel
 
 from app.workflows.resilience import CircuitBreakerOpenError
 
@@ -27,7 +28,7 @@ class ProviderCircuitBreaker:
     Protects external services by tripping OPEN when threshold is exceeded.
     """
 
-    def __init__(self, provider_name: str, config: Optional[CircuitBreakerConfig] = None) -> None:
+    def __init__(self, provider_name: str, config: CircuitBreakerConfig | None = None) -> None:
         self.provider_name = provider_name
         self.config = config or CircuitBreakerConfig()
         self.state = CircuitState.CLOSED
@@ -69,7 +70,7 @@ class CircuitBreakerRegistry:
     """
 
     def __init__(self) -> None:
-        self._breakers: Dict[str, ProviderCircuitBreaker] = {}
+        self._breakers: dict[str, ProviderCircuitBreaker] = {}
         self._lock = threading.Lock()
 
     def get_breaker(self, provider_name: str) -> ProviderCircuitBreaker:
@@ -78,7 +79,7 @@ class CircuitBreakerRegistry:
                 self._breakers[provider_name] = ProviderCircuitBreaker(provider_name)
             return self._breakers[provider_name]
 
-    def get_health_status(self) -> Dict[str, Dict[str, Any]]:
+    def get_health_status(self) -> dict[str, dict[str, Any]]:
         with self._lock:
             return {
                 name: {

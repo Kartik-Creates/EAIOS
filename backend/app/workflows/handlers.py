@@ -1,8 +1,8 @@
-import time
 import logging
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.adapters.exceptions import AdapterError, AdapterTemporaryFailure
@@ -17,7 +17,7 @@ class BaseStepHandler(ABC):
     """Abstract provider-agnostic step handler."""
 
     @abstractmethod
-    def execute(self, step: ExecutionPlanStep, parameters: Dict[str, Any]) -> StepResult:
+    def execute(self, step: ExecutionPlanStep, parameters: dict[str, Any]) -> StepResult:
         pass
 
 
@@ -27,7 +27,7 @@ class AdapterStepHandler(BaseStepHandler):
     Normalizes provider errors into StepResult outputs and retryable flags.
     """
 
-    def execute(self, step: ExecutionPlanStep, parameters: Dict[str, Any]) -> StepResult:
+    def execute(self, step: ExecutionPlanStep, parameters: dict[str, Any]) -> StepResult:
         start_time = time.time()
         started_at = datetime.now(timezone.utc).isoformat()
 
@@ -92,7 +92,7 @@ class AdapterStepHandler(BaseStepHandler):
                 duration=duration,
                 outputs={},
                 warnings=[],
-                error=f"Unexpected step failure: {str(exc)}",
+                error=f"Unexpected step failure: {exc!s}",
                 retryable=False,
             )
 

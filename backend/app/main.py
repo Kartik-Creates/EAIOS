@@ -1,4 +1,5 @@
 import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -42,7 +43,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled error on %s %s: %s", request.method, request.url.path, exc)
     response = JSONResponse(
         status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"},
+        content={"detail": f"Internal server error: {exc!s}"},
     )
     origin = request.headers.get("origin")
     if origin:
@@ -129,7 +130,9 @@ async def startup_security_checks():
     if run_migrations not in ("false", "0", "no", "off"):
         try:
             import asyncio
+
             from alembic.config import Config
+
             from alembic import command
             alembic_cfg = Config("alembic.ini")
             await asyncio.to_thread(command.upgrade, alembic_cfg, "head")

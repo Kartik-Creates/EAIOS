@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from app.workflows.handlers import get_step_handler
 from app.workflows.plan import ExecutionPlanStep
@@ -18,7 +18,7 @@ class WorkflowExecutor:
     def execute_step(
         self,
         step: ExecutionPlanStep,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
     ) -> StepResult:
         """Execute a single step using its corresponding handler."""
         logger.info("Executor executing step '%s' (%s → %s)", step.step_id, step.service, step.action)

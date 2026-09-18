@@ -2,8 +2,13 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from app.core.config import settings
-from app.services.llm_service import LLMServiceError, generate_completion, generate_tool_response
+from app.services.llm_service import (
+    LLMServiceError,
+    generate_completion,
+    generate_tool_response,
+)
 
 
 @pytest.mark.asyncio

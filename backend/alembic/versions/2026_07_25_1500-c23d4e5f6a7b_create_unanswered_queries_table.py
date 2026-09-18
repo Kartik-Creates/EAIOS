@@ -8,6 +8,7 @@ NOTE: hand-written (no live DB available to autogenerate against) — verify
 with `alembic upgrade head` against a fresh database before merging.
 """
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "c23d4e5f6a7b"

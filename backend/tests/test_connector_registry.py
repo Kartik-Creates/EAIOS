@@ -1,5 +1,6 @@
 """Unit & integration tests for Connector Registry auto-discovery and duplicate-name validation."""
 import pytest
+
 from app.connectors.base import ConnectorSpec
 from app.connectors.registry import ConnectorRegistry, connector_registry
 from app.schemas.briefing import SourceResult

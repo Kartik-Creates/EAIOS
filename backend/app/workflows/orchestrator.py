@@ -1,6 +1,5 @@
-import time
 import logging
-from typing import List, Optional
+import time
 
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.approval_engine import approval_engine
@@ -107,7 +106,7 @@ class WorkflowOrchestrator:
             metadata={"workflow_name": plan.workflow_name},
         )
 
-        step_results: List[StepResult] = []
+        step_results: list[StepResult] = []
         completed_count = 0
         failed_count = 0
         skipped_count = 0

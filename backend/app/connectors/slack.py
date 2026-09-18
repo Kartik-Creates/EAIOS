@@ -1,6 +1,6 @@
+import app.services.briefing_service as bs
 from app.connectors.base import ConnectorSpec
 from app.core.oauth_config import PROVIDERS
-import app.services.briefing_service as bs
 
 CONNECTOR = ConnectorSpec(
     name="slack",

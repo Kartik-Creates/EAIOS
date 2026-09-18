@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.models.workflow import WorkflowRunStatus
@@ -13,11 +13,11 @@ class ExecutionHistorySummary(BaseModel):
     workflow_name: str
     status: WorkflowRunStatus
     started_at: str
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
     total_duration: float = 0.0
     actor: str = "system"
-    approval_summary: Optional[Dict[str, Any]] = None
-    step_summary: List[Dict[str, Any]] = Field(default_factory=list)
+    approval_summary: dict[str, Any] | None = None
+    step_summary: list[dict[str, Any]] = Field(default_factory=list)
     total_steps: int = 0
     completed_steps: int = 0
 

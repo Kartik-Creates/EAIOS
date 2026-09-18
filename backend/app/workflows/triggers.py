@@ -1,7 +1,8 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -24,8 +25,8 @@ class TriggerContext(BaseModel):
     trigger_type: TriggerType
     source: str = "user_interface"
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    initiating_user: Optional[str] = "system"
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    initiating_user: str | None = "system"
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True  # Immutable model

@@ -8,10 +8,12 @@ Tests verify:
   - Unauthenticated requests return 401
 """
 import uuid
+
 import pytest
+
+from app.core.security import get_password_hash
 from app.models.notification import UserNotification
 from app.models.user import User
-from app.core.security import get_password_hash
 from tests.rag_fixtures import register_and_login
 
 

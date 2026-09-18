@@ -1,16 +1,14 @@
-from typing import Any, Dict, List, Optional, Set
 from pydantic import BaseModel, Field
 
 
 class DAGCycleError(Exception):
     """Raised when a cycle is detected in the Workflow Execution Graph."""
-    pass
 
 
 class DAGNode(BaseModel):
     step_id: str
-    dependencies: List[str] = Field(default_factory=list)
-    condition: Optional[str] = None  # Optional condition evaluation rule
+    dependencies: list[str] = Field(default_factory=list)
+    condition: str | None = None  # Optional condition evaluation rule
 
     class Config:
         frozen = True
@@ -22,7 +20,7 @@ class DAGGraph:
     Validates graph structure, prevents cycles, and resolves parallel execution levels.
     """
 
-    def __init__(self, nodes: List[DAGNode]) -> None:
+    def __init__(self, nodes: list[DAGNode]) -> None:
         self.nodes = {n.step_id: n for n in nodes}
         self.validate_graph()
 
@@ -56,7 +54,7 @@ class DAGGraph:
         if visited_count != len(self.nodes):
             raise DAGCycleError("Cyclic dependency detected in workflow execution graph!")
 
-    def get_execution_levels(self) -> List[List[str]]:
+    def get_execution_levels(self) -> list[list[str]]:
         """
         Group step IDs into parallel execution levels.
         Steps at the same level can be executed simultaneously in parallel.
@@ -69,7 +67,7 @@ class DAGGraph:
                 adj_list[dep].append(step_id)
                 in_degree[step_id] += 1
 
-        levels: List[List[str]] = []
+        levels: list[list[str]] = []
         current_level = [n for n in in_degree if in_degree[n] == 0]
 
         while current_level:

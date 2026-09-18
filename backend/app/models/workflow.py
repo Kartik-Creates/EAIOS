@@ -1,5 +1,6 @@
 import enum
 import uuid
+
 from sqlalchemy import (
     JSON,
     Boolean,

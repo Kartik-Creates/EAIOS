@@ -7,9 +7,9 @@ from app.workflows.enums import (
 )
 
 __all__ = [
-    "WorkflowCategory",
-    "RiskLevel",
-    "IntegrationType",
     "CapabilityType",
+    "IntegrationType",
     "ParameterType",
+    "RiskLevel",
+    "WorkflowCategory",
 ]

@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from app.schemas.workflow import WorkflowParameter
 from app.workflows.enums import ParameterType
@@ -14,10 +14,10 @@ class ParameterValidator:
 
     @staticmethod
     def validate(
-        schema: List[WorkflowParameter],
-        inputs: Dict[str, Any],
+        schema: list[WorkflowParameter],
+        inputs: dict[str, Any],
     ) -> ValidationSummary:
-        errors: List[FieldValidationError] = []
+        errors: list[FieldValidationError] = []
 
         for param in schema:
             value = inputs.get(param.id)
