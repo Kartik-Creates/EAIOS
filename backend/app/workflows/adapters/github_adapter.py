@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from app.workflows.adapters.base import BaseIntegrationAdapter
 from app.workflows.adapters.exceptions import AdapterConfigurationError
 
@@ -8,15 +9,15 @@ class GitHubAdapter(BaseIntegrationAdapter):
     def provider_name(self) -> str:
         return "GitHub"
 
-    def validate_connection(self, user_id: Optional[str] = None) -> bool:
+    def validate_connection(self, user_id: str | None = None) -> bool:
         return True
 
     def execute_action(
         self,
         action: str,
-        parameters: Dict[str, Any],
-        user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        parameters: dict[str, Any],
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
         repo = parameters.get("repository", "Kartik-Creates/EAIOS")
         if action in ("get_recent_activity", "compare_tags"):
             return {"repo": repo, "merged_prs_count": 4, "provider": "GitHub"}
@@ -26,5 +27,5 @@ class GitHubAdapter(BaseIntegrationAdapter):
         else:
             raise AdapterConfigurationError(f"Unsupported GitHub action '{action}'", self.provider_name)
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         return {"provider": "GitHub", "status": "healthy"}

@@ -1,7 +1,11 @@
 import pytest
-from app.schemas.workflow import WorkflowDefinition
+
 from app.workflows.definitions.reporting import DAILY_BRIEF
-from app.workflows.hardening import RateLimiter, RateLimiterExceededError, hardening_service
+from app.workflows.hardening import (
+    RateLimiter,
+    RateLimiterExceededError,
+    hardening_service,
+)
 from app.workflows.registry import workflow_registry
 from app.workflows.templates import template_service
 from app.workflows.versioning import VersionState, version_manager

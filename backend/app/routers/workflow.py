@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
 from app.core.deps import get_current_user
@@ -31,10 +32,10 @@ from app.workflows.workflow_instance import WorkflowInstance
 router = APIRouter()
 
 
-@router.get("", response_model=List[WorkflowDefinition])
+@router.get("", response_model=list[WorkflowDefinition])
 async def list_workflows(
-    category: Optional[WorkflowCategory] = Query(None, description="Filter by workflow category"),
-    search: Optional[str] = Query(None, description="Search by workflow name or description"),
+    category: WorkflowCategory | None = Query(None, description="Filter by workflow category"),
+    search: str | None = Query(None, description="Search by workflow name or description"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -47,7 +48,7 @@ async def list_workflows(
     return workflow_registry.list()
 
 
-@router.get("/categories", response_model=List[str])
+@router.get("/categories", response_model=list[str])
 async def list_workflow_categories(
     current_user: User = Depends(get_current_user),
 ):
@@ -61,7 +62,7 @@ async def list_workflow_categories(
 # Productization: Templates, Versioning & Health
 # ─────────────────────────────────────────────
 
-@router.get("/templates", response_model=List[EnterpriseTemplate])
+@router.get("/templates", response_model=list[EnterpriseTemplate])
 async def list_enterprise_templates(
     current_user: User = Depends(get_current_user),
 ):
@@ -132,7 +133,7 @@ async def clone_workflow(
 
 @router.get("/analytics", response_model=WorkflowAnalyticsSummary)
 async def get_workflow_analytics(
-    workflow_id: Optional[str] = Query(None, description="Filter analytics by workflow ID"),
+    workflow_id: str | None = Query(None, description="Filter analytics by workflow ID"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -141,7 +142,7 @@ async def get_workflow_analytics(
     return analytics_engine.compute_metrics(workflow_id=workflow_id)
 
 
-@router.get("/circuit-breakers", response_model=Dict[str, Dict[str, Any]])
+@router.get("/circuit-breakers", response_model=dict[str, dict[str, Any]])
 async def get_circuit_breaker_status(
     current_user: User = Depends(get_current_user),
 ):
@@ -159,9 +160,9 @@ async def get_circuit_breaker_status(
 async def create_workflow_schedule(
     workflow_id: str = Body(..., embed=True),
     schedule_type: ScheduleType = Body(..., embed=True),
-    cron_expression: Optional[str] = Body(None, embed=True),
-    run_at: Optional[str] = Body(None, embed=True),
-    parameters: Dict[str, Any] = Body(default_factory=dict, embed=True),
+    cron_expression: str | None = Body(None, embed=True),
+    run_at: str | None = Body(None, embed=True),
+    parameters: dict[str, Any] = Body(default_factory=dict, embed=True),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -179,9 +180,9 @@ async def create_workflow_schedule(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err))
 
 
-@router.get("/schedules", response_model=List[ScheduledJob])
+@router.get("/schedules", response_model=list[ScheduledJob])
 async def list_workflow_schedules(
-    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
+    workflow_id: str | None = Query(None, description="Filter by workflow ID"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -204,9 +205,9 @@ async def delete_workflow_schedule(
     return {"message": f"Successfully deleted schedule '{schedule_id}'"}
 
 
-@router.get("/instances", response_model=List[WorkflowInstance])
+@router.get("/instances", response_model=list[WorkflowInstance])
 async def list_workflow_instances(
-    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
+    workflow_id: str | None = Query(None, description="Filter by workflow ID"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -219,7 +220,7 @@ async def list_workflow_instances(
 async def trigger_workflow(
     workflow_id: str,
     trigger_type: TriggerType = Body(TriggerType.MANUAL, embed=True),
-    parameters: Dict[str, Any] = Body(default_factory=dict, embed=True),
+    parameters: dict[str, Any] = Body(default_factory=dict, embed=True),
     async_background: bool = Body(False, embed=True),
     source: str = Body("api", embed=True),
     current_user: User = Depends(get_current_user),
@@ -247,11 +248,11 @@ async def trigger_workflow(
 # Phase 6 Monitoring, History & Audit Endpoints
 # ─────────────────────────────────────────────
 
-@router.get("/history", response_model=List[ExecutionHistorySummary])
+@router.get("/history", response_model=list[ExecutionHistorySummary])
 async def list_execution_history(
-    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
-    status_filter: Optional[WorkflowRunStatus] = Query(None, alias="status", description="Filter by run status"),
-    correlation_id: Optional[str] = Query(None, description="Filter by correlation ID"),
+    workflow_id: str | None = Query(None, description="Filter by workflow ID"),
+    status_filter: WorkflowRunStatus | None = Query(None, alias="status", description="Filter by run status"),
+    correlation_id: str | None = Query(None, description="Filter by correlation ID"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -281,7 +282,7 @@ async def get_execution_history_details(
     return hist
 
 
-@router.get("/events/{execution_id}", response_model=List[WorkflowEvent])
+@router.get("/events/{execution_id}", response_model=list[WorkflowEvent])
 async def get_execution_event_timeline(
     execution_id: str,
     current_user: User = Depends(get_current_user),
@@ -292,12 +293,12 @@ async def get_execution_event_timeline(
     return audit_service.query_audit_logs(correlation_id=None)
 
 
-@router.get("/audit", response_model=List[WorkflowEvent])
+@router.get("/audit", response_model=list[WorkflowEvent])
 async def query_audit_trail(
-    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
-    event_type: Optional[WorkflowEventType] = Query(None, description="Filter by event type"),
-    actor: Optional[str] = Query(None, description="Filter by actor"),
-    correlation_id: Optional[str] = Query(None, description="Filter by correlation ID"),
+    workflow_id: str | None = Query(None, description="Filter by workflow ID"),
+    event_type: WorkflowEventType | None = Query(None, description="Filter by event type"),
+    actor: str | None = Query(None, description="Filter by actor"),
+    correlation_id: str | None = Query(None, description="Filter by correlation ID"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -315,9 +316,9 @@ async def query_audit_trail(
 # Phase 5 Approval Management Endpoints
 # ─────────────────────────────────────────────
 
-@router.get("/approvals", response_model=List[ApprovalRequestModel])
+@router.get("/approvals", response_model=list[ApprovalRequestModel])
 async def list_approval_requests(
-    status_filter: Optional[ApprovalLifecycleState] = Query(None, alias="status", description="Filter by approval status"),
+    status_filter: ApprovalLifecycleState | None = Query(None, alias="status", description="Filter by approval status"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -346,7 +347,7 @@ async def get_approval_request(
 @router.post("/approvals/{request_id}/approve", response_model=ExecutionResult)
 async def approve_workflow_request(
     request_id: str,
-    comments: Optional[str] = Body(None, embed=True, description="Optional approver comments"),
+    comments: str | None = Body(None, embed=True, description="Optional approver comments"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -370,7 +371,7 @@ async def approve_workflow_request(
 @router.post("/approvals/{request_id}/reject", response_model=ExecutionResult)
 async def reject_workflow_request(
     request_id: str,
-    comments: Optional[str] = Body(None, embed=True, description="Reason for rejection"),
+    comments: str | None = Body(None, embed=True, description="Reason for rejection"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -398,7 +399,7 @@ async def reject_workflow_request(
 @router.get("/{workflow_id}", response_model=WorkflowDefinition)
 async def get_workflow_definition(
     workflow_id: str,
-    version: Optional[str] = Query(None, description="Optional workflow version"),
+    version: str | None = Query(None, description="Optional workflow version"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -413,10 +414,10 @@ async def get_workflow_definition(
     return workflow
 
 
-@router.get("/{workflow_id}/parameters", response_model=List[WorkflowParameter])
+@router.get("/{workflow_id}/parameters", response_model=list[WorkflowParameter])
 async def get_workflow_parameters(
     workflow_id: str,
-    version: Optional[str] = Query(None, description="Optional workflow version"),
+    version: str | None = Query(None, description="Optional workflow version"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -434,8 +435,8 @@ async def get_workflow_parameters(
 @router.post("/{workflow_id}/plan", response_model=ExecutionPlan)
 async def generate_execution_plan(
     workflow_id: str,
-    version: Optional[str] = Query(None, description="Optional workflow version"),
-    parameters: Dict[str, Any] = Body(default_factory=dict, description="Workflow parameter inputs"),
+    version: str | None = Query(None, description="Optional workflow version"),
+    parameters: dict[str, Any] = Body(default_factory=dict, description="Workflow parameter inputs"),
     current_user: User = Depends(get_current_user),
 ):
     """

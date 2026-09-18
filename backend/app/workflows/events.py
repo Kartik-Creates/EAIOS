@@ -1,7 +1,8 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -25,12 +26,12 @@ class WorkflowEvent(BaseModel):
     event_type: WorkflowEventType
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     correlation_id: str
-    execution_id: Optional[str] = None
+    execution_id: str | None = None
     workflow_id: str
     workflow_version: str = "1.0.0"
-    step_id: Optional[str] = None
+    step_id: str | None = None
     actor: str = "system"
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True  # Enforce event immutability

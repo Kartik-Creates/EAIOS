@@ -8,29 +8,23 @@ class AdapterError(Exception):
 
 class AdapterAuthenticationError(AdapterError):
     """Raised when authentication credentials or OAuth tokens are missing/invalid."""
-    pass
 
 
 class AdapterPermissionError(AdapterError):
     """Raised when permission/scope is insufficient."""
-    pass
 
 
 class AdapterRateLimitError(AdapterError):
     """Raised when external API rate limit is exceeded."""
-    pass
 
 
 class AdapterResourceNotFoundError(AdapterError):
     """Raised when requested external resource is not found."""
-    pass
 
 
 class AdapterConfigurationError(AdapterError):
     """Raised when integration settings are misconfigured."""
-    pass
 
 
 class AdapterTemporaryFailure(AdapterError):
     """Raised when temporary network/timeout error occurs."""
-    pass

@@ -1,7 +1,7 @@
 import pytest
+
 from app.workflows.exceptions import WorkflowNotFoundError
 from app.workflows.planner import WorkflowPlanner
-from app.workflows.registry import workflow_registry
 
 
 def test_planner_valid_execution_plan():

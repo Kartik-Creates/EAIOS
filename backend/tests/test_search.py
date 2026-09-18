@@ -6,9 +6,9 @@ real pgvector query in this test suite.
 import uuid
 
 import pytest
+
 from app.core.security import get_password_hash
 from app.models.user import User
-
 from tests.rag_fixtures import (
     captured_meeting_search_calls,
     captured_search_calls,

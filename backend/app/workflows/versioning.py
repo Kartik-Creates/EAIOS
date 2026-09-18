@@ -2,7 +2,7 @@ import enum
 import logging
 import threading
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 from app.schemas.workflow import WorkflowDefinition
@@ -23,7 +23,7 @@ class WorkflowVersionRecord(BaseModel):
     state: VersionState
     definition: WorkflowDefinition
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    published_at: Optional[str] = None
+    published_at: str | None = None
 
 
 class WorkflowVersionManager:
@@ -32,7 +32,7 @@ class WorkflowVersionManager:
     """
 
     def __init__(self) -> None:
-        self._versions: Dict[str, Dict[str, WorkflowVersionRecord]] = {}
+        self._versions: dict[str, dict[str, WorkflowVersionRecord]] = {}
         self._lock = threading.Lock()
 
     def create_draft(self, definition: WorkflowDefinition) -> WorkflowVersionRecord:
@@ -88,7 +88,7 @@ class WorkflowVersionManager:
         logger.info("Cloned workflow '%s' to '%s'", source_workflow_id, new_workflow_id)
         return cloned_def
 
-    def list_versions(self, workflow_id: str) -> List[WorkflowVersionRecord]:
+    def list_versions(self, workflow_id: str) -> list[WorkflowVersionRecord]:
         with self._lock:
             return list(self._versions.get(workflow_id, {}).values())
 

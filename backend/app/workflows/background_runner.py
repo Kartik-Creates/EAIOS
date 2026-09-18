@@ -1,10 +1,8 @@
-import asyncio
 import logging
 import threading
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
-from app.workflows.execution import ExecutionResult
 from app.workflows.orchestrator import orchestrator
 from app.workflows.plan import ExecutionPlan
 
@@ -17,19 +15,17 @@ class BaseBackgroundRunner(ABC):
     @abstractmethod
     def queue_execution(self, plan: ExecutionPlan) -> str:
         """Queue plan for asynchronous background execution. Returns task_id."""
-        pass
 
     @abstractmethod
-    def get_status(self, task_id: str) -> Dict[str, Any]:
+    def get_status(self, task_id: str) -> dict[str, Any]:
         """Get status of queued background execution."""
-        pass
 
 
 class InMemoryBackgroundRunner(BaseBackgroundRunner):
     """Default thread/async background runner."""
 
     def __init__(self) -> None:
-        self._tasks: Dict[str, Dict[str, Any]] = {}
+        self._tasks: dict[str, dict[str, Any]] = {}
         self._lock = threading.Lock()
 
     def queue_execution(self, plan: ExecutionPlan) -> str:
@@ -62,7 +58,7 @@ class InMemoryBackgroundRunner(BaseBackgroundRunner):
                 self._tasks[task_id]["status"] = "FAILED"
                 self._tasks[task_id]["error"] = str(exc)
 
-    def get_status(self, task_id: str) -> Dict[str, Any]:
+    def get_status(self, task_id: str) -> dict[str, Any]:
         with self._lock:
             return self._tasks.get(task_id, {"status": "UNKNOWN"})
 

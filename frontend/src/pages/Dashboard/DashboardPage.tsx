@@ -303,14 +303,24 @@ export const DashboardPage = () => {
             )}
           </div>
 
-
-          <button
-            type="button"
-            className="priorities-link text-xs cursor-pointer hover:underline text-accent"
-            onClick={() => setIsFullBriefingOpen(true)}
-          >
-            {t('dashboard.viewFullBriefing')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed p-1"
+              onClick={fetchBriefingData}
+              disabled={isLoadingBriefing}
+              title="Refresh briefing data"
+            >
+              <RefreshCw size={14} className={isLoadingBriefing ? 'animate-spin' : ''} />
+            </button>
+            <button
+              type="button"
+              className="priorities-link text-xs cursor-pointer hover:underline text-accent"
+              onClick={() => setIsFullBriefingOpen(true)}
+            >
+              {t('dashboard.viewFullBriefing')}
+            </button>
+          </div>
 
         </div>
 

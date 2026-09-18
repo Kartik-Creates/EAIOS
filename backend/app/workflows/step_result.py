@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.models.workflow import WorkflowRunStatus
@@ -10,9 +11,9 @@ class StepResult(BaseModel):
     started_at: str
     finished_at: str
     duration: float  # In seconds
-    outputs: Dict[str, Any] = Field(default_factory=dict)
+    outputs: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
-    error: Optional[str] = None
+    error: str | None = None
     retryable: bool = False
 
     class Config:

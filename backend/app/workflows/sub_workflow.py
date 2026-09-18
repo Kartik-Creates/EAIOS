@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.workflows.plan import ExecutionPlan
 from app.workflows.planner import planner
@@ -10,7 +10,6 @@ logger = logging.getLogger("eaios.workflows.sub_workflow")
 
 class CircularSubWorkflowError(Exception):
     """Raised when a sub-workflow causes a circular reference chain."""
-    pass
 
 
 class SubWorkflowEngine:
@@ -22,8 +21,8 @@ class SubWorkflowEngine:
     def expand_sub_workflow(
         self,
         sub_workflow_id: str,
-        parameters: Dict[str, Any],
-        call_stack: Optional[List[str]] = None,
+        parameters: dict[str, Any],
+        call_stack: list[str] | None = None,
     ) -> ExecutionPlan:
         stack = list(call_stack or [])
         if sub_workflow_id in stack:

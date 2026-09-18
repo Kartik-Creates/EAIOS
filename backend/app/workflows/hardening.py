@@ -1,7 +1,8 @@
 import logging
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel
 
 from app.workflows.circuit_breaker import circuit_breaker_registry
@@ -12,7 +13,6 @@ logger = logging.getLogger("eaios.workflows.hardening")
 
 class RateLimiterExceededError(Exception):
     """Raised when workflow execution rate limit is exceeded."""
-    pass
 
 
 class RateLimiter:
@@ -21,7 +21,7 @@ class RateLimiter:
     def __init__(self, max_requests: int = 100, window_seconds: float = 60.0) -> None:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self._requests: List[float] = []
+        self._requests: list[float] = []
         self._lock = threading.Lock()
 
     def check_rate_limit(self) -> None:
@@ -37,7 +37,7 @@ class SystemHealthReport(BaseModel):
     status: str
     uptime: float
     total_events_logged: int
-    circuit_breaker_summary: Dict[str, Any]
+    circuit_breaker_summary: dict[str, Any]
     rate_limiter_active: bool
 
 

@@ -1,9 +1,8 @@
 import logging
-from typing import List, Optional
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel
 
 from app.schemas.workflow import WorkflowDefinition
-from app.workflows.definitions.administration import USER_OFFBOARDING
 from app.workflows.definitions.automation import AUTO_REPLY
 from app.workflows.definitions.engineering import RELEASE_NOTES
 from app.workflows.definitions.meetings import MEETING_FOLLOW_UP
@@ -22,7 +21,7 @@ class EnterpriseTemplate(BaseModel):
     workflow_definition: WorkflowDefinition
 
 
-ENTERPRISE_TEMPLATES: List[EnterpriseTemplate] = [
+ENTERPRISE_TEMPLATES: list[EnterpriseTemplate] = [
     EnterpriseTemplate(
         template_id="tpl_daily_brief",
         name="Executive Daily Digest",
@@ -61,7 +60,7 @@ ENTERPRISE_TEMPLATES: List[EnterpriseTemplate] = [
 class TemplateLibraryService:
     """Enterprise Template Library Service."""
 
-    def list_templates(self) -> List[EnterpriseTemplate]:
+    def list_templates(self) -> list[EnterpriseTemplate]:
         return ENTERPRISE_TEMPLATES
 
     def install_template(self, template_id: str) -> WorkflowDefinition:

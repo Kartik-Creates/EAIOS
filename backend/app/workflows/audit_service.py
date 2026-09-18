@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.workflows.event_store import event_store
 from app.workflows.events import WorkflowEvent, WorkflowEventType
@@ -16,10 +16,10 @@ class AuditService:
         correlation_id: str,
         workflow_id: str,
         workflow_version: str = "1.0.0",
-        execution_id: Optional[str] = None,
-        step_id: Optional[str] = None,
+        execution_id: str | None = None,
+        step_id: str | None = None,
         actor: str = "system",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> WorkflowEvent:
         event = WorkflowEvent(
             event_type=event_type,
@@ -36,11 +36,11 @@ class AuditService:
 
     def query_audit_logs(
         self,
-        workflow_id: Optional[str] = None,
-        event_type: Optional[WorkflowEventType] = None,
-        actor: Optional[str] = None,
-        correlation_id: Optional[str] = None,
-    ) -> List[WorkflowEvent]:
+        workflow_id: str | None = None,
+        event_type: WorkflowEventType | None = None,
+        actor: str | None = None,
+        correlation_id: str | None = None,
+    ) -> list[WorkflowEvent]:
         if correlation_id:
             return event_store.get_by_correlation_id(correlation_id)
         return event_store.list_events(workflow_id=workflow_id, event_type=event_type, actor=actor)

@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.models.workflow import WorkflowRunStatus
@@ -17,8 +18,8 @@ class ExecutionResult(BaseModel):
     completed_steps: int = 0
     failed_steps: int = 0
     skipped_steps: int = 0
-    step_results: List[StepResult] = Field(default_factory=list)
-    execution_summary: Dict[str, Any] = Field(default_factory=dict)
+    step_results: list[StepResult] = Field(default_factory=list)
+    execution_summary: dict[str, Any] = Field(default_factory=dict)
     executed_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     class Config:

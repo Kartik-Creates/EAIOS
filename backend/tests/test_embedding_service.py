@@ -9,6 +9,7 @@ Tests verify:
 from unittest.mock import MagicMock
 
 import pytest
+
 from app.core.config import settings
 from app.services.embedding_service import (
     EmbeddingServiceError,

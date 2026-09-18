@@ -1,9 +1,12 @@
 import logging
 import threading
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
 
-from app.workflows.approval_models import ApprovalDecision, ApprovalLifecycleState, ApprovalRequestModel
+from app.workflows.approval_models import (
+    ApprovalDecision,
+    ApprovalLifecycleState,
+    ApprovalRequestModel,
+)
 from app.workflows.plan import ExecutionPlan
 
 logger = logging.getLogger("eaios.workflows.approval_engine")
@@ -17,14 +20,14 @@ class ApprovalEngine:
     """
 
     def __init__(self) -> None:
-        self._requests: Dict[str, ApprovalRequestModel] = {}
+        self._requests: dict[str, ApprovalRequestModel] = {}
         self._lock = threading.Lock()
 
     def create_request(
         self,
         plan: ExecutionPlan,
         decision: ApprovalDecision,
-        execution_id: Optional[str] = None,
+        execution_id: str | None = None,
     ) -> ApprovalRequestModel:
         """Create a new pending approval request."""
         req = ApprovalRequestModel(
@@ -42,7 +45,7 @@ class ApprovalEngine:
         logger.info("Created pending approval request '%s' for workflow '%s'", req.request_id, req.workflow_id)
         return req
 
-    def approve_request(self, request_id: str, user_id: str, comments: Optional[str] = None) -> ApprovalRequestModel:
+    def approve_request(self, request_id: str, user_id: str, comments: str | None = None) -> ApprovalRequestModel:
         """Approve a pending request."""
         with self._lock:
             req = self._requests.get(request_id)
@@ -63,7 +66,7 @@ class ApprovalEngine:
             logger.info("Approval request '%s' APPROVED by user '%s'", request_id, user_id)
             return updated
 
-    def reject_request(self, request_id: str, user_id: str, comments: Optional[str] = None) -> ApprovalRequestModel:
+    def reject_request(self, request_id: str, user_id: str, comments: str | None = None) -> ApprovalRequestModel:
         """Reject a pending request."""
         with self._lock:
             req = self._requests.get(request_id)
@@ -84,12 +87,12 @@ class ApprovalEngine:
             logger.info("Approval request '%s' REJECTED by user '%s'", request_id, user_id)
             return updated
 
-    def get_request(self, request_id: str) -> Optional[ApprovalRequestModel]:
+    def get_request(self, request_id: str) -> ApprovalRequestModel | None:
         """Retrieve an approval request by ID."""
         with self._lock:
             return self._requests.get(request_id)
 
-    def list_requests(self, status: Optional[ApprovalLifecycleState] = None) -> List[ApprovalRequestModel]:
+    def list_requests(self, status: ApprovalLifecycleState | None = None) -> list[ApprovalRequestModel]:
         """List approval requests with optional status filter."""
         with self._lock:
             requests = list(self._requests.values())

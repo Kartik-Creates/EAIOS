@@ -1,6 +1,4 @@
-import pytest
 from app.models.workflow import WorkflowRunStatus
-from app.workflows.adapters.exceptions import AdapterAuthenticationError, AdapterConfigurationError
 from app.workflows.adapters.github_adapter import GitHubAdapter
 from app.workflows.adapters.jira_adapter import JiraAdapter
 from app.workflows.adapters.registry import adapter_registry

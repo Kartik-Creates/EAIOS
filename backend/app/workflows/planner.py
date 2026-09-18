@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional
 import logging
+from typing import Any
 
 from app.workflows.audit_service import audit_service
 from app.workflows.events import WorkflowEventType
@@ -21,9 +21,9 @@ class WorkflowPlanner:
     def create_plan(
         self,
         workflow_id: str,
-        parameters: Dict[str, Any],
-        user_id: Optional[str] = "system",
-        version: Optional[str] = None,
+        parameters: dict[str, Any],
+        user_id: str | None = "system",
+        version: str | None = None,
     ) -> ExecutionPlan:
         """
         Build an ExecutionPlan for the specified workflow definition and inputs.

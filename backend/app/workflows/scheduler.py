@@ -3,7 +3,8 @@ import logging
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("eaios.workflows.scheduler")
@@ -19,9 +20,9 @@ class ScheduledJob(BaseModel):
     schedule_id: str = Field(default_factory=lambda: f"sched_{uuid.uuid4().hex[:12]}")
     workflow_id: str
     schedule_type: ScheduleType
-    cron_expression: Optional[str] = None
-    run_at: Optional[str] = None
-    parameters: Dict[str, Any] = Field(default_factory=dict)
+    cron_expression: str | None = None
+    run_at: str | None = None
+    parameters: dict[str, Any] = Field(default_factory=dict)
     is_active: bool = True
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -36,16 +37,16 @@ class WorkflowScheduler:
     """
 
     def __init__(self) -> None:
-        self._schedules: Dict[str, ScheduledJob] = {}
+        self._schedules: dict[str, ScheduledJob] = {}
         self._lock = threading.Lock()
 
     def create_schedule(
         self,
         workflow_id: str,
         schedule_type: ScheduleType,
-        cron_expression: Optional[str] = None,
-        run_at: Optional[str] = None,
-        parameters: Optional[Dict[str, Any]] = None,
+        cron_expression: str | None = None,
+        run_at: str | None = None,
+        parameters: dict[str, Any] | None = None,
     ) -> ScheduledJob:
         if schedule_type == ScheduleType.CRON and not cron_expression:
             raise ValueError("Cron schedule requires a valid 'cron_expression'.")
@@ -72,7 +73,7 @@ class WorkflowScheduler:
                 return True
             return False
 
-    def list_schedules(self, workflow_id: Optional[str] = None) -> List[ScheduledJob]:
+    def list_schedules(self, workflow_id: str | None = None) -> list[ScheduledJob]:
         with self._lock:
             jobs = list(self._schedules.values())
             if workflow_id:

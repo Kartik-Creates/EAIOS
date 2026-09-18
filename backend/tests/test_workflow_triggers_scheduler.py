@@ -1,5 +1,5 @@
 import pytest
-from app.workflows.background_runner import background_runner
+
 from app.workflows.scheduler import ScheduleType, scheduler
 from app.workflows.trigger_engine import trigger_engine
 from app.workflows.triggers import TriggerContext, TriggerType

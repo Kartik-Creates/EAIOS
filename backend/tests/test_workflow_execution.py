@@ -1,10 +1,15 @@
 import pytest
+
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.executor import WorkflowExecutor
 from app.workflows.orchestrator import WorkflowOrchestrator
 from app.workflows.plan import ExecutionPlanStep
 from app.workflows.planner import WorkflowPlanner
-from app.workflows.state_machine import InvalidStateTransitionError, WorkflowState, WorkflowStateMachine
+from app.workflows.state_machine import (
+    InvalidStateTransitionError,
+    WorkflowState,
+    WorkflowStateMachine,
+)
 
 
 def test_state_machine_valid_transitions():

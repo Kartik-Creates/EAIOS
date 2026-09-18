@@ -1,14 +1,12 @@
 import logging
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.background_runner import background_runner
-from app.workflows.execution import ExecutionResult
 from app.workflows.orchestrator import orchestrator
-from app.workflows.plan import ExecutionPlan
 from app.workflows.planner import planner
-from app.workflows.triggers import TriggerContext, TriggerType
+from app.workflows.triggers import TriggerContext
 from app.workflows.workflow_instance import WorkflowInstance
 
 logger = logging.getLogger("eaios.workflows.trigger_engine")
@@ -22,16 +20,16 @@ class TriggerEngine:
     """
 
     def __init__(self) -> None:
-        self._instances: Dict[str, WorkflowInstance] = {}
+        self._instances: dict[str, WorkflowInstance] = {}
         self._lock = threading.Lock()
 
     def trigger_workflow(
         self,
         workflow_id: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         context: TriggerContext,
         async_background: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Trigger workflow invocation from any trigger source.
         Returns instance metadata and execution/background task results.
@@ -76,7 +74,7 @@ class TriggerEngine:
                 "execution_result": exec_result,
             }
 
-    def list_instances(self, workflow_id: Optional[str] = None) -> List[WorkflowInstance]:
+    def list_instances(self, workflow_id: str | None = None) -> list[WorkflowInstance]:
         with self._lock:
             instances = list(self._instances.values())
             if workflow_id:

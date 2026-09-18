@@ -1,5 +1,4 @@
 import enum
-from typing import Set
 
 
 class WorkflowState(str, enum.Enum):
@@ -27,7 +26,7 @@ class WorkflowStateMachine:
     Explicit lifecycle state machine enforcing valid workflow state transitions.
     """
 
-    ALLOWED_TRANSITIONS: dict[WorkflowState, Set[WorkflowState]] = {
+    ALLOWED_TRANSITIONS: dict[WorkflowState, set[WorkflowState]] = {
         WorkflowState.CREATED: {WorkflowState.VALIDATED, WorkflowState.CANCELLED, WorkflowState.FAILED},
         WorkflowState.VALIDATED: {WorkflowState.READY, WorkflowState.CANCELLED, WorkflowState.FAILED},
         WorkflowState.READY: {WorkflowState.RUNNING, WorkflowState.WAITING_CONFIRMATION, WorkflowState.CANCELLED},

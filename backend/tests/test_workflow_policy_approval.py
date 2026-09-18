@@ -1,8 +1,8 @@
 import pytest
+
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.approval_engine import ApprovalEngine
 from app.workflows.approval_models import ApprovalLifecycleState
-from app.workflows.enums import RiskLevel
 from app.workflows.orchestrator import WorkflowOrchestrator
 from app.workflows.planner import WorkflowPlanner
 from app.workflows.policy import PolicyEngine

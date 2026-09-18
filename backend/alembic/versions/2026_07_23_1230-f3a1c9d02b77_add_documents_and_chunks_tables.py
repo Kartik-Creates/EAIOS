@@ -6,8 +6,9 @@ Create Date: 2026-07-23 12:30:00.000000
 
 """
 import sqlalchemy as sa
-from alembic import op
 from pgvector.sqlalchemy import Vector
+
+from alembic import op
 
 revision = "f3a1c9d02b77"
 down_revision = None

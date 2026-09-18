@@ -4,11 +4,12 @@ Run inside the backend container: docker compose exec backend python -m scripts.
 """
 import asyncio
 
+from sqlalchemy import delete, select
+
 from app.db.session import AsyncSessionLocal
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.services.ingestion_service import ingest_document
-from sqlalchemy import delete, select
 
 OLD_STUB_TITLES = [
     "[TEST DATA] Employee Leave Policy",

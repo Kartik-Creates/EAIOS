@@ -3,11 +3,8 @@
 Scans the app/connectors directory for python modules defining a CONNECTOR
 instance of ConnectorSpec. Validates uniqueness across all connector names on startup.
 """
-import importlib
 import logging
-import pkgutil
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from app.connectors.base import ConnectorSpec
 
@@ -18,10 +15,10 @@ class ConnectorRegistry:
     """Registry managing all discovered integration connectors."""
 
     def __init__(self):
-        self._connectors: Dict[str, ConnectorSpec] = {}
+        self._connectors: dict[str, ConnectorSpec] = {}
         self._discovered = False
 
-    def discover_connectors(self, package_path: Optional[str] = None):
+    def discover_connectors(self, package_path: str | None = None):
         """Auto-discover all connectors in the connectors package directory.
 
         Scans all python files in the directory, loads them dynamically,
@@ -67,25 +64,25 @@ class ConnectorRegistry:
 
         self._discovered = True
 
-    def get_all_connectors(self) -> Dict[str, ConnectorSpec]:
+    def get_all_connectors(self) -> dict[str, ConnectorSpec]:
         """Retrieve dictionary of all registered connectors."""
         if not self._discovered:
             self.discover_connectors()
         return self._connectors
 
-    def get_connector(self, name: str) -> Optional[ConnectorSpec]:
+    def get_connector(self, name: str) -> ConnectorSpec | None:
         """Retrieve a specific connector by canonical provider name."""
         if not self._discovered:
             self.discover_connectors()
         return self._connectors.get(name.lower())
 
-    def get_implemented_connectors(self) -> List[ConnectorSpec]:
+    def get_implemented_connectors(self) -> list[ConnectorSpec]:
         """Retrieve list of connectors with is_implemented=True."""
         if not self._discovered:
             self.discover_connectors()
         return [c for c in self._connectors.values() if c.is_implemented]
 
-    def get_connector_list(self) -> List[dict]:
+    def get_connector_list(self) -> list[dict]:
         """Retrieve JSON-serializable connector list for frontend endpoint."""
         if not self._discovered:
             self.discover_connectors()

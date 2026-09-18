@@ -1,4 +1,3 @@
-from typing import List, Optional
 
 from app.models.workflow import WorkflowRunStatus
 from app.workflows.event_store import event_store
@@ -11,7 +10,7 @@ class HistoryService:
     Service for building and deriving summarized execution histories directly from stored events.
     """
 
-    def get_execution_history(self, execution_id: str) -> Optional[ExecutionHistorySummary]:
+    def get_execution_history(self, execution_id: str) -> ExecutionHistorySummary | None:
         events = event_store.get_by_execution_id(execution_id)
         if not events:
             return None
@@ -74,10 +73,10 @@ class HistoryService:
 
     def list_histories(
         self,
-        workflow_id: Optional[str] = None,
-        status: Optional[WorkflowRunStatus] = None,
-        correlation_id: Optional[str] = None,
-    ) -> List[ExecutionHistorySummary]:
+        workflow_id: str | None = None,
+        status: WorkflowRunStatus | None = None,
+        correlation_id: str | None = None,
+    ) -> list[ExecutionHistorySummary]:
         if correlation_id:
             events = event_store.get_by_correlation_id(correlation_id)
             exec_ids = list({e.execution_id for e in events if e.execution_id})

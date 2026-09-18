@@ -6,8 +6,9 @@ These tests verify the security baseline requirements:
 3. Invalid/garbage tokens return 401 (not a crash or silent pass-through)
 """
 import pytest
-from app.models.user import User
 from sqlalchemy.future import select
+
+from app.models.user import User
 
 
 def _register_and_login(client, email: str, password: str = "securepassword", full_name: str = "Test"):
@@ -61,6 +62,7 @@ async def test_admin_route_rejected_for_employee(client):
 async def test_admin_route_accessible_by_manager(client, db_session):
     """A manager role MUST be allowed on admin-protected routes."""
     import uuid
+
     from app.core.security import get_password_hash
 
     # Create user directly with role='manager'
@@ -94,6 +96,7 @@ async def test_admin_route_accessible_by_manager(client, db_session):
 async def test_admin_route_rejected_for_hr(client, db_session):
     """An HR role must be rejected with 403 on admin-protected routes."""
     import uuid
+
     from app.core.security import get_password_hash
 
     hr_user = User(

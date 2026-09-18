@@ -29,11 +29,12 @@ import sys
 # invoked as `python -m scripts.reembed_documents` from backend/.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy import func, select, text
+
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, engine
 from app.models.chunk import Chunk
 from app.services.embedding_service import EmbeddingServiceError, embed_text
-from sqlalchemy import func, select, text
 
 logging.basicConfig(
     level=logging.INFO,

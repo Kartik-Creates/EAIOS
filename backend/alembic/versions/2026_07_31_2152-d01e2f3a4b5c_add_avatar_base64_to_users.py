@@ -7,6 +7,7 @@ Create Date: 2026-07-31 21:52:00.000000
 NOTE: hand-written migration to add avatar_base64 column.
 """
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "d01e2f3a4b5c"
