@@ -303,19 +303,20 @@ export const DashboardPage = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="priorities-header-actions">
             <button
               type="button"
-              className="text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed p-1"
+              className="priorities-refresh-btn"
               onClick={fetchBriefingData}
               disabled={isLoadingBriefing}
               title="Refresh briefing data"
+              aria-label="Refresh briefing data"
             >
               <RefreshCw size={14} className={isLoadingBriefing ? 'animate-spin' : ''} />
             </button>
             <button
               type="button"
-              className="priorities-link text-xs cursor-pointer hover:underline text-accent"
+              className="priorities-link"
               onClick={() => setIsFullBriefingOpen(true)}
             >
               {t('dashboard.viewFullBriefing')}

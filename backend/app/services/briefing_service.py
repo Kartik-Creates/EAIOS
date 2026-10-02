@@ -634,7 +634,29 @@ async def get_gmail_recent(db: AsyncSession, user: User) -> SourceResult:
     items: list[BriefingItem] = []
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
-    ignored_patterns = ("no-reply", "noreply", "mailer-daemon", "newsletter", "notifications", "donotreply")
+    # Sender-based noise filter — catches mail from addresses that are
+    # themselves automated/bulk senders.
+    ignored_patterns = (
+        "no-reply", "noreply", "mailer-daemon", "newsletter", "notifications",
+        "donotreply", "do-not-reply", "support@", "billing@", "alert@",
+        "system@", "info@", "admin@", "updates@", "notification@",
+        "@noreply.", ".noreply.",
+    )
+    # Subject-line noise filter — sender-pattern matching alone misses a real
+    # category of noise: onboarding/verification/gamification/job-alert mail
+    # sent from an address that looks perfectly legitimate (e.g.
+    # "developer@salesforce.com" sending an account-verification email, or a
+    # learning platform's "you've unlocked a rank" congratulations email).
+    # These aren't automated-looking by sender, only by subject phrasing, so
+    # they sailed straight through the sender-only filter and got presented
+    # to the user as if they might be a real priority item.
+    ignored_subject_patterns = (
+        "welcome to", "verify your account", "confirm your email",
+        "confirm your account", "congratulations", "you've unlocked",
+        "you have unlocked", "get started with", "activate your account",
+        "complete your profile", "hiring now", "new opportunities",
+        "job alert", "jobs matching", "unsubscribe",
+    )
 
     async with httpx.AsyncClient(timeout=httpx_timeout_default) as client:
         try:
@@ -681,7 +703,10 @@ async def get_gmail_recent(db: AsyncSession, user: User) -> SourceResult:
                         sender = h.get("value") or sender
 
                 sender_lower = sender.lower()
+                subject_lower = subject.lower()
                 if any(p in sender_lower for p in ignored_patterns):
+                    continue
+                if any(p in subject_lower for p in ignored_subject_patterns):
                     continue
 
                 detail_str = f"From: {sender} | {snippet[:100]}"

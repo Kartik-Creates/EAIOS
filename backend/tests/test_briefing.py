@@ -428,6 +428,87 @@ async def test_gmail_recent_does_not_filter_to_unread_only(db_session, monkeypat
 
 
 @pytest.mark.asyncio
+async def test_gmail_recent_filters_onboarding_noise_by_subject_not_just_sender(db_session, monkeypatch):
+    """Regression: a legitimate-looking sender (not "noreply"-style) sending
+    promotional/onboarding/gamification/job-alert content must still be
+    excluded from chat's Gmail results — sender-pattern matching alone
+    cannot catch this, since e.g. "developer@salesforce.com" sending an
+    account-verification email, or a learning platform's "you've unlocked a
+    rank" email, look like ordinary senders. Only subject-line phrasing
+    reveals these as noise, not genuine priority content."""
+    user = await _create_test_user(db_session, "gmail_noise_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "gmail")
+
+    message_bodies = {
+        "msg-real": {
+            "snippet": "Can you review the Q3 budget doc before our 2pm sync?",
+            "payload": {
+                "headers": [
+                    {"name": "Subject", "value": "Q3 budget review needed"},
+                    {"name": "From", "value": "manager@company.com"},
+                ]
+            },
+        },
+        "msg-verify": {
+            "snippet": "Click here to verify your new account and get started.",
+            "payload": {
+                "headers": [
+                    {"name": "Subject", "value": "Welcome to Salesforce: Verify your account"},
+                    {"name": "From", "value": "developer@salesforce.com"},
+                ]
+            },
+        },
+        "msg-gamify": {
+            "snippet": "You've unlocked a Trailblazer Rank!",
+            "payload": {
+                "headers": [
+                    {"name": "Subject", "value": "Congratulations, you've unlocked a Hiker Rank!"},
+                    {"name": "From", "value": "trailhead@salesforce.com"},
+                ]
+            },
+        },
+        "msg-jobs": {
+            "snippet": "New opportunities matching your profile.",
+            "payload": {
+                "headers": [
+                    {"name": "Subject", "value": "Hiring now: new opportunities at Teamware Solutions"},
+                    {"name": "From", "value": "alerts@internshala.com"},
+                ]
+            },
+        },
+    }
+
+    class MockGmailResponse:
+        def __init__(self, url):
+            self.url = str(url)
+
+        def raise_for_status(self):
+            pass
+
+        @property
+        def status_code(self):
+            return 200
+
+        def json(self):
+            for msg_id in message_bodies:
+                if msg_id in self.url:
+                    return message_bodies[msg_id]
+            return {"messages": [{"id": mid} for mid in message_bodies]}
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        return MockGmailResponse(url)
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_gmail_recent(db_session, user)
+    assert res.source == "gmail"
+    assert res.connected is True
+    # only the genuine work email survives
+    assert len(res.items) == 1
+    assert res.items[0].title == "Q3 budget review needed"
+
+
+@pytest.mark.asyncio
 async def test_github_briefing_success(db_session, monkeypatch):
     user = await _create_test_user(db_session, "gh_user@example.com")
     await _add_mock_oauth_token(db_session, user.id, "github")

@@ -124,6 +124,46 @@
   color: var(--accent-hover);
 }
 
+.priorities-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.priorities-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.priorities-refresh-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.priorities-refresh-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.priorities-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.priorities-refresh-btn svg {
+  display: block;
+}
+
 .priorities-list {
   list-style: none;
   display: flex;
