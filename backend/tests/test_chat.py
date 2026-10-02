@@ -243,6 +243,12 @@ async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeyp
     assert "deploy is blocked on review" in data["answer"]
     # the disconnected source is reported as such, not silently dropped
     assert "NOT connected" in data["answer"] or "not connected" in data["answer"].lower()
+    # Regression: Drive's entry within the aggregated overview must also use
+    # the canonical "google_drive" label, not "drive" — the label-pairing
+    # fix has to hold for every source in the fan-out, not just a standalone
+    # single-tool Drive question.
+    assert "[GOOGLE_DRIVE STATUS]" in data["answer"]
+    assert "[DRIVE STATUS]" not in data["answer"]
 
 
 @pytest.mark.asyncio
@@ -718,6 +724,12 @@ async def test_chat_routes_drive_question_to_drive_briefing(client, monkeypatch)
     assert data["source"] == "google_drive"
     assert data["citations"] == []
     assert data["confidence"] == 0.0
+    # Regression: the text the LLM actually sees must use the canonical
+    # "google_drive" label, not "drive" (get_drive_briefing's internal
+    # SourceResult.source, kept as "drive" for the dashboard's sake) — the
+    # LLM only ever learns to recognize the canonical name.
+    assert "[GOOGLE_DRIVE DATA" in data["answer"]
+    assert "[DRIVE DATA" not in data["answer"]
 
 
 @pytest.mark.asyncio
@@ -772,3 +784,7 @@ async def test_chat_drive_not_connected_gives_clear_message(client, monkeypatch)
     data = response.json()
     assert data["source"] == "google_drive"
     assert data["flagged_for_review"] is False
+    # Regression: the "not connected" block must say GOOGLE_DRIVE, the name
+    # the LLM is actually told to recognize — not DRIVE.
+    assert "[GOOGLE_DRIVE STATUS]" in data["answer"]
+    assert "[DRIVE STATUS]" not in data["answer"]

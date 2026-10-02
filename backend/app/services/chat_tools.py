@@ -179,8 +179,20 @@ TOOL_SOURCE_MAP = {
 _OVERVIEW_SOURCES = ["gmail", "calendar", "jira", "github", "google_drive", "slack"]
 
 
-def _format_source_result(result: SourceResult) -> str:
+def _format_source_result(result: SourceResult, label: str | None = None) -> str:
     """Format a SourceResult into a prompt-injection-safe data block for the LLM.
+
+    `label` lets the caller override the display name used in the block
+    header/text — defaults to `result.source` when not given, so existing
+    behavior is unchanged for every caller that doesn't pass one. This
+    matters for Google Drive specifically: get_drive_briefing() internally
+    sets SourceResult(source="drive", ...) because that's the name the
+    dashboard's briefing items/icons/tabs already key off of (left alone
+    here — not touching dashboard-facing code), but the canonical name
+    everywhere else in the app (OAuth, the connector registry, chat's own
+    ChatResponse.source field) is "google_drive". Without an override, the
+    LLM would see "[DRIVE STATUS]" — a label it never explicitly learns to
+    recognize — instead of "[GOOGLE_DRIVE STATUS]".
 
     Phrased as neutral, factual statements rather than imperative instructions
     ("please inform the user...") — the LLM grounds a reply from this fine
@@ -190,29 +202,30 @@ def _format_source_result(result: SourceResult) -> str:
     sentence. An imperative aimed at "the user" would look broken/confusing
     if a real user ever saw it verbatim in that fallback.
     """
+    name = label or result.source
     if not result.connected:
         return (
-            f"[{result.source.upper()} STATUS] "
-            f"This integration is not connected — no {result.source} account is "
+            f"[{name.upper()} STATUS] "
+            f"This integration is not connected — no {name} account is "
             f"linked yet. (Connect it from the Integrations settings page.)"
         )
     if result.error:
         return (
-            f"[{result.source.upper()} STATUS] "
-            f"{result.source.capitalize()} is connected, but the request failed "
+            f"[{name.upper()} STATUS] "
+            f"{name.capitalize()} is connected, but the request failed "
             f"just now: {result.error}."
         )
     if not result.items:
         return (
-            f"[{result.source.upper()} STATUS] "
-            f"{result.source.capitalize()} is connected — no items to show right now."
+            f"[{name.upper()} STATUS] "
+            f"{name.capitalize()} is connected — no items to show right now."
         )
     items_text = "\n".join(
         f"  - {item.title} | {item.detail}" + (f" | Link: {item.url}" if item.url else "")
         for item in result.items
     )
     return (
-        f"[{result.source.upper()} DATA — {len(result.items)} item(s)]\n"
+        f"[{name.upper()} DATA — {len(result.items)} item(s)]\n"
         f"{items_text}"
     )
 
@@ -261,11 +274,18 @@ async def dispatch_tool_call(
         # sources (that function only aggregates 4, for the dashboard widget)
         # via the registry so it stays in sync with whatever each connector's
         # chat_fn actually points to, instead of importing functions directly.
-        connectors = [connector_registry.get_connector(name) for name in _OVERVIEW_SOURCES]
-        results = await asyncio.gather(*(
-            c.chat_fn(db, user) for c in connectors if c and c.chat_fn
-        ))
-        formatted = "\n\n".join(_format_source_result(r) for r in results)
+        # Keep (canonical_name, connector) paired through the gather so a
+        # missing connector can't silently shift a later result's label —
+        # each result is labeled with the name it was actually fetched for.
+        named_connectors = [
+            (name, connector_registry.get_connector(name)) for name in _OVERVIEW_SOURCES
+        ]
+        available = [(name, c) for name, c in named_connectors if c and c.chat_fn]
+        results = await asyncio.gather(*(c.chat_fn(db, user) for _, c in available))
+        formatted = "\n\n".join(
+            _format_source_result(r, label=name)
+            for (name, _), r in zip(available, results)
+        )
         logger.info(
             "tool_dispatch tool=get_priority_overview user_id=%s connected=%d/%d",
             user.id, sum(1 for r in results if r.connected), len(results),
@@ -276,7 +296,7 @@ async def dispatch_tool_call(
 
     if connector and connector.chat_fn:
         result: SourceResult = await connector.chat_fn(db, user)
-        formatted = _format_source_result(result)
+        formatted = _format_source_result(result, label=source)
         logger.info(
             "tool_dispatch tool=%s provider=%s user_id=%s connected=%s items=%d",
             tool_name, connector.name, user.id, result.connected, len(result.items),
