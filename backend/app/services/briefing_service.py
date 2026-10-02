@@ -108,7 +108,8 @@ async def _refresh_jira_token(db: AsyncSession, db_token: OAuthToken) -> str:
 
 
 async def get_decrypted_token(
-    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False
+    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False,
+    required_scope_keyword: str | None = None,
 ) -> str | None:
     """Fetch and decrypt the user's active OAuth access token for any of the specified provider names.
 
@@ -117,16 +118,28 @@ async def get_decrypted_token(
     Returns decrypted access token string, or None if the integration is not connected.
 
     Provider list order is a preference: the first matching row wins so Gmail
-    does not accidentally use a Drive-only token.
+    does not accidentally use a Drive-only token — but that preference alone
+    isn't enough when the user has ONLY connected the lower-preference
+    provider (e.g. only Drive, never Gmail): in that case the one matching
+    row IS the wrong-scoped token, and it would otherwise be returned anyway.
+
+    `required_scope_keyword`, when given, filters matched rows to ones whose
+    stored `scopes` string actually contains it (case-insensitive) before
+    picking by preference order. A connection that's real but doesn't carry
+    the needed scope is treated the same as "not connected" for this call,
+    rather than being handed to an API request that's guaranteed to fail
+    with a confusing permissions error.
     """
     async with _token_refresh_lock:
         return await _get_decrypted_token_unlocked(
-            db, user_id, providers, force_refresh=force_refresh
+            db, user_id, providers, force_refresh=force_refresh,
+            required_scope_keyword=required_scope_keyword,
         )
 
 
 async def _get_decrypted_token_unlocked(
-    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False
+    db: AsyncSession, user_id: str, providers: list[str], *, force_refresh: bool = False,
+    required_scope_keyword: str | None = None,
 ) -> str | None:
     stmt = select(OAuthToken).where(
         OAuthToken.user_id == user_id,
@@ -136,6 +149,20 @@ async def _get_decrypted_token_unlocked(
     rows = list(res.scalars().all())
     if not rows:
         return None
+
+    if required_scope_keyword:
+        scoped_rows = [
+            r for r in rows
+            if required_scope_keyword.lower() in (r.scopes or "").lower()
+        ]
+        if not scoped_rows:
+            logger.info(
+                "User %s has a connection among providers %s but none carry the "
+                "required '%s' scope — treating as not connected for this purpose.",
+                user_id, providers, required_scope_keyword,
+            )
+            return None
+        rows = scoped_rows
 
     rank = {name.lower(): idx for idx, name in enumerate(providers)}
     rows.sort(key=lambda t: rank.get((t.provider or "").lower(), 999))
@@ -502,7 +529,7 @@ async def get_calendar_briefing(db: AsyncSession, user: User) -> SourceResult:
 
 async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
     """Fetch urgent/important unread Gmail messages received today."""
-    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"])
+    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"], required_scope_keyword="gmail")
     if not token:
         logger.info("Gmail integration not connected for user_id: %s", user.id)
         return SourceResult(source="gmail", connected=False, items=[])
@@ -626,7 +653,7 @@ async def get_gmail_briefing(db: AsyncSession, user: User) -> SourceResult:
 
 async def get_gmail_recent(db: AsyncSession, user: User) -> SourceResult:
     """Fetch the user's most recent Gmail messages, read or unread."""
-    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"])
+    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"], required_scope_keyword="gmail")
     if not token:
         logger.info("Gmail integration not connected for user_id: %s", user.id)
         return SourceResult(source="gmail", connected=False, items=[])
@@ -768,7 +795,17 @@ async def get_github_briefing(db: AsyncSession, user: User) -> SourceResult:
                 resp = await client.get(
                     "https://api.github.com/search/issues",
                     headers=headers,
-                    params={"q": q, "per_page": 10},
+                    # per_page caps EACH query independently (not the combined
+                    # total) — 10 was too low: a PR matching two queries (e.g.
+                    # authored by you AND review-requested from you) gets
+                    # merged down to one item afterward, but only after each
+                    # query already threw away anything past its own top 10.
+                    # The two effects compound into a real undercount with no
+                    # visible sign it happened. 50 (GitHub's max is 100) is
+                    # comfortably above any realistic personal workload, so
+                    # this effectively removes the truncation rather than
+                    # just raising the ceiling on it.
+                    params={"q": q, "per_page": 50},
                 )
                 if resp.status_code in (401, 403):
                     logger.warning("GitHub API returned %d for user_id %s — token expired or missing scope", resp.status_code, user.id)
@@ -1169,7 +1206,7 @@ async def get_gmail_item_detail(
     db: AsyncSession, user: User, item_id: str
 ) -> BriefingItemDetail | None:
     """Fetch full Gmail message detail by message ID."""
-    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"])
+    token = await get_decrypted_token(db, user.id, ["gmail", "google", "google_drive"], required_scope_keyword="gmail")
     if not token:
         return None
 

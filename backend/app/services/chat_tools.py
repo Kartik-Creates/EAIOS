@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.schemas.briefing import SourceResult
+from app.services.email_draft_service import EmailDraftResult, create_gmail_draft
 from app.services.retrieval_service import (
     RetrievedChunk,
     excerpt,
@@ -155,6 +156,38 @@ TOOL_SCHEMAS = [
             "required": [],
         },
     },
+    {
+        "name": "draft_email",
+        "description": (
+            "Write and create a real Gmail DRAFT for the user, addressed to a "
+            "specific recipient, with a subject line. You write the body "
+            "yourself based on the subject. This only creates a draft sitting "
+            "in the user's Gmail Drafts folder — it NEVER sends anything. The "
+            "user reviews and sends it themselves from Gmail. Use this when "
+            "the user asks you to draft, write, or compose an email to "
+            "someone. Requires the recipient's email address; if the user "
+            "didn't give an exact subject, infer a short, specific one from "
+            "what they asked for."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "to": {
+                    "type": "string",
+                    "description": "The recipient's email address.",
+                },
+                "subject": {
+                    "type": "string",
+                    "description": (
+                        "The email subject line. Also used as the only basis "
+                        "for the AI-written body — make it specific enough to "
+                        "convey what the email is about."
+                    ),
+                },
+            },
+            "required": ["to", "subject"],
+        },
+    },
 ]
 
 # Map tool names to their source labels for the ChatResponse.source field
@@ -171,6 +204,7 @@ TOOL_SOURCE_MAP = {
     "search_company_documents": "documents",
     "get_drive_briefing": "google_drive",
     "get_slack_briefing": "slack",
+    "draft_email": "gmail",
 }
 
 # The 6 connector-registry names get_priority_overview fans out to. Kept as a
@@ -244,18 +278,49 @@ def _format_document_results(chunks: list[RetrievedChunk]) -> str:
     return f"[COMPANY DOCUMENTS — {len(chunks)} result(s)]\n{blocks}"
 
 
+def _format_email_draft_result(result: EmailDraftResult) -> str:
+    """Format an EmailDraftResult into a data block for the LLM.
+
+    Explicit about DRAFT vs SENT in every branch — this tool only ever
+    creates a draft sitting in the user's Gmail Drafts folder, never sends,
+    and the wording here must not let the LLM's final synthesized answer
+    imply anything was actually sent.
+    """
+    if not result.connected:
+        return f"[EMAIL DRAFT STATUS] Could not create the draft — {result.error}"
+    if not result.success:
+        return (
+            f"[EMAIL DRAFT STATUS] Attempted to draft an email to {result.to} "
+            f"but it failed: {result.error}"
+        )
+    return (
+        "[EMAIL DRAFT CREATED — NOT SENT] A draft was successfully created in "
+        "the user's Gmail Drafts folder. It has NOT been sent — the user must "
+        "open Gmail and send it themselves when ready.\n"
+        f"To: {result.to}\n"
+        f"Subject: {result.subject}\n"
+        f"Body:\n{result.body}"
+    )
+
+
 async def dispatch_tool_call(
     tool_name: str,
     db: AsyncSession,
     user: User,
     query: str,
+    tool_args: dict | None = None,
 ) -> tuple[str, str, list[RetrievedChunk]]:
     """Execute a tool call and return (formatted_result_text, source_label, chunks).
 
     Uses the connector registry to dynamically dispatch tool calls to the
-    corresponding connector's chat function.
+    corresponding connector's chat function. `tool_args` carries the full
+    argument dict the model supplied for tools that need more than the
+    single free-text `query` string (e.g. draft_email's `to`/`subject`) —
+    optional and defaults to None so every existing caller/tool is unaffected.
     """
     from app.connectors.registry import connector_registry
+
+    tool_args = tool_args or {}
 
     if tool_name == "search_company_documents":
         chunks = await semantic_search(db, query, allowed_roles=[user.role])
@@ -265,6 +330,17 @@ async def dispatch_tool_call(
             user.id, len(chunks),
         )
         return formatted, "documents", chunks
+
+    if tool_name == "draft_email":
+        to = tool_args.get("to", "")
+        subject = tool_args.get("subject", "")
+        result = await create_gmail_draft(db, user, to, subject)
+        formatted = _format_email_draft_result(result)
+        logger.info(
+            "tool_dispatch tool=draft_email user_id=%s connected=%s success=%s",
+            user.id, result.connected, result.success,
+        )
+        return formatted, "gmail", []
 
     source = TOOL_SOURCE_MAP.get(tool_name, "none")
 

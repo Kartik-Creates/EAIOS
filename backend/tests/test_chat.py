@@ -301,6 +301,67 @@ async def test_chat_compound_question_calls_both_named_tools(client, monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_chat_draft_email_creates_draft_and_never_claims_it_was_sent(client, monkeypatch, db_session):
+    """End-to-end: asking chat to draft an email routes to draft_email with
+    the recipient/subject extracted as structured args (not just the raw
+    query string), actually creates a Gmail draft, and the final answer
+    must say it was drafted/created — never "sent", since this feature
+    never calls Gmail's send endpoint."""
+
+    async def fake_generate_with_tools_draft(query: str, tool_schemas: list[dict]):
+        return [{"name": "draft_email", "args": {
+            "to": "manager@company.com",
+            "subject": "Request to reschedule our 1:1",
+        }}]
+
+    async def fake_body(to, subject):
+        assert to == "manager@company.com"
+        assert subject == "Request to reschedule our 1:1"
+        return "Hi,\n\nCould we move our 1:1 to later this week?\n\nBest regards,"
+
+    class MockDraftResponse:
+        status_code = 201
+
+        def json(self):
+            return {"id": "draft_xyz"}
+
+    async def mock_post(self_or_client, url, *args, **kwargs):
+        return MockDraftResponse()
+
+    async def fake_get_decrypted_token(*args, **kwargs):
+        return "mock-compose-token"
+
+    monkeypatch.setattr("app.routers.chat.generate_with_tools", fake_generate_with_tools_draft)
+    monkeypatch.setattr("app.services.email_draft_service.generate_email_draft_body", fake_body)
+    # create_gmail_draft does `from app.services.briefing_service import
+    # get_decrypted_token`, which binds the name in email_draft_service's own
+    # module namespace — patching briefing_service's copy wouldn't affect
+    # that already-bound reference, so the patch target has to be here.
+    monkeypatch.setattr("app.services.email_draft_service.get_decrypted_token", fake_get_decrypted_token)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_post)
+
+    token = register_and_login(client, "draftuser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "draft an email to manager@company.com asking to reschedule our 1:1"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "gmail"
+    answer_lower = data["answer"].lower()
+    assert "manager@company.com" in data["answer"]
+    assert "draft" in answer_lower
+    # "not sent" / "hasn't been sent" are correct and expected; what must
+    # never appear is a claim that it WAS sent.
+    assert "not been sent" in answer_lower or "not sent" in answer_lower
+    for false_claim in ("was sent", "has been sent", "successfully sent", "email sent", "delivered"):
+        assert false_claim not in answer_lower
+
+
+@pytest.mark.asyncio
 async def test_chat_priority_overview_not_triggered_by_single_app_question(client, db_session):
     """A narrow, single-app question must still route to that app's own tool,
     not the cross-cutting overview — the fake router only returns

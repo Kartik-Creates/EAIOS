@@ -59,13 +59,33 @@ async def _create_test_user(db_session, email: str, role: str = "employee") -> U
     return user
 
 
-async def _add_mock_oauth_token(db_session, user_id: str, provider: str):
-    """Helper to store a dummy encrypted OAuth token for a user."""
+_REAL_SCOPES_BY_PROVIDER = {
+    # Mirrors the actual scope strings in app/core/oauth_config.py's PROVIDERS
+    # dict — needed because get_decrypted_token() can now filter candidate
+    # tokens by required scope (e.g. Gmail calls require "gmail" to actually
+    # appear in the stored scopes string). A generic placeholder like "read"
+    # would make every Gmail-token test fail that check even though it's
+    # meant to represent a real, correctly-scoped connection.
+    "gmail": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
+    "google": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
+    "google_drive": "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly",
+}
+
+
+async def _add_mock_oauth_token(db_session, user_id: str, provider: str, *, scopes: str | None = None):
+    """Helper to store a dummy encrypted OAuth token for a user.
+
+    `scopes` defaults to that provider's real-world scope string (see
+    _REAL_SCOPES_BY_PROVIDER) rather than a generic placeholder, so tests
+    accurately reflect which provider actually grants which access. Pass an
+    explicit `scopes` to simulate an edge case (e.g. a connection that's
+    missing an expected scope).
+    """
     tok = OAuthToken(
         user_id=user_id,
         provider=provider,
         access_token_encrypted=encrypt_token(f"mock-access-token-{user_id}-{provider}"),
-        scopes="read",
+        scopes=scopes if scopes is not None else _REAL_SCOPES_BY_PROVIDER.get(provider, "read"),
     )
     db_session.add(tok)
     await db_session.commit()
@@ -509,6 +529,76 @@ async def test_gmail_recent_filters_onboarding_noise_by_subject_not_just_sender(
 
 
 @pytest.mark.asyncio
+async def test_gmail_recent_does_not_use_drive_only_token(db_session, monkeypatch):
+    """Regression: a user who has ONLY connected Google Drive (never Gmail)
+    must be correctly reported as Gmail-not-connected, instead of the Drive
+    token being silently reused for a Gmail API call it doesn't have scope
+    for. Before the fix, get_decrypted_token() picked a token by provider
+    preference alone with no scope awareness, so the one matching
+    "google_drive" row would be handed to the Gmail API and fail with a
+    permissions error — or worse, succeed unpredictably and imply broader
+    access than the user actually granted."""
+    user = await _create_test_user(db_session, "drive_only_user@example.com")
+    # Only a Drive connection exists — its real scope has no Gmail access.
+    await _add_mock_oauth_token(db_session, user.id, "google_drive")
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        raise AssertionError("Gmail API must never be called with a Drive-only token")
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_gmail_recent(db_session, user)
+    assert res.source == "gmail"
+    assert res.connected is False
+    assert res.items == []
+
+
+@pytest.mark.asyncio
+async def test_gmail_recent_uses_legacy_google_token_when_scoped_for_gmail(db_session, monkeypatch):
+    """A legacy "google"-provider connection that DOES carry Gmail scope
+    (e.g. from before the app split into separate "gmail"/"google_drive"
+    providers) must still work — the fix filters by actual scope content,
+    not by rejecting every provider name except "gmail" outright."""
+    user = await _create_test_user(db_session, "legacy_google_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "google")  # real scope includes gmail.readonly
+
+    class MockGmailResponse:
+        def __init__(self, url):
+            self.url = str(url)
+
+        def raise_for_status(self):
+            pass
+
+        @property
+        def status_code(self):
+            return 200
+
+        def json(self):
+            if "msg-1" not in self.url:
+                return {"messages": [{"id": "msg-1"}]}
+            return {
+                "snippet": "Real work email via a legacy combined-scope token.",
+                "payload": {
+                    "headers": [
+                        {"name": "Subject", "value": "Status update"},
+                        {"name": "From", "value": "teammate@company.com"},
+                    ]
+                },
+            }
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        return MockGmailResponse(url)
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_gmail_recent(db_session, user)
+    assert res.source == "gmail"
+    assert res.connected is True
+    assert len(res.items) == 1
+    assert res.items[0].title == "Status update"
+
+
+@pytest.mark.asyncio
 async def test_github_briefing_success(db_session, monkeypatch):
     user = await _create_test_user(db_session, "gh_user@example.com")
     await _add_mock_oauth_token(db_session, user.id, "github")
@@ -545,6 +635,78 @@ async def test_github_briefing_success(db_session, monkeypatch):
     assert len(res.items) == 1
     assert "[repo] Add OAuth2 integration tests" in res.items[0].title
     assert res.items[0].priority_hint == "overdue"
+
+
+@pytest.mark.asyncio
+async def test_github_briefing_does_not_undercount_overlapping_queries(db_session, monkeypatch):
+    """Regression: get_github_briefing() runs 3 separate searches (assigned,
+    review-requested, authored) and merges duplicates. Each search used to
+    be capped at per_page=10 independently, so a PR matching two searches
+    could cause real items to be lost once results were de-duplicated — the
+    per-query cap and the dedup compounded into an undercount. This proves
+    (a) a query returning more than the old cap of 10 isn't truncated, and
+    (b) a PR appearing in two different queries' results is still only
+    counted once, without losing a different, non-overlapping item to make
+    room for it."""
+    user = await _create_test_user(db_session, "gh_overlap_user@example.com")
+    await _add_mock_oauth_token(db_session, user.id, "github")
+
+    def make_item(number: int, title: str) -> dict:
+        return {
+            "number": number,
+            "title": title,
+            "html_url": f"https://github.com/org/repo/pull/{number}",
+            "repository_url": "https://api.github.com/repos/org/repo",
+            "created_at": "2026-07-20T10:00:00Z",
+            "pull_request": {},
+        }
+
+    # "assigned" query returns 12 items (more than the old per_page=10 cap) —
+    # PR #1 also happens to be returned by the "review-requested" query.
+    assigned_items = [make_item(i, f"Assigned PR #{i}") for i in range(1, 13)]
+    review_requested_items = [make_item(1, "Assigned PR #1"), make_item(99, "Review-requested PR #99")]
+
+    call_count = {"n": 0}
+
+    class MockGithubResponse:
+        def __init__(self, items):
+            self._items = items
+
+        def raise_for_status(self):
+            pass
+
+        @property
+        def status_code(self):
+            return 200
+
+        def json(self):
+            return {"items": self._items}
+
+    captured_per_page = []
+
+    async def mock_get(self_or_client, url, *args, **kwargs):
+        call_count["n"] += 1
+        captured_per_page.append(kwargs.get("params", {}).get("per_page"))
+        q = kwargs.get("params", {}).get("q", "")
+        if "assignee:@me" in q:
+            return MockGithubResponse(assigned_items)
+        if "review-requested:@me" in q:
+            return MockGithubResponse(review_requested_items)
+        return MockGithubResponse([])  # author:@me
+
+    monkeypatch.setattr("httpx.AsyncClient.get", mock_get)
+
+    res = await get_github_briefing(db_session, user)
+    assert res.source == "github"
+    assert res.connected is True
+    # 12 assigned + 1 unique review-requested (PR #99) = 13 unique items,
+    # with PR #1 correctly deduplicated rather than counted twice
+    assert len(res.items) == 13
+    titles = {item.title for item in res.items}
+    assert "[repo] Assigned PR #12" in titles  # would be lost under the old per_page=10 cap
+    assert "[repo] Review-requested PR #99" in titles
+    # each of the 3 queries must ask for more than the old 10-item cap
+    assert all(pp > 10 for pp in captured_per_page)
 
 
 @pytest.mark.asyncio

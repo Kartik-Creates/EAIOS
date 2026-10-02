@@ -153,7 +153,7 @@ async def chat(
             query_for_tool = tool_args.get("query", body.query)
 
             result_text, tool_source, chunks = await dispatch_tool_call(
-                tool_name, db, current_user, query_for_tool,
+                tool_name, db, current_user, query_for_tool, tool_args=tool_args,
             )
             all_results.append(result_text)
             all_chunks.extend(chunks)
