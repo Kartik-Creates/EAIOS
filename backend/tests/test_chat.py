@@ -243,6 +243,12 @@ async def test_chat_priority_overview_aggregates_all_six_sources(client, monkeyp
     assert "deploy is blocked on review" in data["answer"]
     # the disconnected source is reported as such, not silently dropped
     assert "NOT connected" in data["answer"] or "not connected" in data["answer"].lower()
+    # Regression: Drive's entry within the aggregated overview must also use
+    # the canonical "google_drive" label, not "drive" — the label-pairing
+    # fix has to hold for every source in the fan-out, not just a standalone
+    # single-tool Drive question.
+    assert "[GOOGLE_DRIVE STATUS]" in data["answer"]
+    assert "[DRIVE STATUS]" not in data["answer"]
 
 
 @pytest.mark.asyncio
@@ -292,6 +298,67 @@ async def test_chat_compound_question_calls_both_named_tools(client, monkeypatch
     assert "CI notification" in data["answer"]
     # source label reflects both sources actually used, not just the first
     assert data["source"] == "github, gmail"
+
+
+@pytest.mark.asyncio
+async def test_chat_draft_email_creates_draft_and_never_claims_it_was_sent(client, monkeypatch, db_session):
+    """End-to-end: asking chat to draft an email routes to draft_email with
+    the recipient/subject extracted as structured args (not just the raw
+    query string), actually creates a Gmail draft, and the final answer
+    must say it was drafted/created — never "sent", since this feature
+    never calls Gmail's send endpoint."""
+
+    async def fake_generate_with_tools_draft(query: str, tool_schemas: list[dict]):
+        return [{"name": "draft_email", "args": {
+            "to": "manager@company.com",
+            "subject": "Request to reschedule our 1:1",
+        }}]
+
+    async def fake_body(to, subject):
+        assert to == "manager@company.com"
+        assert subject == "Request to reschedule our 1:1"
+        return "Hi,\n\nCould we move our 1:1 to later this week?\n\nBest regards,"
+
+    class MockDraftResponse:
+        status_code = 201
+
+        def json(self):
+            return {"id": "draft_xyz"}
+
+    async def mock_post(self_or_client, url, *args, **kwargs):
+        return MockDraftResponse()
+
+    async def fake_get_decrypted_token(*args, **kwargs):
+        return "mock-compose-token"
+
+    monkeypatch.setattr("app.routers.chat.generate_with_tools", fake_generate_with_tools_draft)
+    monkeypatch.setattr("app.services.email_draft_service.generate_email_draft_body", fake_body)
+    # create_gmail_draft does `from app.services.briefing_service import
+    # get_decrypted_token`, which binds the name in email_draft_service's own
+    # module namespace — patching briefing_service's copy wouldn't affect
+    # that already-bound reference, so the patch target has to be here.
+    monkeypatch.setattr("app.services.email_draft_service.get_decrypted_token", fake_get_decrypted_token)
+    monkeypatch.setattr("httpx.AsyncClient.post", mock_post)
+
+    token = register_and_login(client, "draftuser@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.post(
+        "/api/v1/chat",
+        json={"query": "draft an email to manager@company.com asking to reschedule our 1:1"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "gmail"
+    answer_lower = data["answer"].lower()
+    assert "manager@company.com" in data["answer"]
+    assert "draft" in answer_lower
+    # "not sent" / "hasn't been sent" are correct and expected; what must
+    # never appear is a claim that it WAS sent.
+    assert "not been sent" in answer_lower or "not sent" in answer_lower
+    for false_claim in ("was sent", "has been sent", "successfully sent", "email sent", "delivered"):
+        assert false_claim not in answer_lower
 
 
 @pytest.mark.asyncio
@@ -718,6 +785,12 @@ async def test_chat_routes_drive_question_to_drive_briefing(client, monkeypatch)
     assert data["source"] == "google_drive"
     assert data["citations"] == []
     assert data["confidence"] == 0.0
+    # Regression: the text the LLM actually sees must use the canonical
+    # "google_drive" label, not "drive" (get_drive_briefing's internal
+    # SourceResult.source, kept as "drive" for the dashboard's sake) — the
+    # LLM only ever learns to recognize the canonical name.
+    assert "[GOOGLE_DRIVE DATA" in data["answer"]
+    assert "[DRIVE DATA" not in data["answer"]
 
 
 @pytest.mark.asyncio
@@ -772,3 +845,7 @@ async def test_chat_drive_not_connected_gives_clear_message(client, monkeypatch)
     data = response.json()
     assert data["source"] == "google_drive"
     assert data["flagged_for_review"] is False
+    # Regression: the "not connected" block must say GOOGLE_DRIVE, the name
+    # the LLM is actually told to recognize — not DRIVE.
+    assert "[GOOGLE_DRIVE STATUS]" in data["answer"]
+    assert "[DRIVE STATUS]" not in data["answer"]
